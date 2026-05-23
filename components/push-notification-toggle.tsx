@@ -17,6 +17,27 @@ async function getActiveServiceWorkerRegistration(): Promise<ServiceWorkerRegist
   return navigator.serviceWorker.ready;
 }
 
+function getErrorMessage(err: unknown): string {
+  if (err instanceof Error && err.message) {
+    return err.message;
+  }
+  return String(err);
+}
+
+async function readErrorResponseBody(response: Response): Promise<string> {
+  try {
+    const data = (await response.json()) as {
+      error?: unknown;
+      details?: unknown;
+    };
+    const error = typeof data.error === "string" ? data.error : null;
+    const details = typeof data.details === "string" ? data.details : null;
+    return [error, details].filter(Boolean).join(" | ");
+  } catch {
+    return "";
+  }
+}
+
 export function PushNotificationToggle() {
   const [state, setState] = useState<PushState>("loading");
   const [message, setMessage] = useState<string | null>(null);
@@ -63,6 +84,7 @@ export function PushNotificationToggle() {
   const enablePush = async () => {
     setPending(true);
     setMessage(null);
+    let step = "request-notification-permission";
 
     try {
       const permission = await Notification.requestPermission();
@@ -72,16 +94,24 @@ export function PushNotificationToggle() {
         return;
       }
 
+      step = "fetch-vapid-public-key";
       const vapidRes = await fetch("/api/push/vapid-public-key");
       if (!vapidRes.ok) {
+        const errorBody = await readErrorResponseBody(vapidRes);
+        console.error("[push-enable] vapid-public-key failed", {
+          status: vapidRes.status,
+          errorBody,
+        });
         setState("error");
         setMessage("Push is not configured on server");
         return;
       }
 
+      step = "register-service-worker";
       const { publicKey } = (await vapidRes.json()) as { publicKey: string };
       const registration = await getActiveServiceWorkerRegistration();
 
+      step = "get-or-create-subscription";
       let subscription = await getBrowserSubscription(registration);
       if (!subscription) {
         subscription = await registration.pushManager.subscribe({
@@ -97,6 +127,7 @@ export function PushNotificationToggle() {
         throw new Error("Invalid push subscription");
       }
 
+      step = "save-subscription";
       const saveRes = await fetch("/api/push/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -107,12 +138,21 @@ export function PushNotificationToggle() {
       });
 
       if (!saveRes.ok) {
-        throw new Error("Failed to save subscription");
+        const errorBody = await readErrorResponseBody(saveRes);
+        throw new Error(
+          `Failed to save subscription (status ${saveRes.status}${
+            errorBody ? `: ${errorBody}` : ""
+          })`,
+        );
       }
 
       setState("enabled");
       setMessage(null);
-    } catch {
+    } catch (err) {
+      console.error("[push-enable] failed", {
+        step,
+        error: getErrorMessage(err),
+      });
       setState("error");
       setMessage("Failed to enable push notifications");
     } finally {
@@ -123,24 +163,39 @@ export function PushNotificationToggle() {
   const disablePush = async () => {
     setPending(true);
     setMessage(null);
+    let step = "register-service-worker";
 
     try {
       const registration = await getActiveServiceWorkerRegistration();
       const subscription = await getBrowserSubscription(registration);
 
       if (subscription) {
+        step = "remove-subscription-on-server";
         const endpoint = subscription.endpoint;
-        await fetch("/api/push/unsubscribe", {
+        const removeRes = await fetch("/api/push/unsubscribe", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ endpoint }),
         });
+        if (!removeRes.ok) {
+          const errorBody = await readErrorResponseBody(removeRes);
+          throw new Error(
+            `Failed to remove subscription (status ${removeRes.status}${
+              errorBody ? `: ${errorBody}` : ""
+            })`,
+          );
+        }
+        step = "unsubscribe-browser";
         await subscription.unsubscribe();
       }
 
       setState("disabled");
       setMessage(null);
-    } catch {
+    } catch (err) {
+      console.error("[push-disable] failed", {
+        step,
+        error: getErrorMessage(err),
+      });
       setState("error");
       setMessage("Failed to disable push notifications");
     } finally {

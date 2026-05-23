@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { EquityCurve } from "@/components/equity-curve";
 import { PushNotificationToggle } from "@/components/push-notification-toggle";
@@ -18,6 +18,8 @@ import type {
 
 const POLL_MS = 30_000;
 const DEFAULT_SYMBOL = "BTCUSDT";
+const MISSED_RUN_WARNING_MS = 2 * 60 * 60 * 1000;
+const NO_RUN_AFTER_START_WARNING_MS = 75 * 60 * 1000;
 
 interface SymbolRow {
   symbol: string;
@@ -27,10 +29,97 @@ interface SymbolRow {
 interface StrategyStatus {
   running: boolean;
   runningNow: boolean;
+  heartbeatMs: number;
   startedAt: string | null;
   lastRunAt: string | null;
   nextRunAt: string | null;
   lastError: string | null;
+}
+
+type CronAlertSeverity = "warning" | "error";
+
+interface CronAlert {
+  id: string;
+  severity: CronAlertSeverity;
+  message: string;
+}
+
+function parseIsoToMs(value: string | null): number | null {
+  if (!value) {
+    return null;
+  }
+  const ts = Date.parse(value);
+  return Number.isFinite(ts) ? ts : null;
+}
+
+function buildCronAlerts({
+  strategyStatus,
+  statusRequestError,
+  actionError,
+}: {
+  strategyStatus: StrategyStatus | null;
+  statusRequestError: string | null;
+  actionError: string | null;
+}): CronAlert[] {
+  const alerts: CronAlert[] = [];
+
+  if (statusRequestError) {
+    alerts.push({
+      id: "status-request-error",
+      severity: "error",
+      message: statusRequestError,
+    });
+  }
+
+  if (actionError) {
+    alerts.push({
+      id: "strategy-action-error",
+      severity: "error",
+      message: actionError,
+    });
+  }
+
+  if (!strategyStatus) {
+    return alerts;
+  }
+
+  if (strategyStatus.lastError) {
+    alerts.push({
+      id: "last-run-error",
+      severity: "error",
+      message: `Last strategy run failed: ${strategyStatus.lastError}`,
+    });
+  }
+
+  if (!strategyStatus.running) {
+    return alerts;
+  }
+
+  const nowMs = Date.now();
+  const lastRunAtMs = parseIsoToMs(strategyStatus.lastRunAt);
+  const startedAtMs = parseIsoToMs(strategyStatus.startedAt);
+
+  if (lastRunAtMs && nowMs - lastRunAtMs > MISSED_RUN_WARNING_MS) {
+    alerts.push({
+      id: "stale-last-run",
+      severity: "warning",
+      message: "Cron looks stale: no successful run in the last 2 hours.",
+    });
+  }
+
+  if (
+    !lastRunAtMs &&
+    startedAtMs &&
+    nowMs - startedAtMs > NO_RUN_AFTER_START_WARNING_MS
+  ) {
+    alerts.push({
+      id: "never-ran-after-start",
+      severity: "warning",
+      message: "Strategy started but no successful run has been recorded yet.",
+    });
+  }
+
+  return alerts;
 }
 
 export function Dashboard() {
@@ -47,9 +136,17 @@ export function Dashboard() {
     null,
   );
   const [strategyActionPending, setStrategyActionPending] = useState(false);
+  const [statusRequestError, setStatusRequestError] = useState<string | null>(
+    null,
+  );
+  const [strategyActionError, setStrategyActionError] = useState<string | null>(
+    null,
+  );
+  const lastNotificationKeyRef = useRef<string | null>(null);
 
   const refresh = useCallback(async () => {
     setLoadingPortfolio(true);
+    setStatusRequestError(null);
 
     try {
       const [symbolsRes, portfolioRes, tradesRes, equityRes, strategyRes] =
@@ -93,6 +190,11 @@ export function Dashboard() {
 
       if (strategyRes.ok) {
         setStrategyStatus((await strategyRes.json()) as StrategyStatus);
+      } else {
+        const body = (await strategyRes.text()) || "unknown error";
+        setStatusRequestError(
+          `Could not fetch strategy status (${strategyRes.status}): ${body}`,
+        );
       }
     } finally {
       setLoadingSymbols(false);
@@ -121,9 +223,18 @@ export function Dashboard() {
 
   const toggleStrategy = async () => {
     setStrategyActionPending(true);
+    setStrategyActionError(null);
     try {
       const action = strategyStatus?.running ? "stop" : "start";
-      await fetch(`/api/strategy/${action}`, { method: "POST" });
+      const response = await fetch(`/api/strategy/${action}`, {
+        method: "POST",
+      });
+      if (!response.ok) {
+        const body = (await response.text()) || "unknown error";
+        setStrategyActionError(
+          `Could not ${action} strategy (${response.status}): ${body}`,
+        );
+      }
       await refresh();
     } finally {
       setStrategyActionPending(false);
@@ -132,6 +243,38 @@ export function Dashboard() {
 
   const disableStrategyButton =
     strategyActionPending || (loadingPortfolio && !strategyStatus?.running);
+  const cronAlerts = useMemo(
+    () =>
+      buildCronAlerts({
+        strategyStatus,
+        statusRequestError,
+        actionError: strategyActionError,
+      }),
+    [statusRequestError, strategyActionError, strategyStatus],
+  );
+
+  useEffect(() => {
+    if (
+      typeof window === "undefined" ||
+      !("Notification" in window) ||
+      Notification.permission !== "granted" ||
+      cronAlerts.length === 0
+    ) {
+      return;
+    }
+
+    const highestSeverityAlert =
+      cronAlerts.find((alert) => alert.severity === "error") ?? cronAlerts[0];
+    const notificationKey = `${highestSeverityAlert.id}:${highestSeverityAlert.message}`;
+    if (lastNotificationKeyRef.current === notificationKey) {
+      return;
+    }
+    lastNotificationKeyRef.current = notificationKey;
+
+    new Notification("Strategy cron issue", {
+      body: highestSeverityAlert.message,
+    });
+  }, [cronAlerts]);
 
   return (
     <div className="flex min-h-screen flex-col bg-zinc-50 text-zinc-900 dark:bg-black dark:text-zinc-50">
@@ -191,6 +334,22 @@ export function Dashboard() {
             ) : null}
           </span>
         </div>
+        {cronAlerts.length > 0 ? (
+          <div className="mx-auto mt-3 max-w-7xl space-y-2">
+            {cronAlerts.map((alert) => (
+              <p
+                key={alert.id}
+                className={`rounded-md border px-3 py-2 text-sm ${
+                  alert.severity === "error"
+                    ? "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-200"
+                    : "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200"
+                }`}
+              >
+                {alert.message}
+              </p>
+            ))}
+          </div>
+        ) : null}
         <div className="mx-auto mt-4 max-w-7xl">
           <PortfolioSummary portfolio={portfolio} loading={loadingPortfolio} />
         </div>

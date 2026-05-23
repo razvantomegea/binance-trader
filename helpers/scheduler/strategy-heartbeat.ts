@@ -109,7 +109,8 @@ async function runIfNeeded(state: StrategyHeartbeatState): Promise<void> {
     );
   } catch (error) {
     state.lastCompletedHourKey = hourKey;
-    const message = error instanceof Error ? error.message : "Strategy run failed";
+    const message =
+      error instanceof Error ? error.message : "Strategy run failed";
     state.lastError = message;
     await recordSchedulerRun({ error: message });
     console.error("[heartbeat] H1 failed", error);
@@ -127,7 +128,9 @@ function startHeartbeatLoop(state: StrategyHeartbeatState): void {
   }, HEARTBEAT_MS);
 }
 
-async function ensureStateHydrated(state: StrategyHeartbeatState): Promise<void> {
+async function ensureStateHydrated(
+  state: StrategyHeartbeatState,
+): Promise<void> {
   if (state.hydratedFromMeta) {
     return;
   }
