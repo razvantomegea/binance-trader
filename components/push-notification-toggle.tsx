@@ -12,6 +12,11 @@ function getBrowserSubscription(
   return registration.pushManager.getSubscription();
 }
 
+async function getActiveServiceWorkerRegistration(): Promise<ServiceWorkerRegistration> {
+  await navigator.serviceWorker.register("/sw.js");
+  return navigator.serviceWorker.ready;
+}
+
 export function PushNotificationToggle() {
   const [state, setState] = useState<PushState>("loading");
   const [message, setMessage] = useState<string | null>(null);
@@ -29,7 +34,7 @@ export function PushNotificationToggle() {
     }
 
     try {
-      const registration = await navigator.serviceWorker.register("/sw.js");
+      const registration = await getActiveServiceWorkerRegistration();
       const subscription = await getBrowserSubscription(registration);
       setState(subscription ? "enabled" : "disabled");
       setMessage(null);
@@ -75,8 +80,7 @@ export function PushNotificationToggle() {
       }
 
       const { publicKey } = (await vapidRes.json()) as { publicKey: string };
-      const registration = await navigator.serviceWorker.register("/sw.js");
-      await navigator.serviceWorker.ready;
+      const registration = await getActiveServiceWorkerRegistration();
 
       let subscription = await getBrowserSubscription(registration);
       if (!subscription) {
@@ -121,7 +125,7 @@ export function PushNotificationToggle() {
     setMessage(null);
 
     try {
-      const registration = await navigator.serviceWorker.register("/sw.js");
+      const registration = await getActiveServiceWorkerRegistration();
       const subscription = await getBrowserSubscription(registration);
 
       if (subscription) {

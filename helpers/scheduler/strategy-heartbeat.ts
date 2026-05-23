@@ -1,6 +1,7 @@
 import {
   getSchedulerPersistedStatus,
   isServerlessScheduler,
+  recordSchedulerRun,
   setSchedulerRunning,
 } from "@/helpers/scheduler/strategy-scheduler-meta";
 import {
@@ -21,6 +22,7 @@ interface StrategyHeartbeatState {
   lastError: string | null;
   lastResult: RunStrategyResult | null;
   timer: NodeJS.Timeout | null;
+  hydratedFromMeta: boolean;
 }
 
 export interface StrategyHeartbeatStatus {
@@ -49,6 +51,7 @@ function getState(): StrategyHeartbeatState {
       lastError: null,
       lastResult: null,
       timer: null,
+      hydratedFromMeta: false,
     };
   }
 
@@ -100,17 +103,48 @@ async function runIfNeeded(state: StrategyHeartbeatState): Promise<void> {
     state.lastRunAtMs = Date.now();
     state.lastCompletedHourKey = hourKey;
     state.lastResult = result;
+    await recordSchedulerRun({ result });
     console.info(
       `[heartbeat] H1 done: trades=${result.tradesExecuted} equity=${result.equity.toFixed(2)}`,
     );
   } catch (error) {
     state.lastCompletedHourKey = hourKey;
-    state.lastError =
-      error instanceof Error ? error.message : "Strategy run failed";
+    const message = error instanceof Error ? error.message : "Strategy run failed";
+    state.lastError = message;
+    await recordSchedulerRun({ error: message });
     console.error("[heartbeat] H1 failed", error);
   } finally {
     state.runningNow = false;
   }
+}
+
+function startHeartbeatLoop(state: StrategyHeartbeatState): void {
+  if (state.timer) {
+    return;
+  }
+  state.timer = setInterval(() => {
+    void runIfNeeded(state);
+  }, HEARTBEAT_MS);
+}
+
+async function ensureStateHydrated(state: StrategyHeartbeatState): Promise<void> {
+  if (state.hydratedFromMeta) {
+    return;
+  }
+
+  state.hydratedFromMeta = true;
+  const persisted = await getSchedulerPersistedStatus();
+  if (!persisted.running) {
+    return;
+  }
+
+  state.running = true;
+  state.startedAtMs = persisted.startedAtMs ?? Date.now();
+  state.lastRunAtMs = persisted.lastRunAtMs;
+  state.lastError = persisted.lastError;
+  state.lastResult = persisted.lastResult;
+  startHeartbeatLoop(state);
+  console.info("[heartbeat] strategy scheduler restored from persisted state");
 }
 
 function toStatus(state: StrategyHeartbeatState): StrategyHeartbeatStatus {
@@ -154,7 +188,9 @@ export async function getStrategyHeartbeatStatus(): Promise<StrategyHeartbeatSta
     return toServerlessStatus();
   }
 
-  return toStatus(getState());
+  const state = getState();
+  await ensureStateHydrated(state);
+  return toStatus(state);
 }
 
 export async function startStrategyHeartbeat(): Promise<StrategyHeartbeatStatus> {
@@ -166,6 +202,7 @@ export async function startStrategyHeartbeat(): Promise<StrategyHeartbeatStatus>
   }
 
   const state = getState();
+  await ensureStateHydrated(state);
   if (state.running) {
     return toStatus(state);
   }
@@ -173,9 +210,7 @@ export async function startStrategyHeartbeat(): Promise<StrategyHeartbeatStatus>
   state.running = true;
   state.startedAtMs = Date.now();
   state.lastError = null;
-  state.timer = setInterval(() => {
-    void runIfNeeded(state);
-  }, HEARTBEAT_MS);
+  startHeartbeatLoop(state);
 
   void runIfNeeded(state);
   console.info("[heartbeat] strategy scheduler started");
