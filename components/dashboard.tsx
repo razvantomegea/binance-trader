@@ -22,7 +22,15 @@ const DEFAULT_SYMBOL = "BTCUSDT";
 interface SymbolRow {
   symbol: string;
   close: string | null;
-  changePct: number | null;
+}
+
+interface StrategyStatus {
+  running: boolean;
+  runningNow: boolean;
+  startedAt: string | null;
+  lastRunAt: string | null;
+  nextRunAt: string | null;
+  lastError: string | null;
 }
 
 export function Dashboard() {
@@ -35,27 +43,29 @@ export function Dashboard() {
   );
   const [loadingSymbols, setLoadingSymbols] = useState(true);
   const [loadingPortfolio, setLoadingPortfolio] = useState(true);
-  const [runningStrategy, setRunningStrategy] = useState(false);
+  const [strategyStatus, setStrategyStatus] = useState<StrategyStatus | null>(
+    null,
+  );
+  const [strategyActionPending, setStrategyActionPending] = useState(false);
 
   const refresh = useCallback(async () => {
     setLoadingPortfolio(true);
 
     try {
-      const [pricesRes, portfolioRes, tradesRes, equityRes] = await Promise.all(
-        [
+      const [pricesRes, portfolioRes, tradesRes, equityRes, strategyRes] =
+        await Promise.all([
           fetch(`/api/closing-prices?intervals=${STRATEGY_INTERVAL}`),
           fetch(`/api/portfolio?interval=${STRATEGY_INTERVAL}`),
           fetch("/api/trades?limit=50"),
           fetch(`/api/equity-curve?interval=${STRATEGY_INTERVAL}&limit=200`),
-        ],
-      );
+          fetch("/api/strategy/status"),
+        ]);
 
       if (pricesRes.ok) {
         const pricesJson = (await pricesRes.json()) as ClosingPricesResponse;
         const rows: SymbolRow[] = pricesJson.data.map((item) => ({
           symbol: item.symbol,
           close: item.prices.H1 ?? null,
-          changePct: null,
         }));
         setSymbolRows(rows);
 
@@ -76,6 +86,10 @@ export function Dashboard() {
       if (equityRes.ok) {
         const equityJson = (await equityRes.json()) as EquityCurveResponse;
         setSnapshots(equityJson.snapshots);
+      }
+
+      if (strategyRes.ok) {
+        setStrategyStatus((await strategyRes.json()) as StrategyStatus);
       }
     } finally {
       setLoadingSymbols(false);
@@ -102,13 +116,14 @@ export function Dashboard() {
     };
   }, [refresh]);
 
-  const runStrategyNow = async () => {
-    setRunningStrategy(true);
+  const toggleStrategy = async () => {
+    setStrategyActionPending(true);
     try {
-      await fetch("/api/cron/run-strategy", { method: "POST" });
+      const action = strategyStatus?.running ? "stop" : "start";
+      await fetch(`/api/strategy/${action}`, { method: "POST" });
       await refresh();
     } finally {
-      setRunningStrategy(false);
+      setStrategyActionPending(false);
     }
   };
 
@@ -125,12 +140,47 @@ export function Dashboard() {
           </div>
           <button
             type="button"
-            onClick={() => void runStrategyNow()}
-            disabled={runningStrategy}
-            className="rounded-md bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+            onClick={() => void toggleStrategy()}
+            disabled={strategyActionPending}
+            className={`rounded-md px-3 py-2 text-sm font-medium text-white disabled:opacity-50 ${
+              strategyStatus?.running
+                ? "bg-rose-600 hover:bg-rose-500"
+                : "bg-emerald-600 hover:bg-emerald-500"
+            }`}
           >
-            {runningStrategy ? "Running..." : "Run strategy"}
+            {strategyActionPending
+              ? "Please wait..."
+              : strategyStatus?.running
+                ? "Stop strategy"
+                : "Start strategy"}
           </button>
+        </div>
+        <div className="mx-auto mt-2 max-w-7xl text-xs text-zinc-500">
+          <span className="inline-flex items-center gap-2">
+            <span>
+              Status:{" "}
+              {strategyStatus?.runningNow
+                ? "Running now"
+                : strategyStatus?.running
+                  ? "Started"
+                  : "Stopped"}
+            </span>
+            {strategyStatus?.nextRunAt ? (
+              <span>
+                Next run: {new Date(strategyStatus.nextRunAt).toLocaleString()}
+              </span>
+            ) : null}
+            {strategyStatus?.lastRunAt ? (
+              <span>
+                Last run: {new Date(strategyStatus.lastRunAt).toLocaleString()}
+              </span>
+            ) : null}
+            {strategyStatus?.lastError ? (
+              <span className="text-rose-500">
+                Last error: {strategyStatus.lastError}
+              </span>
+            ) : null}
+          </span>
         </div>
         <div className="mx-auto mt-4 max-w-7xl">
           <PortfolioSummary

@@ -29,7 +29,9 @@ export const positions = pgTable("positions", {
   qty: numeric("qty", { precision: 24, scale: 12 }).notNull(),
   buyPrice: numeric("buy_price", { precision: 24, scale: 12 }).notNull(),
   buyTime: timestamp("buy_time", { withTimezone: true }).notNull(),
-  buyTradeId: integer("buy_trade_id").notNull(),
+  buyTradeId: integer("buy_trade_id")
+    .references(() => trades.id, { onDelete: "restrict" })
+    .notNull(),
 });
 
 export const equitySnapshots = pgTable("equity_snapshots", {

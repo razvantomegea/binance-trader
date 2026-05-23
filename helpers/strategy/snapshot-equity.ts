@@ -33,8 +33,16 @@ export async function snapshotEquity({
       if (!position || close === null) {
         continue;
       }
-      positionsValue += position.qty * close;
+      const value = position.qty * close;
+      if (!Number.isFinite(value)) {
+        continue;
+      }
+      positionsValue += value;
     }
+  }
+
+  if (!Number.isFinite(positionsValue)) {
+    throw new Error("Invalid positionsValue computed in snapshotEquity");
   }
 
   const equity = cash + positionsValue;

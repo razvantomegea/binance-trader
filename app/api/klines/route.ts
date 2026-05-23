@@ -23,6 +23,16 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Invalid interval" }, { status: 400 });
   }
 
-  const response = await getKlinesResponse({ symbol, interval, limit });
-  return NextResponse.json(response);
+  try {
+    const response = await getKlinesResponse({ symbol, interval, limit });
+    return NextResponse.json(response);
+  } catch (error) {
+    console.error("Failed to fetch klines response", error);
+
+    if (error instanceof Error) {
+      return NextResponse.json({ error: error.message }, { status: 502 });
+    }
+
+    return NextResponse.json({ error: "Failed to fetch klines" }, { status: 500 });
+  }
 }

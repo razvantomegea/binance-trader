@@ -24,6 +24,13 @@ export async function placeTrade({
   candleOpenTime,
   reason,
 }: PlaceTradeParams): Promise<void> {
+  if (!Number.isFinite(qty) || qty <= 0) {
+    throw new Error(`Invalid qty: ${qty}`);
+  }
+  if (!Number.isFinite(price) || price <= 0) {
+    throw new Error(`Invalid price: ${price}`);
+  }
+
   const notional = qty * price;
   const candleDate = new Date(candleOpenTime);
 

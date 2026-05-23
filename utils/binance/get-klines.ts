@@ -11,6 +11,10 @@ interface GetKlinesParams {
   limit?: number;
 }
 
+function isBinanceKline(value: unknown): value is BinanceKline {
+  return Array.isArray(value) && value.length >= 5;
+}
+
 function parseKline(kline: BinanceKline): KlineCandle {
   return {
     openTime: kline[0],
@@ -36,10 +40,17 @@ export async function getKlines({
   });
 
   if (!response.ok) {
-    return [];
+    const body = await response.text();
+    const message = `Binance /klines failed: ${response.status} ${response.statusText}${body ? ` - ${body}` : ""}`;
+    console.error(message);
+    throw new Error(message);
   }
 
-  const klines = (await response.json()) as BinanceKline[];
+  const klines = await response.json();
+  if (!Array.isArray(klines) || !klines.every(isBinanceKline)) {
+    throw new Error("Binance /klines returned invalid payload");
+  }
+
   return klines.map(parseKline);
 }
 
@@ -70,8 +81,7 @@ export async function getRecentClosedKlines({
     return [];
   }
 
-  const closed =
-    klines.length > 1 ? klines.slice(0, -1) : klines;
+  const closed = klines.length ? klines.slice(0, -1) : [];
 
   return closed.slice(-count).reverse();
 }

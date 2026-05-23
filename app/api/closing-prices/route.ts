@@ -19,9 +19,19 @@ export async function GET(request: Request) {
     );
   }
 
-  const symbolsFilter = parseSymbolsFilter(searchParams.get("symbols"));
-
   try {
+    let symbolsFilter: string[] | undefined;
+    try {
+      symbolsFilter = parseSymbolsFilter(searchParams.get("symbols"));
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Invalid symbols filter";
+      return NextResponse.json(
+        { error: `Invalid symbols filter: ${message}` },
+        { status: 400 },
+      );
+    }
+
     const response = await getClosingPrices({ intervals, symbolsFilter });
     return NextResponse.json(response);
   } catch (error) {

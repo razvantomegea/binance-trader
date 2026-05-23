@@ -111,6 +111,13 @@ export function PriceChart({ symbol, interval }: PriceChartProps) {
           <Tooltip
             formatter={(value: number) => [value.toFixed(6), "Close"]}
             labelFormatter={(label) => String(label)}
+            contentStyle={{
+              backgroundColor: "#09090b",
+              border: "1px solid #27272a",
+              borderRadius: "0.5rem",
+            }}
+            labelStyle={{ color: "#d4d4d8" }}
+            itemStyle={{ color: "#fafafa" }}
           />
           <Area
             type="monotone"

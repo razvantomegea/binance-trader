@@ -4,6 +4,11 @@ import { getDb } from "@/db";
 import { trades } from "@/db/schema";
 import { INITIAL_PAPER_CASH } from "@/constants/binance";
 
+function parseFiniteNumber(value: unknown): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 export async function getCash(): Promise<number> {
   const [row] = await getDb()
     .select({
@@ -12,8 +17,8 @@ export async function getCash(): Promise<number> {
     })
     .from(trades);
 
-  const buyTotal = Number(row?.buyTotal ?? 0);
-  const sellTotal = Number(row?.sellTotal ?? 0);
+  const buyTotal = parseFiniteNumber(row?.buyTotal ?? 0);
+  const sellTotal = parseFiniteNumber(row?.sellTotal ?? 0);
 
   return INITIAL_PAPER_CASH + sellTotal - buyTotal;
 }

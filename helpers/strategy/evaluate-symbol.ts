@@ -4,10 +4,7 @@ import {
   STOP_LOSS_PCT,
   TAKE_PROFIT_PCT,
 } from "@/constants/binance";
-import {
-  STRATEGY_INTERVAL,
-  STRATEGY_LOOKBACK_CLOSES,
-} from "@/constants/strategy";
+import { STRATEGY_LOOKBACK_CLOSES } from "@/constants/strategy";
 import { placeTrade } from "@/helpers/strategy/place-trade";
 import type { OpenPosition } from "@/helpers/strategy/get-positions";
 import type { CandleInterval } from "@/types/binance";
@@ -39,7 +36,7 @@ export async function evaluateSymbol({
 }: EvaluateSymbolParams): Promise<EvaluateSymbolResult> {
   const closed = await getRecentClosedKlines({
     symbol,
-    interval: STRATEGY_INTERVAL,
+    interval,
     count: STRATEGY_LOOKBACK_CLOSES,
   });
 
@@ -120,6 +117,9 @@ export async function evaluateSymbol({
   }
 
   const qty = notional / close;
+  if (!Number.isFinite(qty) || qty <= 0) {
+    return { candleOpenTime: latest.openTime, traded: false };
+  }
 
   await placeTrade({
     symbol,

@@ -10,7 +10,7 @@ describe("parseCandleIntervals", () => {
   });
 
   it("parses valid comma-separated intervals", () => {
-    expect(parseCandleIntervals("h1")).toEqual(["H1"]);
+    expect(parseCandleIntervals("h1,h1")).toEqual(["H1", "H1"]);
   });
 
   it("returns null when any interval is invalid", () => {

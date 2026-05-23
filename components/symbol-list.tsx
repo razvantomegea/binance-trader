@@ -6,7 +6,6 @@ import { useMemo, useState } from "react";
 interface SymbolRow {
   symbol: string;
   close: string | null;
-  changePct: number | null;
 }
 
 interface SymbolListProps {
@@ -49,7 +48,6 @@ export function SymbolList({
         ) : (
           <ul>
             {filtered.map((row) => {
-              const positive = (row.changePct ?? 0) >= 0;
               return (
                 <li key={row.symbol}>
                   <button
@@ -67,19 +65,6 @@ export function SymbolList({
                       <span className="block tabular-nums text-zinc-600 dark:text-zinc-300">
                         {row.close ?? "—"}
                       </span>
-                      {row.changePct !== null ? (
-                        <span
-                          className={clsx(
-                            "text-xs tabular-nums",
-                            positive
-                              ? "text-emerald-600"
-                              : "text-red-600",
-                          )}
-                        >
-                          {positive ? "+" : ""}
-                          {row.changePct.toFixed(2)}%
-                        </span>
-                      ) : null}
                     </span>
                   </button>
                 </li>
