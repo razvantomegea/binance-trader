@@ -47,11 +47,13 @@ export async function snapshotEquity({
 
   const equity = cash + positionsValue;
 
-  await getDb().insert(equitySnapshots).values({
-    cash: String(cash),
-    equity: String(equity),
-    interval,
-  });
+  await getDb()
+    .insert(equitySnapshots)
+    .values({
+      cash: String(cash),
+      equity: String(equity),
+      interval,
+    });
 
   return { cash, equity };
 }

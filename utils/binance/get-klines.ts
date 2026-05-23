@@ -3,7 +3,11 @@ import {
   BINANCE_KLINE_INTERVAL,
   KLINE_REVALIDATE_SECONDS,
 } from "@/constants/binance";
-import type { BinanceKline, CandleInterval, KlineCandle } from "@/types/binance";
+import type {
+  BinanceKline,
+  CandleInterval,
+  KlineCandle,
+} from "@/types/binance";
 
 interface GetKlinesParams {
   symbol: string;

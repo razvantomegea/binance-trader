@@ -2,11 +2,16 @@ import type { BinanceKlineInterval, CandleInterval } from "@/types/binance";
 
 export const BINANCE_API_BASE_URL = "https://api.binance.com";
 
-export const CANDLE_INTERVALS = ["H1"] as const satisfies readonly CandleInterval[];
+export const CANDLE_INTERVALS = [
+  "H1",
+] as const satisfies readonly CandleInterval[];
 
 export const STRATEGY_INTERVAL = "H1" as const satisfies CandleInterval;
 
-export const BINANCE_KLINE_INTERVAL: Record<CandleInterval, BinanceKlineInterval> = {
+export const BINANCE_KLINE_INTERVAL: Record<
+  CandleInterval,
+  BinanceKlineInterval
+> = {
   H1: "1h",
 };
 

@@ -1,4 +1,7 @@
-import { runStrategy, type RunStrategyResult } from "@/helpers/strategy/strategy-runner";
+import {
+  runStrategy,
+  type RunStrategyResult,
+} from "@/helpers/strategy/strategy-runner";
 
 const HEARTBEAT_MS = 15_000;
 const STOP_WAIT_TIMEOUT_MS = 5_000;
@@ -110,8 +113,12 @@ function toStatus(state: StrategyHeartbeatState): StrategyHeartbeatStatus {
     running: state.running,
     runningNow: state.runningNow,
     heartbeatMs: HEARTBEAT_MS,
-    startedAt: state.startedAtMs ? new Date(state.startedAtMs).toISOString() : null,
-    lastRunAt: state.lastRunAtMs ? new Date(state.lastRunAtMs).toISOString() : null,
+    startedAt: state.startedAtMs
+      ? new Date(state.startedAtMs).toISOString()
+      : null,
+    lastRunAt: state.lastRunAtMs
+      ? new Date(state.lastRunAtMs).toISOString()
+      : null,
     nextRunAt: state.running ? computeNextRunIso(Date.now()) : null,
     lastError: state.lastError,
     lastResult: state.lastResult,
@@ -140,7 +147,9 @@ export function startStrategyHeartbeat(): StrategyHeartbeatStatus {
   return toStatus(state);
 }
 
-async function waitForInFlightRun(state: StrategyHeartbeatState): Promise<void> {
+async function waitForInFlightRun(
+  state: StrategyHeartbeatState,
+): Promise<void> {
   const startedAtMs = Date.now();
   while (state.runningNow && Date.now() - startedAtMs < STOP_WAIT_TIMEOUT_MS) {
     await new Promise((resolve) => setTimeout(resolve, STOP_WAIT_POLL_MS));

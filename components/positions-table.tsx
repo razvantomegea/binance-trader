@@ -6,9 +6,7 @@ interface PositionsTableProps {
 
 export function PositionsTable({ positions }: PositionsTableProps) {
   if (positions.length === 0) {
-    return (
-      <p className="text-sm text-zinc-500">No open positions</p>
-    );
+    return <p className="text-sm text-zinc-500">No open positions</p>;
   }
 
   return (
@@ -32,8 +30,12 @@ export function PositionsTable({ positions }: PositionsTableProps) {
                 className="border-b border-zinc-100 dark:border-zinc-900"
               >
                 <td className="py-2 pr-3 font-medium">{row.symbol}</td>
-                <td className="py-2 pr-3 tabular-nums">{Number(row.qty).toFixed(6)}</td>
-                <td className="py-2 pr-3 tabular-nums">{Number(row.buyPrice).toFixed(6)}</td>
+                <td className="py-2 pr-3 tabular-nums">
+                  {Number(row.qty).toFixed(6)}
+                </td>
+                <td className="py-2 pr-3 tabular-nums">
+                  {Number(row.buyPrice).toFixed(6)}
+                </td>
                 <td className="py-2 pr-3 tabular-nums">
                   {row.currentPrice ? Number(row.currentPrice).toFixed(6) : "—"}
                 </td>

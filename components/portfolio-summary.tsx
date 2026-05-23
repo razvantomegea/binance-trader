@@ -12,17 +12,16 @@ function formatUsd(value: number): string {
   });
 }
 
-export function PortfolioSummary({ portfolio, loading }: PortfolioSummaryProps) {
+export function PortfolioSummary({
+  portfolio,
+  loading,
+}: PortfolioSummaryProps) {
   if (loading && !portfolio) {
-    return (
-      <div className="text-sm text-zinc-500">Loading portfolio...</div>
-    );
+    return <div className="text-sm text-zinc-500">Loading portfolio...</div>;
   }
 
   if (!portfolio) {
-    return (
-      <div className="text-sm text-red-500">Portfolio unavailable</div>
-    );
+    return <div className="text-sm text-red-500">Portfolio unavailable</div>;
   }
 
   const pnlPositive = portfolio.pnlPct >= 0;
@@ -31,7 +30,9 @@ export function PortfolioSummary({ portfolio, loading }: PortfolioSummaryProps) 
     <div className="flex flex-wrap gap-6 text-sm">
       <div>
         <p className="text-zinc-500">Cash</p>
-        <p className="font-semibold tabular-nums">${formatUsd(portfolio.cash)}</p>
+        <p className="font-semibold tabular-nums">
+          ${formatUsd(portfolio.cash)}
+        </p>
       </div>
       <div>
         <p className="text-zinc-500">Equity</p>

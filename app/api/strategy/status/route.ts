@@ -7,6 +7,9 @@ export async function GET() {
     return NextResponse.json(getStrategyHeartbeatStatus());
   } catch (error) {
     console.error("[strategy/status] failed", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 },
+    );
   }
 }

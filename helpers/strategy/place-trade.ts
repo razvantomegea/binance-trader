@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 
 import { getDb } from "@/db";
 import { positions, trades } from "@/db/schema";
+import { notifyTradeExecuted } from "@/helpers/notifications/notify-trade-executed";
 import type { CandleInterval } from "@/types/binance";
 import type { TradeSide } from "@/types/portfolio";
 
@@ -34,7 +35,7 @@ export async function placeTrade({
   const notional = qty * price;
   const candleDate = new Date(candleOpenTime);
 
-  await getDb().transaction(async (tx) => {
+  const tradeId = await getDb().transaction(async (tx) => {
     const [trade] = await tx
       .insert(trades)
       .values({
@@ -57,9 +58,20 @@ export async function placeTrade({
         buyTime: candleDate,
         buyTradeId: trade!.id,
       });
-      return;
+      return trade!.id;
     }
 
     await tx.delete(positions).where(eq(positions.symbol, symbol));
+    return trade!.id;
+  });
+
+  notifyTradeExecuted({
+    tradeId,
+    symbol,
+    side,
+    qty,
+    price,
+    reason,
+    interval,
   });
 }

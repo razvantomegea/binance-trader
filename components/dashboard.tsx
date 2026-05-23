@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { EquityCurve } from "@/components/equity-curve";
+import { PushNotificationToggle } from "@/components/push-notification-toggle";
 import { PortfolioSummary } from "@/components/portfolio-summary";
 import { PositionsTable } from "@/components/positions-table";
 import { PriceChart } from "@/components/price-chart";
@@ -138,22 +139,25 @@ export function Dashboard() {
               buy, -15% / +50% sell)
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => void toggleStrategy()}
-            disabled={strategyActionPending}
-            className={`rounded-md px-3 py-2 text-sm font-medium text-white disabled:opacity-50 ${
-              strategyStatus?.running
-                ? "bg-rose-600 hover:bg-rose-500"
-                : "bg-emerald-600 hover:bg-emerald-500"
-            }`}
-          >
-            {strategyActionPending
-              ? "Please wait..."
-              : strategyStatus?.running
-                ? "Stop strategy"
-                : "Start strategy"}
-          </button>
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            <PushNotificationToggle />
+            <button
+              type="button"
+              onClick={() => void toggleStrategy()}
+              disabled={strategyActionPending}
+              className={`rounded-md px-3 py-2 text-sm font-medium text-white disabled:opacity-50 ${
+                strategyStatus?.running
+                  ? "bg-rose-600 hover:bg-rose-500"
+                  : "bg-emerald-600 hover:bg-emerald-500"
+              }`}
+            >
+              {strategyActionPending
+                ? "Please wait..."
+                : strategyStatus?.running
+                  ? "Stop strategy"
+                  : "Start strategy"}
+            </button>
+          </div>
         </div>
         <div className="mx-auto mt-2 max-w-7xl text-xs text-zinc-500">
           <span className="inline-flex items-center gap-2">

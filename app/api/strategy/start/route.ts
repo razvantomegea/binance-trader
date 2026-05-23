@@ -8,6 +8,9 @@ export async function POST() {
     return NextResponse.json(result);
   } catch (error) {
     console.error("[strategy/start] failed", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 },
+    );
   }
 }

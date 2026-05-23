@@ -9,9 +9,7 @@ export function hasGainVsAnyRef({
   refs,
   thresholdPct,
 }: CompareToRefsParams): boolean {
-  return refs.some(
-    (ref) => ref > 0 && (reference - ref) / ref >= thresholdPct,
-  );
+  return refs.some((ref) => ref > 0 && (reference - ref) / ref >= thresholdPct);
 }
 
 export function hasLossVsAnyRef({
