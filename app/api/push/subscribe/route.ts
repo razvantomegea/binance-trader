@@ -1,14 +1,8 @@
 import { NextResponse } from "next/server";
 
 import { upsertPushSubscription } from "@/helpers/notifications/subscriptions";
+import { getErrorDetails } from "@/utils/error-handling";
 import { parsePushSubscriptionBody } from "@/utils/notifications/parse-push-subscription";
-
-function getErrorDetails(err: unknown): string {
-  if (err instanceof Error && err.message) {
-    return err.message;
-  }
-  return String(err);
-}
 
 export async function POST(request: Request) {
   let body: unknown;

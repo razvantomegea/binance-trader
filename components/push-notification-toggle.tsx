@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import { getErrorDetails } from "@/utils/error-handling";
 import { urlBase64ToUint8Array } from "@/utils/notifications/url-base64-to-uint8array";
 
 type PushState = "unsupported" | "loading" | "disabled" | "enabled" | "error";
@@ -17,13 +18,6 @@ async function getActiveServiceWorkerRegistration(): Promise<ServiceWorkerRegist
   return navigator.serviceWorker.ready;
 }
 
-function getErrorMessage(err: unknown): string {
-  if (err instanceof Error && err.message) {
-    return err.message;
-  }
-  return String(err);
-}
-
 async function readErrorResponseBody(response: Response): Promise<string> {
   try {
     const data = (await response.json()) as {
@@ -36,6 +30,70 @@ async function readErrorResponseBody(response: Response): Promise<string> {
   } catch {
     return "";
   }
+}
+
+type PushEnvironmentDebug = {
+  permissionState?: NotificationPermission | "prompt" | "granted" | "denied";
+  isSecureContext: boolean;
+  userAgent: string;
+  isBrave: boolean;
+};
+
+function normalizeVapidPublicKey(value: string): string {
+  const trimmed = value.trim();
+  const withoutQuotes =
+    trimmed.startsWith('"') && trimmed.endsWith('"')
+      ? trimmed.slice(1, -1)
+      : trimmed;
+  return withoutQuotes.trim();
+}
+
+function toPushApplicationServerKey(
+  value: Uint8Array,
+): string | BufferSource | null | undefined {
+  return Uint8Array.from(value);
+}
+
+async function collectPushEnvironmentDebug(
+  registration: ServiceWorkerRegistration,
+  applicationServerKey: Uint8Array,
+): Promise<PushEnvironmentDebug> {
+  let permissionState:
+    | NotificationPermission
+    | "prompt"
+    | "granted"
+    | "denied"
+    | undefined;
+  try {
+    permissionState = await registration.pushManager.permissionState({
+      userVisibleOnly: true,
+      applicationServerKey: toPushApplicationServerKey(applicationServerKey),
+    });
+  } catch {
+    permissionState = Notification.permission;
+  }
+
+  const braveCheck = (
+    navigator as Navigator & {
+      brave?: { isBrave?: () => Promise<boolean> };
+    }
+  ).brave?.isBrave;
+
+  let isBrave = false;
+  if (typeof braveCheck === "function") {
+    try {
+      isBrave = await braveCheck();
+    } catch {
+      isBrave = false;
+    }
+  }
+
+  return {
+    permissionState,
+    isSecureContext: window.isSecureContext,
+    userAgent: navigator.userAgent,
+    isBrave,
+  };
 }
 
 export function PushNotificationToggle() {
@@ -110,15 +168,27 @@ export function PushNotificationToggle() {
       step = "register-service-worker";
       const { publicKey } = (await vapidRes.json()) as { publicKey: string };
       const registration = await getActiveServiceWorkerRegistration();
+      const normalizedPublicKey = normalizeVapidPublicKey(publicKey);
+      const applicationServerKey = urlBase64ToUint8Array(normalizedPublicKey);
+
+      if (applicationServerKey.length !== 65) {
+        throw new Error(
+          `Invalid VAPID public key length (${applicationServerKey.length} bytes)`,
+        );
+      }
 
       step = "get-or-create-subscription";
       let subscription = await getBrowserSubscription(registration);
       if (!subscription) {
+        const envDebug = await collectPushEnvironmentDebug(
+          registration,
+          applicationServerKey,
+        );
+        console.info("[push-enable] environment", envDebug);
         subscription = await registration.pushManager.subscribe({
           userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(
-            publicKey,
-          ) as BufferSource,
+          applicationServerKey:
+            toPushApplicationServerKey(applicationServerKey),
         });
       }
 
@@ -149,12 +219,18 @@ export function PushNotificationToggle() {
       setState("enabled");
       setMessage(null);
     } catch (err) {
+      const errMessage = getErrorDetails(err);
       console.error("[push-enable] failed", {
         step,
-        error: getErrorMessage(err),
+        error: errMessage,
+        notificationPermission: Notification.permission,
       });
       setState("error");
-      setMessage("Failed to enable push notifications");
+      setMessage(
+        errMessage.toLowerCase().includes("push service error")
+          ? "Browser push service blocked/unavailable. Disable blocking extensions/shields and retry."
+          : "Failed to enable push notifications",
+      );
     } finally {
       setPending(false);
     }
@@ -194,7 +270,7 @@ export function PushNotificationToggle() {
     } catch (err) {
       console.error("[push-disable] failed", {
         step,
-        error: getErrorMessage(err),
+        error: getErrorDetails(err),
       });
       setState("error");
       setMessage("Failed to disable push notifications");

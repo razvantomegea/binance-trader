@@ -1,0 +1,6 @@
+export function getErrorDetails(err: unknown): string {
+  if (err instanceof Error) {
+    return err.message;
+  }
+  return String(err);
+}
