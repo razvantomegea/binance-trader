@@ -1,6 +1,7 @@
 import type { BinanceKlineInterval, CandleInterval } from "@/types/binance";
 
-export const BINANCE_API_BASE_URL = "https://api.binance.com";
+export const BINANCE_API_BASE_URL =
+  process.env.BINANCE_API_BASE_URL?.trim() || "https://data-api.binance.vision";
 
 export const CANDLE_INTERVALS = [
   "H1",

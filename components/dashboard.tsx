@@ -69,7 +69,10 @@ export function Dashboard() {
         }));
         setSymbolRows(rows);
 
-        if (rows.length > 0 && !rows.some((row) => row.symbol === selectedSymbol)) {
+        if (
+          rows.length > 0 &&
+          !rows.some((row) => row.symbol === selectedSymbol)
+        ) {
           setSelectedSymbol(rows[0]!.symbol);
         }
       }
@@ -189,10 +192,7 @@ export function Dashboard() {
           </span>
         </div>
         <div className="mx-auto mt-4 max-w-7xl">
-          <PortfolioSummary
-            portfolio={portfolio}
-            loading={loadingPortfolio}
-          />
+          <PortfolioSummary portfolio={portfolio} loading={loadingPortfolio} />
         </div>
       </header>
 

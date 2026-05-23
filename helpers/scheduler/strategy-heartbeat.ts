@@ -158,9 +158,10 @@ export async function getStrategyHeartbeatStatus(): Promise<StrategyHeartbeatSta
 }
 
 export async function startStrategyHeartbeat(): Promise<StrategyHeartbeatStatus> {
+  await setSchedulerRunning(true);
+
   if (isServerlessScheduler()) {
-    await setSchedulerRunning(true);
-    console.info("[heartbeat] strategy scheduler enabled (Vercel cron)");
+    console.info("[heartbeat] strategy scheduler enabled (Railway cron)");
     return toServerlessStatus();
   }
 
@@ -191,9 +192,10 @@ async function waitForInFlightRun(
 }
 
 export async function stopStrategyHeartbeat(): Promise<StrategyHeartbeatStatus> {
+  await setSchedulerRunning(false);
+
   if (isServerlessScheduler()) {
-    await setSchedulerRunning(false);
-    console.info("[heartbeat] strategy scheduler disabled (Vercel cron)");
+    console.info("[heartbeat] strategy scheduler disabled (Railway cron)");
     return toServerlessStatus();
   }
 

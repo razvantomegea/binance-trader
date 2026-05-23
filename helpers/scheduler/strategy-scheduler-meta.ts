@@ -21,17 +21,14 @@ async function getMetaValue(key: string): Promise<string | null> {
 }
 
 async function setMetaValue(key: string, value: string): Promise<void> {
-  await getDb()
-    .insert(strategyMeta)
-    .values({ key, value })
-    .onConflictDoUpdate({
-      target: strategyMeta.key,
-      set: { value },
-    });
+  await getDb().insert(strategyMeta).values({ key, value }).onConflictDoUpdate({
+    target: strategyMeta.key,
+    set: { value },
+  });
 }
 
 export function isServerlessScheduler(): boolean {
-  return process.env.VERCEL === "1" || Boolean(process.env.VERCEL_ENV);
+  return process.env.SCHEDULER_MODE === "external-cron";
 }
 
 export async function getSchedulerRunning(): Promise<boolean> {
