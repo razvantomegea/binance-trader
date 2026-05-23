@@ -127,6 +127,9 @@ export function Dashboard() {
     }
   };
 
+  const disableStrategyButton =
+    strategyActionPending || (loadingPortfolio && !strategyStatus?.running);
+
   return (
     <div className="flex min-h-screen flex-col bg-zinc-50 text-zinc-900 dark:bg-black dark:text-zinc-50">
       <header className="border-b border-zinc-200 bg-white px-4 py-4 dark:border-zinc-800 dark:bg-zinc-950">
@@ -143,7 +146,7 @@ export function Dashboard() {
             <button
               type="button"
               onClick={() => void toggleStrategy()}
-              disabled={strategyActionPending}
+              disabled={disableStrategyButton}
               className={`rounded-md px-3 py-2 text-sm font-medium text-white disabled:opacity-50 ${
                 strategyStatus?.running
                   ? "bg-rose-600 hover:bg-rose-500"

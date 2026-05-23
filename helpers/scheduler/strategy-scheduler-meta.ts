@@ -37,7 +37,7 @@ export function isServerlessScheduler(): boolean {
 export async function getSchedulerRunning(): Promise<boolean> {
   const value = await getMetaValue(RUNNING_KEY);
   if (value === null) {
-    return true;
+    return false;
   }
   return value === "true";
 }
