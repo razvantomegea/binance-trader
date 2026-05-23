@@ -1,0 +1,35 @@
+export interface BinanceExchangeSymbol {
+  symbol: string;
+  status: string;
+  baseAsset: string;
+  quoteAsset: string;
+}
+
+export interface BinanceExchangeInfoResponse {
+  symbols: BinanceExchangeSymbol[];
+}
+
+export type CandleInterval = "H1" | "H4" | "D";
+
+export type BinanceKlineInterval = "1h" | "4h" | "1d";
+
+/** Binance kline: [openTime, open, high, low, close, ...] */
+export type BinanceKline = [
+  number,
+  string,
+  string,
+  string,
+  string,
+  ...unknown[],
+];
+
+export interface SymbolClosingPrices {
+  symbol: string;
+  prices: Partial<Record<CandleInterval, string>>;
+}
+
+export interface ClosingPricesResponse {
+  intervals: CandleInterval[];
+  updatedAt: string;
+  data: SymbolClosingPrices[];
+}
