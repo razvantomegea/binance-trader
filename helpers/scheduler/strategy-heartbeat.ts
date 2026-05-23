@@ -1,4 +1,9 @@
 import {
+  getSchedulerPersistedStatus,
+  isServerlessScheduler,
+  setSchedulerRunning,
+} from "@/helpers/scheduler/strategy-scheduler-meta";
+import {
   runStrategy,
   type RunStrategyResult,
 } from "@/helpers/strategy/strategy-runner";
@@ -125,11 +130,40 @@ function toStatus(state: StrategyHeartbeatState): StrategyHeartbeatStatus {
   };
 }
 
-export function getStrategyHeartbeatStatus(): StrategyHeartbeatStatus {
+async function toServerlessStatus(): Promise<StrategyHeartbeatStatus> {
+  const persisted = await getSchedulerPersistedStatus();
+
+  return {
+    running: persisted.running,
+    runningNow: false,
+    heartbeatMs: HEARTBEAT_MS,
+    startedAt: persisted.startedAtMs
+      ? new Date(persisted.startedAtMs).toISOString()
+      : null,
+    lastRunAt: persisted.lastRunAtMs
+      ? new Date(persisted.lastRunAtMs).toISOString()
+      : null,
+    nextRunAt: persisted.running ? computeNextRunIso(Date.now()) : null,
+    lastError: persisted.lastError,
+    lastResult: persisted.lastResult,
+  };
+}
+
+export async function getStrategyHeartbeatStatus(): Promise<StrategyHeartbeatStatus> {
+  if (isServerlessScheduler()) {
+    return toServerlessStatus();
+  }
+
   return toStatus(getState());
 }
 
-export function startStrategyHeartbeat(): StrategyHeartbeatStatus {
+export async function startStrategyHeartbeat(): Promise<StrategyHeartbeatStatus> {
+  if (isServerlessScheduler()) {
+    await setSchedulerRunning(true);
+    console.info("[heartbeat] strategy scheduler enabled (Vercel cron)");
+    return toServerlessStatus();
+  }
+
   const state = getState();
   if (state.running) {
     return toStatus(state);
@@ -157,6 +191,12 @@ async function waitForInFlightRun(
 }
 
 export async function stopStrategyHeartbeat(): Promise<StrategyHeartbeatStatus> {
+  if (isServerlessScheduler()) {
+    await setSchedulerRunning(false);
+    console.info("[heartbeat] strategy scheduler disabled (Vercel cron)");
+    return toServerlessStatus();
+  }
+
   const state = getState();
   if (!state.running) {
     return toStatus(state);

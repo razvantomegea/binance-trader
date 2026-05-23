@@ -4,7 +4,7 @@ import { getStrategyHeartbeatStatus } from "@/helpers/scheduler/strategy-heartbe
 
 export async function GET() {
   try {
-    return NextResponse.json(getStrategyHeartbeatStatus());
+    return NextResponse.json(await getStrategyHeartbeatStatus());
   } catch (error) {
     console.error("[strategy/status] failed", error);
     return NextResponse.json(

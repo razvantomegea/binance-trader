@@ -37,5 +37,11 @@ export async function removePushSubscription(endpoint: string): Promise<void> {
 export async function listPushSubscriptions(): Promise<
   Array<{ endpoint: string; p256dh: string; auth: string }>
 > {
-  return getDb().select().from(pushSubscriptions);
+  return getDb()
+    .select({
+      endpoint: pushSubscriptions.endpoint,
+      p256dh: pushSubscriptions.p256dh,
+      auth: pushSubscriptions.auth,
+    })
+    .from(pushSubscriptions);
 }

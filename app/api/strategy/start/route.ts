@@ -4,7 +4,7 @@ import { startStrategyHeartbeat } from "@/helpers/scheduler/strategy-heartbeat";
 
 export async function POST() {
   try {
-    const result = startStrategyHeartbeat();
+    const result = await startStrategyHeartbeat();
     return NextResponse.json(result);
   } catch (error) {
     console.error("[strategy/start] failed", error);

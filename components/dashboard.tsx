@@ -10,7 +10,6 @@ import { PriceChart } from "@/components/price-chart";
 import { SymbolList } from "@/components/symbol-list";
 import { TradesTable } from "@/components/trades-table";
 import { STRATEGY_INTERVAL } from "@/constants/strategy";
-import type { ClosingPricesResponse } from "@/types/binance";
 import type {
   EquityCurveResponse,
   PortfolioResponse,
@@ -53,20 +52,20 @@ export function Dashboard() {
     setLoadingPortfolio(true);
 
     try {
-      const [pricesRes, portfolioRes, tradesRes, equityRes, strategyRes] =
+      const [symbolsRes, portfolioRes, tradesRes, equityRes, strategyRes] =
         await Promise.all([
-          fetch(`/api/closing-prices?intervals=${STRATEGY_INTERVAL}`),
+          fetch("/api/usdt-symbols"),
           fetch(`/api/portfolio?interval=${STRATEGY_INTERVAL}`),
           fetch("/api/trades?limit=50"),
           fetch(`/api/equity-curve?interval=${STRATEGY_INTERVAL}&limit=200`),
           fetch("/api/strategy/status"),
         ]);
 
-      if (pricesRes.ok) {
-        const pricesJson = (await pricesRes.json()) as ClosingPricesResponse;
-        const rows: SymbolRow[] = pricesJson.data.map((item) => ({
-          symbol: item.symbol,
-          close: item.prices.H1 ?? null,
+      if (symbolsRes.ok) {
+        const { symbols } = (await symbolsRes.json()) as { symbols: string[] };
+        const rows: SymbolRow[] = symbols.map((symbol) => ({
+          symbol,
+          close: null,
         }));
         setSymbolRows(rows);
 
