@@ -9,9 +9,17 @@ export interface BinanceExchangeInfoResponse {
   symbols: BinanceExchangeSymbol[];
 }
 
-export type CandleInterval = "H1" | "H4" | "D";
+export type CandleInterval = "H1";
 
-export type BinanceKlineInterval = "1h" | "4h" | "1d";
+export type BinanceKlineInterval = "1h";
+
+export interface KlineCandle {
+  openTime: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+}
 
 /** Binance kline: [openTime, open, high, low, close, ...] */
 export type BinanceKline = [
