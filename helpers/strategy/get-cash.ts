@@ -3,11 +3,7 @@ import { sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import { trades } from "@/db/schema";
 import { INITIAL_PAPER_CASH } from "@/constants/binance";
-
-function parseFiniteNumber(value: unknown): number {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
+import { parseFiniteNumber } from "@/utils/parse-finite-number";
 
 export async function getCash(): Promise<number> {
   const [row] = await getDb()

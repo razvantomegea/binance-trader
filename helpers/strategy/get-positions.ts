@@ -1,10 +1,6 @@
 import { getDb } from "@/db";
 import { positions } from "@/db/schema";
-
-function parseFiniteNumber(value: unknown): number {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
+import { parseFiniteNumber } from "@/utils/parse-finite-number";
 
 export interface OpenPosition {
   symbol: string;

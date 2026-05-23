@@ -1,6 +1,8 @@
 import { runStrategy, type RunStrategyResult } from "@/helpers/strategy/strategy-runner";
 
 const HEARTBEAT_MS = 15_000;
+const STOP_WAIT_TIMEOUT_MS = 5_000;
+const STOP_WAIT_POLL_MS = 50;
 
 interface StrategyHeartbeatState {
   running: boolean;
@@ -94,6 +96,7 @@ async function runIfNeeded(state: StrategyHeartbeatState): Promise<void> {
       `[heartbeat] H1 done: trades=${result.tradesExecuted} equity=${result.equity.toFixed(2)}`,
     );
   } catch (error) {
+    state.lastCompletedHourKey = hourKey;
     state.lastError =
       error instanceof Error ? error.message : "Strategy run failed";
     console.error("[heartbeat] H1 failed", error);
@@ -137,14 +140,21 @@ export function startStrategyHeartbeat(): StrategyHeartbeatStatus {
   return toStatus(state);
 }
 
-export function stopStrategyHeartbeat(): StrategyHeartbeatStatus {
+async function waitForInFlightRun(state: StrategyHeartbeatState): Promise<void> {
+  const startedAtMs = Date.now();
+  while (state.runningNow && Date.now() - startedAtMs < STOP_WAIT_TIMEOUT_MS) {
+    await new Promise((resolve) => setTimeout(resolve, STOP_WAIT_POLL_MS));
+  }
+}
+
+export async function stopStrategyHeartbeat(): Promise<StrategyHeartbeatStatus> {
   const state = getState();
   if (!state.running) {
     return toStatus(state);
   }
 
   state.running = false;
-  state.runningNow = false;
+  await waitForInFlightRun(state);
   if (state.timer) {
     clearInterval(state.timer);
     state.timer = null;
