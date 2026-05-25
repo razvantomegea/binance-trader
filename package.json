@@ -30,6 +30,7 @@
     "web-push": "^3.6.7"
   },
   "devDependencies": {
+    "@railway/cli": "^4.62.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/node-cron": "^3.0.11",
