@@ -35,35 +35,38 @@ export async function placeTrade({
   const notional = qty * price;
   const candleDate = new Date(candleOpenTime);
 
-  const tradeId = await getDb().transaction(async (tx) => {
-    const [trade] = await tx
-      .insert(trades)
-      .values({
-        symbol,
-        side,
-        qty: String(qty),
-        price: String(price),
-        notional: String(notional),
-        interval,
-        candleOpenTime: candleDate,
-        reason,
-      })
-      .returning({ id: trades.id });
+  const db = getDb();
+  const [trade] = await db
+    .insert(trades)
+    .values({
+      symbol,
+      side,
+      qty: String(qty),
+      price: String(price),
+      notional: String(notional),
+      interval,
+      candleOpenTime: candleDate,
+      reason,
+    })
+    .returning({ id: trades.id });
 
-    if (side === "BUY") {
-      await tx.insert(positions).values({
-        symbol,
-        qty: String(qty),
-        buyPrice: String(price),
-        buyTime: candleDate,
-        buyTradeId: trade!.id,
-      });
-      return trade!.id;
-    }
+  if (!trade) {
+    throw new Error("Failed to insert trade");
+  }
 
-    await tx.delete(positions).where(eq(positions.symbol, symbol));
-    return trade!.id;
-  });
+  if (side === "BUY") {
+    await db.insert(positions).values({
+      symbol,
+      qty: String(qty),
+      buyPrice: String(price),
+      buyTime: candleDate,
+      buyTradeId: trade.id,
+    });
+  } else {
+    await db.delete(positions).where(eq(positions.symbol, symbol));
+  }
+
+  const tradeId = trade.id;
 
   notifyTradeExecuted({
     tradeId,
