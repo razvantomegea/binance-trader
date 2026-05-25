@@ -54,16 +54,21 @@ export async function placeTrade({
     throw new Error("Failed to insert trade");
   }
 
-  if (side === "BUY") {
-    await db.insert(positions).values({
-      symbol,
-      qty: String(qty),
-      buyPrice: String(price),
-      buyTime: candleDate,
-      buyTradeId: trade.id,
-    });
-  } else {
-    await db.delete(positions).where(eq(positions.symbol, symbol));
+  try {
+    if (side === "BUY") {
+      await db.insert(positions).values({
+        symbol,
+        qty: String(qty),
+        buyPrice: String(price),
+        buyTime: candleDate,
+        buyTradeId: trade.id,
+      });
+    } else {
+      await db.delete(positions).where(eq(positions.symbol, symbol));
+    }
+  } catch (error) {
+    await db.delete(trades).where(eq(trades.id, trade.id));
+    throw error;
   }
 
   const tradeId = trade.id;
