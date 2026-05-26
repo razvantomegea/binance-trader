@@ -78,7 +78,7 @@ export async function evaluateSymbol({
         price: close,
         interval,
         candleOpenTime: latest.openTime,
-        reason: "stop_loss_15pct_vs_24h_or_buy",
+        reason: "stop_loss_15pct_vs_buy",
       });
       return { candleOpenTime: latest.openTime, traded: true };
     }
@@ -97,7 +97,7 @@ export async function evaluateSymbol({
         price: close,
         interval,
         candleOpenTime: latest.openTime,
-        reason: "take_profit_50pct_vs_24h_or_buy",
+        reason: "take_profit_50pct_vs_buy",
       });
       return { candleOpenTime: latest.openTime, traded: true };
     }

@@ -86,7 +86,7 @@ describe("evaluateSymbol exits", () => {
     expect(mockedPlaceTrade).toHaveBeenCalledWith(
       expect.objectContaining({
         side: "SELL",
-        reason: "take_profit_50pct_vs_24h_or_buy",
+        reason: "take_profit_50pct_vs_buy",
       }),
     );
   });
@@ -108,7 +108,7 @@ describe("evaluateSymbol exits", () => {
     expect(mockedPlaceTrade).toHaveBeenCalledWith(
       expect.objectContaining({
         side: "SELL",
-        reason: "stop_loss_15pct_vs_24h_or_buy",
+        reason: "stop_loss_15pct_vs_buy",
       }),
     );
   });
@@ -130,7 +130,7 @@ describe("evaluateSymbol exits", () => {
     expect(mockedPlaceTrade).toHaveBeenCalledWith(
       expect.objectContaining({
         side: "SELL",
-        reason: "take_profit_50pct_vs_24h_or_buy",
+        reason: "take_profit_50pct_vs_buy",
       }),
     );
   });
@@ -153,7 +153,7 @@ describe("evaluateSymbol exits", () => {
     expect(mockedPlaceTrade).toHaveBeenCalledWith(
       expect.objectContaining({
         side: "SELL",
-        reason: "take_profit_50pct_vs_24h_or_buy",
+        reason: "take_profit_50pct_vs_buy",
       }),
     );
   });
