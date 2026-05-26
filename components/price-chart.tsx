@@ -1,17 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 
 import type { CandleInterval, KlineCandle } from "@/types/binance";
+
+import { BaseAreaChart } from "./base-area-chart";
 
 interface PriceChartProps {
   symbol: string;
@@ -22,6 +15,9 @@ interface ChartPoint {
   time: string;
   close: number;
 }
+
+const formatTooltipValue = (value: number) => value.toFixed(6);
+const formatYAxis = (value: number) => value.toFixed(4);
 
 export function PriceChart({ symbol, interval }: PriceChartProps) {
   const [data, setData] = useState<ChartPoint[]>([]);
@@ -92,43 +88,16 @@ export function PriceChart({ symbol, interval }: PriceChartProps) {
 
   return (
     <div className="h-72 w-full">
-      <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={data}>
-          <defs>
-            <linearGradient id="priceFill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#10b981" stopOpacity={0.35} />
-              <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-            </linearGradient>
-          </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="#27272a" opacity={0.3} />
-          <XAxis dataKey="time" hide />
-          <YAxis
-            domain={["auto", "auto"]}
-            tick={{ fontSize: 11 }}
-            width={70}
-            tickFormatter={(value: number) => value.toFixed(4)}
-          />
-          <Tooltip
-            formatter={(value: number) => [value.toFixed(6), "Close"]}
-            labelFormatter={(label) => String(label)}
-            contentStyle={{
-              backgroundColor: "#09090b",
-              border: "1px solid #27272a",
-              borderRadius: "0.5rem",
-            }}
-            labelStyle={{ color: "#d4d4d8" }}
-            itemStyle={{ color: "#fafafa" }}
-          />
-          <Area
-            type="monotone"
-            dataKey="close"
-            stroke="#10b981"
-            fill="url(#priceFill)"
-            strokeWidth={2}
-            dot={false}
-          />
-        </AreaChart>
-      </ResponsiveContainer>
+      <BaseAreaChart
+        data={data}
+        dataKey="close"
+        color="#10b981"
+        gradientId="priceFill"
+        tooltipLabel="Close"
+        tooltipValueFormatter={formatTooltipValue}
+        yAxisDomain={["auto", "auto"]}
+        yAxisFormatter={formatYAxis}
+      />
     </div>
   );
 }
