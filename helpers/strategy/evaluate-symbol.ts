@@ -57,11 +57,16 @@ export async function evaluateSymbol({
   const { close } = latest;
 
   if (position) {
-    const refsWithBuyPrice = [position.buyPrice, ...priorCloses];
+    const buyOpenTime = position.buyTime.getTime();
+    if (latest.openTime < buyOpenTime) {
+      return { candleOpenTime: latest.openTime, traded: false };
+    }
+
+    const exitRefs = [position.buyPrice];
 
     const shouldStop = hasLossVsAnyRef({
       reference: close,
-      refs: refsWithBuyPrice,
+      refs: exitRefs,
       thresholdPct: STOP_LOSS_PCT,
     });
 
@@ -80,7 +85,7 @@ export async function evaluateSymbol({
 
     const shouldTakeProfit = hasGainVsAnyRef({
       reference: close,
-      refs: refsWithBuyPrice,
+      refs: exitRefs,
       thresholdPct: TAKE_PROFIT_PCT,
     });
 
