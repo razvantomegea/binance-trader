@@ -9,7 +9,6 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "deploy:railway": "pnpm build && npx @railway/cli up --service \"22a24e9e-c6dd-48f3-ae15-4913c30b959a\" --detach",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
