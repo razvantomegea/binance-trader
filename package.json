@@ -15,7 +15,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "db:push": "drizzle-kit push",
-    "cron:trigger": "node scripts/trigger-strategy-cron.mjs"
+    "cron:trigger": "node scripts/trigger-strategy-cron.mjs",
+    "railway:up": "pnpm run railway:up:web",
+    "railway:up:web": "node scripts/railway-up.mjs RAILWAY_WEB_SERVICE",
+    "railway:up:cron": "node scripts/railway-up.mjs RAILWAY_CRON_SERVICE"
   },
   "dependencies": {
     "@neondatabase/serverless": "1.0.2",
