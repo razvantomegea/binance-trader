@@ -4,25 +4,14 @@ import {
   getSchedulerRunning,
   recordSchedulerRun,
 } from "@/helpers/scheduler/strategy-scheduler-meta";
+import { hasValidCronSecret } from "@/utils/api/cron-secret-auth";
 import { runStrategy } from "@/helpers/strategy/strategy-runner";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
-function isAuthorized(request: Request): boolean {
-  const secret = process.env.CRON_SECRET;
-  const authorizationHeader = request.headers.get("authorization");
-  const bearerToken = authorizationHeader?.startsWith("Bearer ")
-    ? authorizationHeader.slice("Bearer ".length).trim()
-    : undefined;
-  const headerToken = request.headers.get("x-cron-secret")?.trim();
-  const token = bearerToken || headerToken;
-
-  return Boolean(secret && token === secret);
-}
-
 async function handleCronRun(request: Request) {
-  if (!isAuthorized(request)) {
+  if (!hasValidCronSecret(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

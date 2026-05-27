@@ -32,9 +32,6 @@ export async function POST(request: Request) {
       endpoint: parsed.endpoint,
       details,
     });
-    return NextResponse.json(
-      { error: "Failed to remove subscription", details },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to remove subscription" }, { status: 500 });
   }
 }
