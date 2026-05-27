@@ -24,11 +24,17 @@ export interface TradeRow {
   side: TradeSide;
   qty: string;
   price: string;
+  /** Entry price (BUY fill, or paired BUY on SELL) */
+  openPrice: string | null;
+  /** Exit price (SELL fill only) */
+  closePrice: string | null;
   notional: string;
   interval: string;
   candleOpenTime: string;
   reason: string;
   createdAt: string;
+  /** Realized P&L % on SELL (vs paired BUY); null for BUY or unknown pairing */
+  realizedPnlPct: number | null;
 }
 
 export interface TradesResponse {

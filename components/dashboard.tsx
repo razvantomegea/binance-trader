@@ -18,6 +18,7 @@ import type {
 
 const POLL_MS = 30_000;
 const DEFAULT_SYMBOL = "BTCUSDT";
+const CRON_INTERVAL_MS = 15 * 60 * 1000;
 const MISSED_RUN_WARNING_MS = 2 * 60 * 60 * 1000;
 const NO_RUN_AFTER_START_WARNING_MS = 75 * 60 * 1000;
 
@@ -50,6 +51,12 @@ function parseIsoToMs(value: string | null): number | null {
   }
   const ts = Date.parse(value);
   return Number.isFinite(ts) ? ts : null;
+}
+
+function computeNextFifteenMinuteRunIso(tsMs: number): string {
+  const intervalStartMs =
+    Math.floor(tsMs / CRON_INTERVAL_MS) * CRON_INTERVAL_MS;
+  return new Date(intervalStartMs + CRON_INTERVAL_MS).toISOString();
 }
 
 function buildCronAlerts({
@@ -317,9 +324,12 @@ export function Dashboard() {
                   ? "Started"
                   : "Stopped"}
             </span>
-            {strategyStatus?.nextRunAt ? (
+            {strategyStatus?.running ? (
               <span>
-                Next run: {new Date(strategyStatus.nextRunAt).toLocaleString()}
+                Next run:{" "}
+                {new Date(
+                  computeNextFifteenMinuteRunIso(Date.now()),
+                ).toLocaleString()}
               </span>
             ) : null}
             {strategyStatus?.lastRunAt ? (
@@ -355,7 +365,7 @@ export function Dashboard() {
         </div>
       </header>
 
-      <main className="mx-auto grid w-full max-w-7xl flex-1 grid-cols-1 gap-4 p-4 lg:grid-cols-[280px_1fr]">
+      <main className="mx-auto grid w-full min-w-0 max-w-7xl flex-1 grid-cols-1 gap-4 p-4 lg:grid-cols-[280px_1fr]">
         <div className="h-[calc(100vh-12rem)] min-h-[320px]">
           <SymbolList
             symbols={symbolRows}
@@ -380,19 +390,25 @@ export function Dashboard() {
             <EquityCurve snapshots={snapshots} loading={loadingPortfolio} />
           </section>
 
-          <div className="grid gap-4 lg:grid-cols-2">
-            <section className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
+          <div className="grid min-w-0 gap-4 lg:grid-cols-2">
+            <section className="min-w-0 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
               <h2 className="mb-3 text-sm font-medium text-zinc-500">
                 Open positions
               </h2>
-              <PositionsTable positions={portfolio?.positions ?? []} />
+              <PositionsTable
+                positions={portfolio?.positions ?? []}
+                onSymbolSelect={setSelectedSymbol}
+              />
             </section>
 
-            <section className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
+            <section className="min-w-0 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
               <h2 className="mb-3 text-sm font-medium text-zinc-500">
                 Recent trades
               </h2>
-              <TradesTable trades={trades} />
+              <TradesTable
+                trades={trades}
+                onSymbolSelect={setSelectedSymbol}
+              />
             </section>
           </div>
         </div>

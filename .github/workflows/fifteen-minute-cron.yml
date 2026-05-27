@@ -1,4 +1,4 @@
-name: Hourly Strategy Cron
+name: 15-Minute Strategy Cron
 
 on:
   schedule:

@@ -4,6 +4,7 @@ import { getCash } from "@/helpers/strategy/get-cash";
 import { getOpenPositions } from "@/helpers/strategy/get-positions";
 import type { PortfolioResponse, PositionRow } from "@/types/portfolio";
 import { getLatestClosedKline } from "@/utils/binance/get-klines";
+import { pnlPercentFromPrices } from "@/utils/pnl-percent";
 import { processInBatches } from "@/utils/process-in-batches";
 import { BINANCE_FETCH_CONCURRENCY } from "@/constants/binance";
 export async function buildPortfolioResponse(): Promise<PortfolioResponse> {
@@ -43,7 +44,7 @@ export async function buildPortfolioResponse(): Promise<PortfolioResponse> {
       currentPrice !== null ? position.qty * currentPrice : null;
     const unrealizedPnlPct =
       currentPrice !== null
-        ? ((currentPrice - position.buyPrice) / position.buyPrice) * 100
+        ? pnlPercentFromPrices(position.buyPrice, currentPrice)
         : null;
 
     if (marketValue !== null) {
