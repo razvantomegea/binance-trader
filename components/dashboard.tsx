@@ -9,7 +9,12 @@ import { PositionsTable } from "@/components/positions-table";
 import { PriceChart } from "@/components/price-chart";
 import { SymbolList } from "@/components/symbol-list";
 import { TradesTable } from "@/components/trades-table";
+import {
+  STRATEGY_CRON_NO_RUN_AFTER_START_MS,
+  STRATEGY_CRON_STALE_MS,
+} from "@/constants/cron";
 import { STRATEGY_INTERVAL } from "@/constants/strategy";
+import { computeNextStrategyCronRunIso } from "@/utils/scheduler/compute-next-cron-run";
 import type {
   EquityCurveResponse,
   PortfolioResponse,
@@ -18,9 +23,6 @@ import type {
 
 const POLL_MS = 30_000;
 const DEFAULT_SYMBOL = "BTCUSDT";
-const CRON_INTERVAL_MS = 15 * 60 * 1000;
-const MISSED_RUN_WARNING_MS = 2 * 60 * 60 * 1000;
-const NO_RUN_AFTER_START_WARNING_MS = 75 * 60 * 1000;
 
 interface SymbolRow {
   symbol: string;
@@ -51,12 +53,6 @@ function parseIsoToMs(value: string | null): number | null {
   }
   const ts = Date.parse(value);
   return Number.isFinite(ts) ? ts : null;
-}
-
-function computeNextFifteenMinuteRunIso(tsMs: number): string {
-  const intervalStartMs =
-    Math.floor(tsMs / CRON_INTERVAL_MS) * CRON_INTERVAL_MS;
-  return new Date(intervalStartMs + CRON_INTERVAL_MS).toISOString();
 }
 
 function buildCronAlerts({
@@ -106,18 +102,19 @@ function buildCronAlerts({
   const lastRunAtMs = parseIsoToMs(strategyStatus.lastRunAt);
   const startedAtMs = parseIsoToMs(strategyStatus.startedAt);
 
-  if (lastRunAtMs && nowMs - lastRunAtMs > MISSED_RUN_WARNING_MS) {
+  if (lastRunAtMs && nowMs - lastRunAtMs > STRATEGY_CRON_STALE_MS) {
     alerts.push({
       id: "stale-last-run",
       severity: "warning",
-      message: "Cron looks stale: no successful run in the last 2 hours.",
+      message:
+        "Cron looks stale: no successful run in the last 40 minutes.",
     });
   }
 
   if (
     !lastRunAtMs &&
     startedAtMs &&
-    nowMs - startedAtMs > NO_RUN_AFTER_START_WARNING_MS
+    nowMs - startedAtMs > STRATEGY_CRON_NO_RUN_AFTER_START_MS
   ) {
     alerts.push({
       id: "never-ran-after-start",
@@ -300,11 +297,10 @@ export function Dashboard() {
               type="button"
               onClick={() => void toggleStrategy()}
               disabled={disableStrategyButton}
-              className={`rounded-md px-3 py-2 text-sm font-medium text-white disabled:opacity-50 ${
-                strategyStatus?.running
-                  ? "bg-rose-600 hover:bg-rose-500"
-                  : "bg-emerald-600 hover:bg-emerald-500"
-              }`}
+              className={`rounded-md px-3 py-2 text-sm font-medium text-white disabled:opacity-50 ${strategyStatus?.running
+                ? "bg-rose-600 hover:bg-rose-500"
+                : "bg-emerald-600 hover:bg-emerald-500"
+                }`}
             >
               {strategyActionPending
                 ? "Please wait..."
@@ -328,7 +324,8 @@ export function Dashboard() {
               <span>
                 Next run:{" "}
                 {new Date(
-                  computeNextFifteenMinuteRunIso(Date.now()),
+                  strategyStatus.nextRunAt ??
+                  computeNextStrategyCronRunIso(Date.now()),
                 ).toLocaleString()}
               </span>
             ) : null}
@@ -349,11 +346,10 @@ export function Dashboard() {
             {cronAlerts.map((alert) => (
               <p
                 key={alert.id}
-                className={`rounded-md border px-3 py-2 text-sm ${
-                  alert.severity === "error"
-                    ? "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-200"
-                    : "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200"
-                }`}
+                className={`rounded-md border px-3 py-2 text-sm ${alert.severity === "error"
+                  ? "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-200"
+                  : "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200"
+                  }`}
               >
                 {alert.message}
               </p>

@@ -8,6 +8,7 @@ import {
   runStrategy,
   type RunStrategyResult,
 } from "@/helpers/strategy/strategy-runner";
+import { computeNextStrategyCronRunIso } from "@/utils/scheduler/compute-next-cron-run";
 
 const HEARTBEAT_MS = 15_000;
 const STOP_WAIT_TIMEOUT_MS = 5_000;
@@ -73,7 +74,7 @@ function isTopOfHour(tsMs: number): boolean {
   return date.getUTCMinutes() === 0;
 }
 
-function computeNextRunIso(tsMs: number): string {
+function computeNextHourlyRunIso(tsMs: number): string {
   const date = new Date(tsMs);
   date.setUTCMinutes(0, 0, 0);
   date.setUTCHours(date.getUTCHours() + 1);
@@ -161,7 +162,7 @@ function toStatus(state: StrategyHeartbeatState): StrategyHeartbeatStatus {
     lastRunAt: state.lastRunAtMs
       ? new Date(state.lastRunAtMs).toISOString()
       : null,
-    nextRunAt: state.running ? computeNextRunIso(Date.now()) : null,
+    nextRunAt: state.running ? computeNextHourlyRunIso(Date.now()) : null,
     lastError: state.lastError,
     lastResult: state.lastResult,
   };
@@ -180,7 +181,9 @@ async function toServerlessStatus(): Promise<StrategyHeartbeatStatus> {
     lastRunAt: persisted.lastRunAtMs
       ? new Date(persisted.lastRunAtMs).toISOString()
       : null,
-    nextRunAt: persisted.running ? computeNextRunIso(Date.now()) : null,
+    nextRunAt: persisted.running
+      ? computeNextStrategyCronRunIso(Date.now())
+      : null,
     lastError: persisted.lastError,
     lastResult: persisted.lastResult,
   };
