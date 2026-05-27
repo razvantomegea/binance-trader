@@ -135,7 +135,7 @@ export async function getTrades({
       const buyPrice = findBuyPriceForSell(row, buysBySymbol);
       const sellPrice = Number(row.price);
       const realizedPnlPct =
-        buyPrice !== null && Number.isFinite(sellPrice)
+        buyPrice !== null && buyPrice !== 0 && Number.isFinite(sellPrice)
           ? pnlPercentFromPrices(buyPrice, sellPrice)
           : null;
 

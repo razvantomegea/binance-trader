@@ -21,7 +21,7 @@ export function PositionsTable({
             <th className="py-2 pr-3">Symbol</th>
             <th className="py-2 pr-3">Qty</th>
             <th className="py-2 pr-3">Open</th>
-            <th className="py-2 pr-3">Close</th>
+            <th className="py-2 pr-3">Current</th>
             <th className="py-2">P&amp;L %</th>
           </tr>
         </thead>

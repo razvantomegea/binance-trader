@@ -43,7 +43,7 @@ export async function buildPortfolioResponse(): Promise<PortfolioResponse> {
     const marketValue =
       currentPrice !== null ? position.qty * currentPrice : null;
     const unrealizedPnlPct =
-      currentPrice !== null
+      currentPrice !== null && position.buyPrice !== 0
         ? pnlPercentFromPrices(position.buyPrice, currentPrice)
         : null;
 

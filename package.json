@@ -14,7 +14,8 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "db:push": "drizzle-kit push"
+    "db:push": "drizzle-kit push",
+    "cron:trigger": "node scripts/trigger-strategy-cron.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "1.0.2",
