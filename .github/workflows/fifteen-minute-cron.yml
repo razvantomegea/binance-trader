@@ -2,7 +2,8 @@ name: 15-Minute Strategy Cron
 
 on:
   schedule:
-    - cron: "*/15 * * * *"
+    # Offset from :00/:15/:30/:45 — GitHub delays/drops scheduled runs at those peaks.
+    - cron: "7,22,37,52 * * * *"
   workflow_dispatch:
 
 jobs:
