@@ -16,7 +16,12 @@ function resolveCronUrl() {
     return null;
   }
 
-  const base = domain.startsWith("http") ? domain : `https://${domain}`;
+  const base = domain.startsWith("https://")
+    ? domain
+    : domain.startsWith("http://")
+      ? domain.replace("http://", "https://")
+      : `https://${domain}`;
+
   return `${base.replace(/\/$/, "")}/api/cron/run-strategy`;
 }
 
