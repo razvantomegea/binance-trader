@@ -15,10 +15,10 @@ Open `http://localhost:3000`.
 
 You have **two services** in the same Railway project:
 
-| Service | Purpose | Config file |
-| --- | --- | --- |
-| `binance-trading` | Next.js dashboard (always running) | `railway.json` |
-| `strategy-cron` | Hits the cron API every 15 min, then exits | `railway.cron.json` |
+| Service           | Purpose                                    | Config file         |
+| ----------------- | ------------------------------------------ | ------------------- |
+| `binance-trading` | Next.js dashboard (always running)         | `railway.json`      |
+| `strategy-cron`   | Hits the cron API every 15 min, then exits | `railway.cron.json` |
 
 ### Step 1 — Push code to GitHub
 

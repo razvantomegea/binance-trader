@@ -21,10 +21,7 @@ function makeCandle(openTime: number, close: number): KlineCandle {
   return { openTime, open: close, high: close, low: close, close };
 }
 
-function makeCandles(
-  startOpenTime: number,
-  closes: number[],
-): KlineCandle[] {
+function makeCandles(startOpenTime: number, closes: number[]): KlineCandle[] {
   return closes.map((c, i) => makeCandle(startOpenTime - i * HOUR_MS, c));
 }
 
@@ -117,7 +114,12 @@ describe("evaluateSymbol exits", () => {
     const buyOpenTime = 1000 * HOUR_MS;
     const latestOpenTime = buyOpenTime + 3 * HOUR_MS;
 
-    const closes = [150, 120, 110, ...Array(STRATEGY_LOOKBACK_CLOSES - 3).fill(90)];
+    const closes = [
+      150,
+      120,
+      110,
+      ...Array(STRATEGY_LOOKBACK_CLOSES - 3).fill(90),
+    ];
     const candles = makeCandles(latestOpenTime, closes as number[]);
     mockedGetKlines.mockResolvedValue(candles);
 
@@ -140,7 +142,11 @@ describe("evaluateSymbol exits", () => {
     const latestOpenTime = buyOpenTime + 2 * HOUR_MS;
 
     // 190 peak, 161.5 is -15% from peak but +61.5% vs buy => TP, not SL
-    const closes = [161.5, 190, ...Array(STRATEGY_LOOKBACK_CLOSES - 2).fill(100)];
+    const closes = [
+      161.5,
+      190,
+      ...Array(STRATEGY_LOOKBACK_CLOSES - 2).fill(100),
+    ];
     const candles = makeCandles(latestOpenTime, closes as number[]);
     mockedGetKlines.mockResolvedValue(candles);
 
