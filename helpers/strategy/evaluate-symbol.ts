@@ -64,7 +64,10 @@ export async function evaluateSymbol({
     if (latest.openTime < buyOpenTime) {
       return { candleOpenTime: latest.openTime, traded: false };
     }
-    const currentMax = position.maxPriceAfterBuy ?? position.buyPrice;
+    const currentMax =
+      position.maxPriceAfterBuy !== null
+        ? position.maxPriceAfterBuy
+        : position.buyPrice;
     if (close > currentMax) {
       await getDb()
         .update(positions)

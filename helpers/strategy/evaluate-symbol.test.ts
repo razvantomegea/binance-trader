@@ -30,6 +30,7 @@ function position(overrides: Partial<OpenPosition> = {}): OpenPosition {
     symbol: "TESTUSDT",
     qty: 10,
     buyPrice: 100,
+    maxPriceAfterBuy: 100,
     buyTime: new Date(1000 * HOUR_MS),
     buyTradeId: 1,
     ...overrides,

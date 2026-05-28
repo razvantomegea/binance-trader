@@ -29,7 +29,7 @@ export interface TradeRow {
   openPrice: string | null;
   /** Exit price (SELL fill only) */
   closePrice: string | null;
-  /** Maximum observed price from BUY until close (SELL only) */
+  /** Maximum observed price from BUY until close; set on BUY and carried through on SELL */
   maxPriceAfterBuy: string | null;
   notional: string;
   interval: string;

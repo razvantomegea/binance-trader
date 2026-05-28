@@ -6,7 +6,7 @@ export interface OpenPosition {
   symbol: string;
   qty: number;
   buyPrice: number;
-  maxPriceAfterBuy?: number | null;
+  maxPriceAfterBuy: number | null;
   buyTime: Date;
   buyTradeId: number;
 }
