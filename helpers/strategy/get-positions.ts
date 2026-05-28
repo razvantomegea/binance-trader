@@ -6,6 +6,7 @@ export interface OpenPosition {
   symbol: string;
   qty: number;
   buyPrice: number;
+  maxPriceAfterBuy?: number | null;
   buyTime: Date;
   buyTradeId: number;
 }
@@ -19,6 +20,10 @@ export async function getOpenPositions(): Promise<Map<string, OpenPosition>> {
       symbol: row.symbol,
       qty: parseFiniteNumber(row.qty),
       buyPrice: parseFiniteNumber(row.buyPrice),
+      maxPriceAfterBuy:
+        row.maxPriceAfterBuy !== null
+          ? parseFiniteNumber(row.maxPriceAfterBuy)
+          : null,
       buyTime: row.buyTime,
       buyTradeId: row.buyTradeId,
     });

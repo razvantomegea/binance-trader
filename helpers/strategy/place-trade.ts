@@ -36,6 +36,16 @@ export async function placeTrade({
   const candleDate = new Date(candleOpenTime);
 
   const db = getDb();
+  const [openPosition] =
+    side === "SELL"
+      ? await db.select().from(positions).where(eq(positions.symbol, symbol))
+      : [undefined];
+
+  const maxPriceAfterBuy =
+    side === "SELL"
+      ? openPosition?.maxPriceAfterBuy ?? openPosition?.buyPrice ?? null
+      : String(price);
+
   const [trade] = await db
     .insert(trades)
     .values({
@@ -43,6 +53,7 @@ export async function placeTrade({
       side,
       qty: String(qty),
       price: String(price),
+      maxPriceAfterBuy,
       notional: String(notional),
       interval,
       candleOpenTime: candleDate,
@@ -60,6 +71,7 @@ export async function placeTrade({
         symbol,
         qty: String(qty),
         buyPrice: String(price),
+        maxPriceAfterBuy: String(price),
         buyTime: candleDate,
         buyTradeId: trade.id,
       });

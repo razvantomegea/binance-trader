@@ -4,11 +4,14 @@ import {
   STOP_LOSS_PCT,
   TAKE_PROFIT_PCT,
 } from "@/constants/binance";
+import { getDb } from "@/db";
+import { positions } from "@/db/schema";
 import { STRATEGY_LOOKBACK_CLOSES } from "@/constants/strategy";
 import { placeTrade } from "@/helpers/strategy/place-trade";
 import type { OpenPosition } from "@/helpers/strategy/get-positions";
 import type { CandleInterval } from "@/types/binance";
 import { getRecentClosedKlines } from "@/utils/binance/get-klines";
+import { eq } from "drizzle-orm";
 import {
   hasGainVsAnyRef,
   hasLossVsAnyRef,
@@ -60,6 +63,13 @@ export async function evaluateSymbol({
     const buyOpenTime = position.buyTime.getTime();
     if (latest.openTime < buyOpenTime) {
       return { candleOpenTime: latest.openTime, traded: false };
+    }
+    const currentMax = position.maxPriceAfterBuy ?? position.buyPrice;
+    if (close > currentMax) {
+      await getDb()
+        .update(positions)
+        .set({ maxPriceAfterBuy: String(close) })
+        .where(eq(positions.symbol, symbol));
     }
 
     const exitRefs = [position.buyPrice];

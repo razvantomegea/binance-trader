@@ -20,6 +20,7 @@ export function TradesTable({ trades, onSymbolSelect }: TradesTableProps) {
             <th className="py-2 pr-3">Symbol</th>
             <th className="py-2 pr-3">Open</th>
             <th className="py-2 pr-3">Close</th>
+            <th className="py-2 pr-3">Max After Buy</th>
             <th className="py-2 pr-3">P&amp;L %</th>
             <th className="py-2">Reason</th>
           </tr>
@@ -54,6 +55,11 @@ export function TradesTable({ trades, onSymbolSelect }: TradesTableProps) {
                 </td>
                 <td className="py-2 pr-3 tabular-nums">
                   {row.closePrice ? Number(row.closePrice).toFixed(6) : "—"}
+                </td>
+                <td className="py-2 pr-3 tabular-nums">
+                  {row.maxPriceAfterBuy !== null
+                    ? Number(row.maxPriceAfterBuy).toFixed(6)
+                    : "—"}
                 </td>
                 <td
                   className={`py-2 pr-3 tabular-nums ${row.realizedPnlPct !== null ? (positive ? "text-emerald-600" : "text-red-600") : "text-zinc-500"}`}

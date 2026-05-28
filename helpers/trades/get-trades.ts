@@ -61,6 +61,7 @@ function toTradeRow(
     side: string;
     qty: string;
     price: string;
+    maxPriceAfterBuy: string | null;
     notional: string;
     interval: string;
     candleOpenTime: Date;
@@ -70,10 +71,12 @@ function toTradeRow(
   {
     openPrice,
     closePrice,
+    maxPriceAfterBuy,
     realizedPnlPct,
   }: {
     openPrice: string | null;
     closePrice: string | null;
+    maxPriceAfterBuy: string | null;
     realizedPnlPct: number | null;
   },
 ): TradeRow {
@@ -85,6 +88,7 @@ function toTradeRow(
     price: row.price,
     openPrice,
     closePrice,
+    maxPriceAfterBuy,
     notional: row.notional,
     interval: row.interval,
     candleOpenTime: row.candleOpenTime.toISOString(),
@@ -128,6 +132,7 @@ export async function getTrades({
         return toTradeRow(row, {
           openPrice: row.price,
           closePrice: null,
+          maxPriceAfterBuy: row.maxPriceAfterBuy,
           realizedPnlPct: null,
         });
       }
@@ -142,6 +147,7 @@ export async function getTrades({
       return toTradeRow(row, {
         openPrice: buyPrice !== null ? String(buyPrice) : null,
         closePrice: row.price,
+        maxPriceAfterBuy: row.maxPriceAfterBuy,
         realizedPnlPct,
       });
     }),

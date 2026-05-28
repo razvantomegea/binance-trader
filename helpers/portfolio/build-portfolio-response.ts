@@ -55,6 +55,10 @@ export async function buildPortfolioResponse(): Promise<PortfolioResponse> {
       symbol: position.symbol,
       qty: String(position.qty),
       buyPrice: String(position.buyPrice),
+      maxPriceAfterBuy:
+        position.maxPriceAfterBuy != null
+          ? String(position.maxPriceAfterBuy)
+          : null,
       buyTime: position.buyTime.toISOString(),
       buyTradeId: position.buyTradeId,
       currentPrice: currentPrice !== null ? String(currentPrice) : null,

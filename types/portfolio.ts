@@ -4,6 +4,7 @@ export interface PositionRow {
   symbol: string;
   qty: string;
   buyPrice: string;
+  maxPriceAfterBuy: string | null;
   buyTime: string;
   buyTradeId: number;
   currentPrice: string | null;
@@ -28,6 +29,8 @@ export interface TradeRow {
   openPrice: string | null;
   /** Exit price (SELL fill only) */
   closePrice: string | null;
+  /** Maximum observed price from BUY until close (SELL only) */
+  maxPriceAfterBuy: string | null;
   notional: string;
   interval: string;
   candleOpenTime: string;

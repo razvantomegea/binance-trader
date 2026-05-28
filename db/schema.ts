@@ -13,6 +13,10 @@ export const trades = pgTable("trades", {
   side: text("side").notNull(),
   qty: numeric("qty", { precision: 24, scale: 12 }).notNull(),
   price: numeric("price", { precision: 24, scale: 12 }).notNull(),
+  maxPriceAfterBuy: numeric("max_price_after_buy", {
+    precision: 24,
+    scale: 12,
+  }),
   notional: numeric("notional", { precision: 24, scale: 8 }).notNull(),
   interval: text("interval").notNull(),
   candleOpenTime: timestamp("candle_open_time", {
@@ -28,6 +32,10 @@ export const positions = pgTable("positions", {
   symbol: text("symbol").primaryKey(),
   qty: numeric("qty", { precision: 24, scale: 12 }).notNull(),
   buyPrice: numeric("buy_price", { precision: 24, scale: 12 }).notNull(),
+  maxPriceAfterBuy: numeric("max_price_after_buy", {
+    precision: 24,
+    scale: 12,
+  }),
   buyTime: timestamp("buy_time", { withTimezone: true }).notNull(),
   buyTradeId: integer("buy_trade_id")
     .references(() => trades.id, { onDelete: "restrict" })
