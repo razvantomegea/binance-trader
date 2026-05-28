@@ -286,9 +286,9 @@ export function Dashboard() {
   }, [cronAlerts]);
 
   return (
-    <div className="flex min-h-screen flex-col bg-zinc-50 text-zinc-900 dark:bg-black dark:text-zinc-50">
-      <header className="border-b border-zinc-200 bg-white px-4 py-4 dark:border-zinc-800 dark:bg-zinc-950">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4">
+    <div className="flex h-screen w-full min-w-0 flex-col overflow-hidden bg-zinc-50 text-zinc-900 dark:bg-black dark:text-zinc-50">
+      <header className="shrink-0 border-b border-zinc-200 bg-white px-4 py-4 dark:border-zinc-800 dark:bg-zinc-950">
+        <div className="flex w-full flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="text-xl font-semibold">Binance Trading Dashboard</h1>
             <p className="text-sm text-zinc-500">
@@ -316,7 +316,7 @@ export function Dashboard() {
             </button>
           </div>
         </div>
-        <div className="mx-auto mt-2 max-w-7xl text-xs text-zinc-500">
+        <div className="mt-2 w-full text-xs text-zinc-500">
           <span className="inline-flex items-center gap-2">
             <span>
               Status:{" "}
@@ -344,7 +344,7 @@ export function Dashboard() {
           </span>
         </div>
         {cronAlerts.length > 0 ? (
-          <div className="mx-auto mt-3 max-w-7xl space-y-2">
+          <div className="mt-3 w-full space-y-2">
             {cronAlerts.map((alert) => (
               <p
                 key={alert.id}
@@ -359,13 +359,13 @@ export function Dashboard() {
             ))}
           </div>
         ) : null}
-        <div className="mx-auto mt-4 max-w-7xl">
+        <div className="mt-4 w-full">
           <PortfolioSummary portfolio={portfolio} loading={loadingPortfolio} />
         </div>
       </header>
 
-      <main className="mx-auto grid w-full min-w-0 max-w-7xl flex-1 grid-cols-1 gap-4 p-4 lg:grid-cols-[280px_1fr]">
-        <div className="h-[calc(100vh-12rem)] min-h-[320px]">
+      <main className="grid min-h-0 w-full min-w-0 flex-1 grid-cols-1 gap-4 overflow-hidden p-4 lg:grid-cols-[320px_minmax(0,1fr)]">
+        <div className="h-full min-h-0">
           <SymbolList
             symbols={symbolRows}
             selectedSymbol={selectedSymbol}
@@ -374,23 +374,23 @@ export function Dashboard() {
           />
         </div>
 
-        <div className="flex min-w-0 flex-col gap-4">
-          <section className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-y-auto pr-1">
+          <section className="shrink-0 min-h-0 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
             <h2 className="mb-3 text-sm font-medium text-zinc-500">
               {selectedSymbol} · H1
             </h2>
             <PriceChart symbol={selectedSymbol} interval={STRATEGY_INTERVAL} />
           </section>
 
-          <section className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
+          <section className="shrink-0 min-h-0 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
             <h2 className="mb-3 text-sm font-medium text-zinc-500">
               Strategy equity (hourly)
             </h2>
             <EquityCurve snapshots={snapshots} loading={loadingPortfolio} />
           </section>
 
-          <div className="grid min-w-0 gap-4 lg:grid-cols-2">
-            <section className="min-w-0 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
+          <div className="grid min-h-[320px] min-w-0 flex-1 gap-4 lg:grid-cols-2 lg:grid-rows-[minmax(0,1fr)]">
+            <section className="flex h-full min-h-0 min-w-0 flex-col rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
               <h2 className="mb-3 text-sm font-medium text-zinc-500">
                 Open positions
               </h2>
@@ -400,7 +400,7 @@ export function Dashboard() {
               />
             </section>
 
-            <section className="min-w-0 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
+            <section className="flex h-full min-h-0 min-w-0 flex-col rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
               <h2 className="mb-3 text-sm font-medium text-zinc-500">
                 Recent trades
               </h2>

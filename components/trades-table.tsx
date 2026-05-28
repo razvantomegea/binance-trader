@@ -7,11 +7,15 @@ interface TradesTableProps {
 
 export function TradesTable({ trades, onSymbolSelect }: TradesTableProps) {
   if (trades.length === 0) {
-    return <p className="text-sm text-zinc-500">No trades yet</p>;
+    return (
+      <div className="flex min-h-0 flex-1 items-center justify-center">
+        <p className="text-sm text-zinc-500">No trades yet</p>
+      </div>
+    );
   }
 
   return (
-    <div className="w-full max-w-full min-w-0 overflow-x-scroll">
+    <div className="min-h-0 w-full max-w-full min-w-0 flex-1 overflow-auto">
       <table className="w-full text-left text-sm">
         <thead>
           <tr className="border-b border-zinc-200 text-zinc-500 dark:border-zinc-800">
