@@ -364,8 +364,8 @@ export function Dashboard() {
         </div>
       </header>
 
-      <main className="grid min-h-0 w-full min-w-0 flex-1 grid-cols-1 gap-4 overflow-hidden p-4 lg:grid-cols-[320px_minmax(0,1fr)]">
-        <div className="h-full min-h-0">
+      <main className="flex min-h-0 w-full min-w-0 flex-1 flex-col gap-4 overflow-y-auto p-4 lg:flex-row lg:items-stretch">
+        <div className="w-full shrink-0 lg:flex lg:min-h-0 lg:w-80 lg:flex-col">
           <SymbolList
             symbols={symbolRows}
             selectedSymbol={selectedSymbol}
@@ -374,7 +374,7 @@ export function Dashboard() {
           />
         </div>
 
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-y-auto pr-1">
+        <div className="flex min-w-0 flex-1 flex-col gap-4">
           <section className="shrink-0 min-h-0 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
             <h2 className="mb-3 text-sm font-medium text-zinc-500">
               {selectedSymbol} · H1
@@ -389,9 +389,9 @@ export function Dashboard() {
             <EquityCurve snapshots={snapshots} loading={loadingPortfolio} />
           </section>
 
-          <div className="grid min-h-[320px] min-w-0 flex-1 gap-4 lg:grid-cols-2 lg:grid-rows-[minmax(0,1fr)]">
-            <section className="flex h-full min-h-0 min-w-0 flex-col rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
-              <h2 className="mb-3 text-sm font-medium text-zinc-500">
+          <div className="grid min-w-0 gap-4 lg:grid-cols-2">
+            <section className="flex min-h-[200px] min-w-0 flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
+              <h2 className="mb-3 shrink-0 text-sm font-medium text-zinc-500">
                 Open positions
               </h2>
               <PositionsTable
@@ -400,8 +400,8 @@ export function Dashboard() {
               />
             </section>
 
-            <section className="flex h-full min-h-0 min-w-0 flex-col rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
-              <h2 className="mb-3 text-sm font-medium text-zinc-500">
+            <section className="flex min-h-[200px] min-w-0 flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
+              <h2 className="mb-3 shrink-0 text-sm font-medium text-zinc-500">
                 Recent trades
               </h2>
               <TradesTable trades={trades} onSymbolSelect={setSelectedSymbol} />

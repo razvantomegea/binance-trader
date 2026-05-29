@@ -32,14 +32,14 @@ export function SymbolList({
   }, [query, symbols]);
 
   return (
-    <div className="flex h-full min-h-0 flex-col rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
-      <div className="border-b border-zinc-200 p-3 dark:border-zinc-800">
+    <div className="flex h-[500px] flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950 lg:h-full lg:min-h-0">
+      <div className="shrink-0 border-b border-zinc-200 p-3 dark:border-zinc-800">
         <input
           type="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Search symbol..."
-          className="w-full rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900"
+          className="w-full rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-base outline-none focus:border-zinc-400 sm:text-sm dark:border-zinc-700 dark:bg-zinc-900"
         />
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto">

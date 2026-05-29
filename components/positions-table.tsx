@@ -11,23 +11,23 @@ export function PositionsTable({
 }: PositionsTableProps) {
   if (positions.length === 0) {
     return (
-      <div className="flex min-h-0 flex-1 items-center justify-center">
+      <div className="flex min-h-[200px] flex-1 items-center justify-center">
         <p className="text-sm text-zinc-500">No open positions</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-0 w-full max-w-full min-w-0 flex-1 overflow-auto">
-      <table className="w-full text-left text-sm">
+    <div className="min-h-[200px] min-w-0 w-full overflow-x-auto">
+      <table className="w-max min-w-full text-left text-sm">
         <thead>
           <tr className="border-b border-zinc-200 text-zinc-500 dark:border-zinc-800">
-            <th className="py-2 pr-3">Symbol</th>
-            <th className="py-2 pr-3">Qty</th>
-            <th className="py-2 pr-3">Open</th>
-            <th className="py-2 pr-3">Max After Buy</th>
-            <th className="py-2 pr-3">Current</th>
-            <th className="py-2">P&amp;L %</th>
+            <th className="whitespace-nowrap py-2 pr-3">Symbol</th>
+            <th className="whitespace-nowrap py-2 pr-3">Qty</th>
+            <th className="whitespace-nowrap py-2 pr-3">Open</th>
+            <th className="whitespace-nowrap py-2 pr-3">Max After Buy</th>
+            <th className="whitespace-nowrap py-2 pr-3">Current</th>
+            <th className="whitespace-nowrap py-2">P&amp;L %</th>
           </tr>
         </thead>
         <tbody>
@@ -47,22 +47,22 @@ export function PositionsTable({
                     {row.symbol}
                   </button>
                 </td>
-                <td className="py-2 pr-3 tabular-nums">
+                <td className="whitespace-nowrap py-2 pr-3 tabular-nums">
                   {Number(row.qty).toFixed(6)}
                 </td>
-                <td className="py-2 pr-3 tabular-nums">
+                <td className="whitespace-nowrap py-2 pr-3 tabular-nums">
                   {Number(row.buyPrice).toFixed(6)}
                 </td>
-                <td className="py-2 pr-3 tabular-nums">
+                <td className="whitespace-nowrap py-2 pr-3 tabular-nums">
                   {row.maxPriceAfterBuy !== null
                     ? Number(row.maxPriceAfterBuy).toFixed(6)
                     : "—"}
                 </td>
-                <td className="py-2 pr-3 tabular-nums">
+                <td className="whitespace-nowrap py-2 pr-3 tabular-nums">
                   {row.currentPrice ? Number(row.currentPrice).toFixed(6) : "—"}
                 </td>
                 <td
-                  className={`py-2 tabular-nums ${positive ? "text-emerald-600" : "text-red-600"}`}
+                  className={`whitespace-nowrap py-2 tabular-nums ${positive ? "text-emerald-600" : "text-red-600"}`}
                 >
                   {row.unrealizedPnlPct !== null
                     ? `${positive ? "+" : ""}${row.unrealizedPnlPct.toFixed(2)}%`

@@ -8,25 +8,25 @@ interface TradesTableProps {
 export function TradesTable({ trades, onSymbolSelect }: TradesTableProps) {
   if (trades.length === 0) {
     return (
-      <div className="flex min-h-0 flex-1 items-center justify-center">
+      <div className="flex min-h-[200px] flex-1 items-center justify-center">
         <p className="text-sm text-zinc-500">No trades yet</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-0 w-full max-w-full min-w-0 flex-1 overflow-auto">
-      <table className="w-full text-left text-sm">
+    <div className="min-h-[200px] min-w-0 w-full overflow-x-auto">
+      <table className="w-max min-w-full text-left text-sm">
         <thead>
           <tr className="border-b border-zinc-200 text-zinc-500 dark:border-zinc-800">
-            <th className="py-2 pr-3">Time</th>
-            <th className="py-2 pr-3">Side</th>
-            <th className="py-2 pr-3">Symbol</th>
-            <th className="py-2 pr-3">Open</th>
-            <th className="py-2 pr-3">Close</th>
-            <th className="py-2 pr-3">Max After Buy</th>
-            <th className="py-2 pr-3">P&amp;L %</th>
-            <th className="py-2">Reason</th>
+            <th className="whitespace-nowrap py-2 pr-3">Time</th>
+            <th className="whitespace-nowrap py-2 pr-3">Side</th>
+            <th className="whitespace-nowrap py-2 pr-3">Symbol</th>
+            <th className="whitespace-nowrap py-2 pr-3">Open</th>
+            <th className="whitespace-nowrap py-2 pr-3">Close</th>
+            <th className="whitespace-nowrap py-2 pr-3">Max After Buy</th>
+            <th className="whitespace-nowrap py-2 pr-3">P&amp;L %</th>
+            <th className="whitespace-nowrap py-2">Reason</th>
           </tr>
         </thead>
         <tbody>
@@ -54,25 +54,27 @@ export function TradesTable({ trades, onSymbolSelect }: TradesTableProps) {
                     {row.symbol}
                   </button>
                 </td>
-                <td className="py-2 pr-3 tabular-nums">
+                <td className="whitespace-nowrap py-2 pr-3 tabular-nums">
                   {row.openPrice ? Number(row.openPrice).toFixed(6) : "—"}
                 </td>
-                <td className="py-2 pr-3 tabular-nums">
+                <td className="whitespace-nowrap py-2 pr-3 tabular-nums">
                   {row.closePrice ? Number(row.closePrice).toFixed(6) : "—"}
                 </td>
-                <td className="py-2 pr-3 tabular-nums">
+                <td className="whitespace-nowrap py-2 pr-3 tabular-nums">
                   {row.maxPriceAfterBuy !== null
                     ? Number(row.maxPriceAfterBuy).toFixed(6)
                     : "—"}
                 </td>
                 <td
-                  className={`py-2 pr-3 tabular-nums ${row.realizedPnlPct !== null ? (positive ? "text-emerald-600" : "text-red-600") : "text-zinc-500"}`}
+                  className={`whitespace-nowrap py-2 pr-3 tabular-nums ${row.realizedPnlPct !== null ? (positive ? "text-emerald-600" : "text-red-600") : "text-zinc-500"}`}
                 >
                   {row.realizedPnlPct !== null
                     ? `${positive ? "+" : ""}${row.realizedPnlPct.toFixed(2)}%`
                     : "—"}
                 </td>
-                <td className="py-2 text-zinc-500">{row.reason}</td>
+                <td className="max-w-[12rem] truncate py-2 text-zinc-500">
+                  {row.reason}
+                </td>
               </tr>
             );
           })}
