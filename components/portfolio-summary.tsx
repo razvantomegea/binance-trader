@@ -28,7 +28,7 @@ export function PortfolioSummary({
     return <div className="text-sm text-red-500">Portfolio unavailable</div>;
   }
 
-  const totalPositive = portfolio.pnlPct >= 0;
+  const totalPositive = portfolio.totalPnl >= 0;
   const realizedPositive = portfolio.realizedPnl >= 0;
   const unrealizedPositive = portfolio.unrealizedPnl >= 0;
 

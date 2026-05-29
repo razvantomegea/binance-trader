@@ -48,9 +48,9 @@ export async function buildPortfolioResponse(): Promise<PortfolioResponse> {
         ? pnlPercentFromPrices(position.buyPrice, currentPrice)
         : null;
 
+    positionsCostBasis += position.qty * position.buyPrice;
     if (marketValue !== null) {
       positionsValue += marketValue;
-      positionsCostBasis += position.qty * position.buyPrice;
     }
 
     positions.push({
