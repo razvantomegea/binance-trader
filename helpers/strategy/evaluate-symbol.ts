@@ -6,7 +6,11 @@ import {
 } from "@/constants/binance";
 import { getDb } from "@/db";
 import { positions } from "@/db/schema";
-import { STRATEGY_LOOKBACK_CLOSES } from "@/constants/strategy";
+import {
+  STRATEGY_LOOKBACK_CLOSES,
+  SYMBOL_REENTRY_COOLDOWN_MS,
+} from "@/constants/strategy";
+import { getLastSymbolCloseTime } from "@/helpers/strategy/get-last-symbol-close-time";
 import { placeTrade } from "@/helpers/strategy/place-trade";
 import type { OpenPosition } from "@/helpers/strategy/get-positions";
 import type { CandleInterval } from "@/types/binance";
@@ -115,6 +119,14 @@ export async function evaluateSymbol({
       return { candleOpenTime: latest.openTime, traded: true };
     }
 
+    return { candleOpenTime: latest.openTime, traded: false };
+  }
+
+  const lastCloseTime = await getLastSymbolCloseTime(symbol);
+  if (
+    lastCloseTime !== null &&
+    latest.openTime - lastCloseTime < SYMBOL_REENTRY_COOLDOWN_MS
+  ) {
     return { candleOpenTime: latest.openTime, traded: false };
   }
 

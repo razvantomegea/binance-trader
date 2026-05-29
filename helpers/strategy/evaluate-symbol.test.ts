@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { STRATEGY_LOOKBACK_CLOSES } from "@/constants/strategy";
+import {
+  STRATEGY_LOOKBACK_CLOSES,
+  SYMBOL_REENTRY_COOLDOWN_MS,
+} from "@/constants/strategy";
 import type { KlineCandle } from "@/types/binance";
 
 import { evaluateSymbol } from "./evaluate-symbol";
@@ -8,12 +11,15 @@ import type { OpenPosition } from "./get-positions";
 
 vi.mock("@/utils/binance/get-klines");
 vi.mock("@/helpers/strategy/place-trade");
+vi.mock("@/helpers/strategy/get-last-symbol-close-time");
 
+import { getLastSymbolCloseTime } from "@/helpers/strategy/get-last-symbol-close-time";
 import { getRecentClosedKlines } from "@/utils/binance/get-klines";
 import { placeTrade } from "@/helpers/strategy/place-trade";
 
 const mockedGetKlines = vi.mocked(getRecentClosedKlines);
 const mockedPlaceTrade = vi.mocked(placeTrade);
+const mockedGetLastClose = vi.mocked(getLastSymbolCloseTime);
 
 const HOUR_MS = 3_600_000;
 
@@ -187,6 +193,7 @@ describe("evaluateSymbol entry", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockedPlaceTrade.mockResolvedValue(undefined);
+    mockedGetLastClose.mockResolvedValue(null);
   });
 
   it("buys when pump >= 50% vs prior closes", async () => {
@@ -246,5 +253,46 @@ describe("evaluateSymbol entry", () => {
 
     expect(result.traded).toBe(false);
     expect(mockedPlaceTrade).not.toHaveBeenCalled();
+  });
+
+  it("does not buy when last SELL was within 24h even if pump qualifies", async () => {
+    const latestOpenTime = 1000 * HOUR_MS;
+    const lastSellOpenTime = latestOpenTime - SYMBOL_REENTRY_COOLDOWN_MS + HOUR_MS;
+
+    const closes = [150, ...Array(STRATEGY_LOOKBACK_CLOSES - 1).fill(100)];
+    const candles = makeCandles(latestOpenTime, closes as number[]);
+    mockedGetKlines.mockResolvedValue(candles);
+    mockedGetLastClose.mockResolvedValue(lastSellOpenTime);
+
+    const result = await evaluateSymbol({
+      ...BASE_PARAMS,
+      position: undefined,
+    });
+
+    expect(result.traded).toBe(false);
+    expect(mockedPlaceTrade).not.toHaveBeenCalled();
+  });
+
+  it("buys when last SELL was exactly 24h ago and pump qualifies", async () => {
+    const latestOpenTime = 1000 * HOUR_MS;
+    const lastSellOpenTime = latestOpenTime - SYMBOL_REENTRY_COOLDOWN_MS;
+
+    const closes = [150, ...Array(STRATEGY_LOOKBACK_CLOSES - 1).fill(100)];
+    const candles = makeCandles(latestOpenTime, closes as number[]);
+    mockedGetKlines.mockResolvedValue(candles);
+    mockedGetLastClose.mockResolvedValue(lastSellOpenTime);
+
+    const result = await evaluateSymbol({
+      ...BASE_PARAMS,
+      position: undefined,
+    });
+
+    expect(result.traded).toBe(true);
+    expect(mockedPlaceTrade).toHaveBeenCalledWith(
+      expect.objectContaining({
+        side: "BUY",
+        reason: "entry_pump_50pct_vs_prior_23h",
+      }),
+    );
   });
 });

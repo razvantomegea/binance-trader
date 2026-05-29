@@ -145,6 +145,10 @@ export function Dashboard() {
   const [strategyActionError, setStrategyActionError] = useState<string | null>(
     null,
   );
+  const [closingSymbol, setClosingSymbol] = useState<string | null>(null);
+  const [closePositionError, setClosePositionError] = useState<string | null>(
+    null,
+  );
   const lastNotificationKeyRef = useRef<string | null>(null);
 
   const refresh = useCallback(async () => {
@@ -229,6 +233,35 @@ export function Dashboard() {
       window.clearInterval(timer);
     };
   }, [refresh]);
+
+  const closePosition = async (symbol: string) => {
+    const confirmed = window.confirm(
+      `Close ${symbol} at the latest closed H1 price? This records a paper SELL and starts the 24h re-entry cooldown.`,
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    setClosingSymbol(symbol);
+    setClosePositionError(null);
+    try {
+      const response = await fetch("/api/positions/close", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ symbol }),
+      });
+      if (!response.ok) {
+        const body = (await response.text()) || "unknown error";
+        setClosePositionError(
+          `Could not close ${symbol} (${response.status}): ${body}`,
+        );
+        return;
+      }
+      await refresh();
+    } finally {
+      setClosingSymbol(null);
+    }
+  };
 
   const toggleStrategy = async () => {
     setStrategyActionPending(true);
@@ -394,9 +427,16 @@ export function Dashboard() {
               <h2 className="mb-3 shrink-0 text-sm font-medium text-zinc-500">
                 Open positions
               </h2>
+              {closePositionError ? (
+                <p className="mb-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-200">
+                  {closePositionError}
+                </p>
+              ) : null}
               <PositionsTable
                 positions={portfolio?.positions ?? []}
                 onSymbolSelect={setSelectedSymbol}
+                onClosePosition={closePosition}
+                closingSymbol={closingSymbol}
               />
             </section>
 
