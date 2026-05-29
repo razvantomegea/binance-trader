@@ -36,6 +36,7 @@ export async function buildPortfolioResponse(): Promise<PortfolioResponse> {
   }
 
   let positionsValue = 0;
+  let positionsCostBasis = 0;
   const positions: PositionRow[] = [];
 
   for (const position of positionsMap.values()) {
@@ -49,6 +50,7 @@ export async function buildPortfolioResponse(): Promise<PortfolioResponse> {
 
     if (marketValue !== null) {
       positionsValue += marketValue;
+      positionsCostBasis += position.qty * position.buyPrice;
     }
 
     positions.push({
@@ -67,12 +69,22 @@ export async function buildPortfolioResponse(): Promise<PortfolioResponse> {
   }
 
   const equity = cash + positionsValue;
+  const totalPnl = equity - INITIAL_PAPER_CASH;
+  const unrealizedPnl = positionsValue - positionsCostBasis;
+  const realizedPnl = totalPnl - unrealizedPnl;
+  const realizedPnlPct = (realizedPnl / INITIAL_PAPER_CASH) * 100;
+  const unrealizedPnlPct = (unrealizedPnl / INITIAL_PAPER_CASH) * 100;
   const pnlPct = ((equity - INITIAL_PAPER_CASH) / INITIAL_PAPER_CASH) * 100;
 
   return {
     cash,
     equity,
     pnlPct,
+    totalPnl,
+    realizedPnl,
+    realizedPnlPct,
+    unrealizedPnl,
+    unrealizedPnlPct,
     positionCount: positions.length,
     positions: positions.sort((a, b) => a.symbol.localeCompare(b.symbol)),
   };

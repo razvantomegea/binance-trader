@@ -71,14 +71,14 @@ Next.js dashboard for **paper trading** USDT pairs on Binance spot data. A sched
 
 ### Scripts
 
-| Command            | Description                          |
-| ------------------ | ------------------------------------ |
-| `pnpm dev`         | Next.js dev server                   |
-| `pnpm build`       | Production build                     |
-| `pnpm start`       | Production server                    |
-| `pnpm test`        | Run Vitest                           |
-| `pnpm db:push`     | Apply Drizzle schema to `DATABASE_URL` |
-| `pnpm cron:trigger`| Manually hit the strategy cron endpoint |
+| Command             | Description                             |
+| ------------------- | --------------------------------------- |
+| `pnpm dev`          | Next.js dev server                      |
+| `pnpm build`        | Production build                        |
+| `pnpm start`        | Production server                       |
+| `pnpm test`         | Run Vitest                              |
+| `pnpm db:push`      | Apply Drizzle schema to `DATABASE_URL`  |
+| `pnpm cron:trigger` | Manually hit the strategy cron endpoint |
 
 ### Manual cron trigger (local)
 
@@ -100,9 +100,9 @@ pnpm cron:trigger
 
 The repo includes two [Railway](https://railway.com) config files for a common two-service setup:
 
-| Service (example name) | Role                                      | Config file          |
-| ---------------------- | ----------------------------------------- | -------------------- |
-| Web app                | Next.js dashboard (always on)             | `railway.json`       |
+| Service (example name) | Role                                       | Config file         |
+| ---------------------- | ------------------------------------------ | ------------------- |
+| Web app                | Next.js dashboard (always on)              | `railway.json`      |
 | Cron worker            | Calls the strategy API every 15 min, exits | `railway.cron.json` |
 
 ### Web service
@@ -133,24 +133,24 @@ Alternatively set `CRON_URL` explicitly to your public app URL.
 
 ## Scheduler modes
 
-| Mode | Env | Behavior |
-| ---- | --- | -------- |
-| In-process | `AUTO_START_STRATEGY=true` | `node-cron` runs inside the Next.js server (handy locally) |
-| External | `SCHEDULER_MODE=external-cron` + `CRON_SECRET` | Strategy runs only when `/api/cron/run-strategy` is called with the secret |
+| Mode       | Env                                            | Behavior                                                                   |
+| ---------- | ---------------------------------------------- | -------------------------------------------------------------------------- |
+| In-process | `AUTO_START_STRATEGY=true`                     | `node-cron` runs inside the Next.js server (handy locally)                 |
+| External   | `SCHEDULER_MODE=external-cron` + `CRON_SECRET` | Strategy runs only when `/api/cron/run-strategy` is called with the secret |
 
 ## Environment reference
 
-| Variable | Required | Description |
-| -------- | -------- | ----------- |
-| `DATABASE_URL` | Yes | Postgres connection string |
-| `CRON_SECRET` | For external cron | Protects `/api/cron/run-strategy` |
-| `SCHEDULER_MODE` | Production | Set to `external-cron` with Railway cron |
-| `AUTO_START_STRATEGY` | Local optional | `true` to start in-process scheduler |
-| `BINANCE_API_BASE_URL` | No | Defaults to `https://data-api.binance.vision` |
-| `WEB_PUSH_VAPID_PUBLIC_KEY` | No | Web push public key |
-| `WEB_PUSH_VAPID_PRIVATE_KEY` | No | Web push private key |
-| `WEB_PUSH_SUBJECT` | No | `mailto:` or `https:` contact for VAPID |
-| `CRON_URL` | Cron worker only | Full URL to `run-strategy` (cron service) |
+| Variable                     | Required          | Description                                   |
+| ---------------------------- | ----------------- | --------------------------------------------- |
+| `DATABASE_URL`               | Yes               | Postgres connection string                    |
+| `CRON_SECRET`                | For external cron | Protects `/api/cron/run-strategy`             |
+| `SCHEDULER_MODE`             | Production        | Set to `external-cron` with Railway cron      |
+| `AUTO_START_STRATEGY`        | Local optional    | `true` to start in-process scheduler          |
+| `BINANCE_API_BASE_URL`       | No                | Defaults to `https://data-api.binance.vision` |
+| `WEB_PUSH_VAPID_PUBLIC_KEY`  | No                | Web push public key                           |
+| `WEB_PUSH_VAPID_PRIVATE_KEY` | No                | Web push private key                          |
+| `WEB_PUSH_SUBJECT`           | No                | `mailto:` or `https:` contact for VAPID       |
+| `CRON_URL`                   | Cron worker only  | Full URL to `run-strategy` (cron service)     |
 
 ## License
 

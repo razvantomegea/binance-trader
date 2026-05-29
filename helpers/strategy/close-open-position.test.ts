@@ -83,9 +83,9 @@ describe("closeOpenPosition", () => {
     const select = vi.fn().mockReturnValue({ from });
     mockedGetDb.mockReturnValue({ select } as ReturnType<typeof getDb>);
 
-    await expect(closeOpenPosition({ symbol: "MISSINGUSDT" })).rejects.toBeInstanceOf(
-      PositionNotFoundError,
-    );
+    await expect(
+      closeOpenPosition({ symbol: "MISSINGUSDT" }),
+    ).rejects.toBeInstanceOf(PositionNotFoundError);
     expect(mockedPlaceTrade).not.toHaveBeenCalled();
   });
 

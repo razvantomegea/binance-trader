@@ -43,7 +43,7 @@ export async function placeTrade({
 
   const maxPriceAfterBuy =
     side === "SELL"
-      ? openPosition?.maxPriceAfterBuy ?? openPosition?.buyPrice ?? null
+      ? (openPosition?.maxPriceAfterBuy ?? openPosition?.buyPrice ?? null)
       : String(price);
 
   const [trade] = await db

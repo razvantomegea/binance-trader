@@ -257,7 +257,8 @@ describe("evaluateSymbol entry", () => {
 
   it("does not buy when last SELL was within 24h even if pump qualifies", async () => {
     const latestOpenTime = 1000 * HOUR_MS;
-    const lastSellOpenTime = latestOpenTime - SYMBOL_REENTRY_COOLDOWN_MS + HOUR_MS;
+    const lastSellOpenTime =
+      latestOpenTime - SYMBOL_REENTRY_COOLDOWN_MS + HOUR_MS;
 
     const closes = [150, ...Array(STRATEGY_LOOKBACK_CLOSES - 1).fill(100)];
     const candles = makeCandles(latestOpenTime, closes as number[]);

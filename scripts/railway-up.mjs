@@ -50,7 +50,9 @@ const localRailwayBin = resolve(
   process.platform === "win32" ? "railway.exe" : "railway",
 );
 
-const railwayCommand = existsSync(localRailwayBin) ? localRailwayBin : "railway";
+const railwayCommand = existsSync(localRailwayBin)
+  ? localRailwayBin
+  : "railway";
 const railwayArgs = ["up", "--service", service];
 const gitBashPath = "C:\\Program Files\\Git\\bin\\bash.exe";
 

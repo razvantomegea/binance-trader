@@ -15,6 +15,11 @@ export interface PortfolioResponse {
   cash: number;
   equity: number;
   pnlPct: number;
+  totalPnl: number;
+  realizedPnl: number;
+  realizedPnlPct: number;
+  unrealizedPnl: number;
+  unrealizedPnlPct: number;
   positionCount: number;
   positions: PositionRow[];
 }

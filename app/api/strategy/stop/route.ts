@@ -13,6 +13,9 @@ export async function POST(request: Request) {
     return NextResponse.json(result, { status: 200 });
   } catch (err) {
     console.error("[strategy/stop] failed", err);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 },
+    );
   }
 }
