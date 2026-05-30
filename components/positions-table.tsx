@@ -82,7 +82,9 @@ export function PositionsTable({
                         : "—"}
                     </td>
                     <td className="whitespace-nowrap py-2 pr-3 tabular-nums">
-                      {row.currentPrice ? Number(row.currentPrice).toFixed(6) : "—"}
+                      {row.currentPrice
+                        ? Number(row.currentPrice).toFixed(6)
+                        : "—"}
                     </td>
                     <td
                       className={`whitespace-nowrap py-2 pr-3 tabular-nums ${positive ? "text-emerald-600" : "text-red-600"}`}

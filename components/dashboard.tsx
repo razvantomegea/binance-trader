@@ -341,10 +341,11 @@ export function Dashboard() {
               type="button"
               onClick={() => void toggleStrategy()}
               disabled={disableStrategyButton}
-              className={`rounded-md px-3 py-2 text-sm font-medium text-white disabled:opacity-50 ${strategyStatus?.running
-                ? "bg-rose-600 hover:bg-rose-500"
-                : "bg-emerald-600 hover:bg-emerald-500"
-                }`}
+              className={`rounded-md px-3 py-2 text-sm font-medium text-white disabled:opacity-50 ${
+                strategyStatus?.running
+                  ? "bg-rose-600 hover:bg-rose-500"
+                  : "bg-emerald-600 hover:bg-emerald-500"
+              }`}
             >
               {strategyActionPending
                 ? "Please wait..."
@@ -386,10 +387,11 @@ export function Dashboard() {
             {cronAlerts.map((alert) => (
               <p
                 key={alert.id}
-                className={`rounded-md border px-3 py-2 text-sm ${alert.severity === "error"
-                  ? "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-200"
-                  : "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200"
-                  }`}
+                className={`rounded-md border px-3 py-2 text-sm ${
+                  alert.severity === "error"
+                    ? "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-200"
+                    : "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200"
+                }`}
               >
                 {alert.message}
               </p>
@@ -416,7 +418,10 @@ export function Dashboard() {
               <h2 className="mb-3 shrink-0 text-sm font-medium text-zinc-500">
                 {selectedSymbol} · H1
               </h2>
-              <PriceChart symbol={selectedSymbol} interval={STRATEGY_INTERVAL} />
+              <PriceChart
+                symbol={selectedSymbol}
+                interval={STRATEGY_INTERVAL}
+              />
             </section>
 
             <section

@@ -5,7 +5,7 @@ import { useEffect, useRef } from "react";
 import { DASHBOARD_HEADER_HEIGHT_VAR } from "@/constants/dashboard-layout";
 
 export function useDashboardHeaderHeight() {
-  const headerRef = useRef<HTMLHeaderElement>(null);
+  const headerRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     const header = headerRef.current;
@@ -26,7 +26,9 @@ export function useDashboardHeaderHeight() {
 
     return () => {
       observer.disconnect();
-      document.documentElement.style.removeProperty(DASHBOARD_HEADER_HEIGHT_VAR);
+      document.documentElement.style.removeProperty(
+        DASHBOARD_HEADER_HEIGHT_VAR,
+      );
     };
   }, []);
 
