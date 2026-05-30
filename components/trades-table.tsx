@@ -3,19 +3,32 @@ import type { TradeRow } from "@/types/portfolio";
 interface TradesTableProps {
   trades: TradeRow[];
   onSymbolSelect: (symbol: string) => void;
+  loading?: boolean;
 }
 
-export function TradesTable({ trades, onSymbolSelect }: TradesTableProps) {
+export function TradesTable({
+  trades,
+  onSymbolSelect,
+  loading = false,
+}: TradesTableProps) {
+  if (loading && trades.length === 0) {
+    return (
+      <div className="flex min-h-0 flex-1 items-center justify-center">
+        <p className="text-sm text-zinc-500">Loading trades...</p>
+      </div>
+    );
+  }
+
   if (trades.length === 0) {
     return (
-      <div className="flex min-h-[200px] flex-1 items-center justify-center">
+      <div className="flex min-h-0 flex-1 items-center justify-center">
         <p className="text-sm text-zinc-500">No trades yet</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-[200px] min-w-0 w-full overflow-x-auto">
+    <div className="min-h-0 min-w-0 flex-1 overflow-auto">
       <table className="w-max min-w-full text-left text-sm">
         <thead>
           <tr className="border-b border-zinc-200 text-zinc-500 dark:border-zinc-800">

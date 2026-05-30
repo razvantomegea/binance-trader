@@ -32,7 +32,7 @@ export function SymbolList({
   }, [query, symbols]);
 
   return (
-    <div className="flex h-[500px] flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950 lg:h-full lg:min-h-0">
+    <div className="flex max-h-[min(24rem,calc(100vh-10rem))] min-h-0 flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950 lg:absolute lg:inset-y-0 lg:left-0 lg:z-10 lg:w-72 lg:max-h-none xl:w-80">
       <div className="shrink-0 border-b border-zinc-200 p-3 dark:border-zinc-800">
         <input
           type="search"
@@ -60,11 +60,11 @@ export function SymbolList({
                         : "hover:bg-zinc-50 dark:hover:bg-zinc-900/60",
                     )}
                   >
-                    <span className="font-medium">{row.symbol}</span>
-                    <span className="text-right">
-                      <span className="block tabular-nums text-zinc-600 dark:text-zinc-300">
-                        {row.close ?? "—"}
-                      </span>
+                    <span className="min-w-0 shrink truncate font-medium">
+                      {row.symbol}
+                    </span>
+                    <span className="shrink-0 text-right tabular-nums text-zinc-600 dark:text-zinc-300">
+                      {row.close ?? "—"}
                     </span>
                   </button>
                 </li>

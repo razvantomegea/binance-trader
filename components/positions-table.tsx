@@ -5,6 +5,7 @@ interface PositionsTableProps {
   onSymbolSelect: (symbol: string) => void;
   onClosePosition?: (symbol: string) => void | Promise<void>;
   closingSymbol?: string | null;
+  loading?: boolean;
 }
 
 export function PositionsTable({
@@ -12,17 +13,26 @@ export function PositionsTable({
   onSymbolSelect,
   onClosePosition,
   closingSymbol = null,
+  loading = false,
 }: PositionsTableProps) {
+  if (loading && positions.length === 0) {
+    return (
+      <div className="flex min-h-0 flex-1 items-center justify-center">
+        <p className="text-sm text-zinc-500">Loading positions...</p>
+      </div>
+    );
+  }
+
   if (positions.length === 0) {
     return (
-      <div className="flex min-h-[200px] flex-1 items-center justify-center">
+      <div className="flex min-h-0 flex-1 items-center justify-center">
         <p className="text-sm text-zinc-500">No open positions</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-[200px] min-w-0 w-full overflow-x-auto">
+    <div className="min-h-0 min-w-0 flex-1 overflow-auto">
       <table className="w-max min-w-full text-left text-sm">
         <thead>
           <tr className="border-b border-zinc-200 text-zinc-500 dark:border-zinc-800">

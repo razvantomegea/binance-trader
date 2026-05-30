@@ -2,6 +2,8 @@
 
 import type { EquitySnapshotRow } from "@/types/portfolio";
 
+import { chartContainerClassName } from "@/components/chart-container";
+
 import { BaseAreaChart } from "./base-area-chart";
 
 interface EquityCurveProps {
@@ -15,7 +17,9 @@ const formatTooltipValue = (value: number) =>
 export function EquityCurve({ snapshots, loading }: EquityCurveProps) {
   if (loading && snapshots.length === 0) {
     return (
-      <div className="flex h-48 items-center justify-center text-sm text-zinc-500">
+      <div
+        className={`flex items-center justify-center text-sm text-zinc-500 ${chartContainerClassName}`}
+      >
         Loading equity curve...
       </div>
     );
@@ -23,7 +27,9 @@ export function EquityCurve({ snapshots, loading }: EquityCurveProps) {
 
   if (snapshots.length === 0) {
     return (
-      <div className="flex h-48 items-center justify-center text-sm text-zinc-500">
+      <div
+        className={`flex items-center justify-center text-sm text-zinc-500 ${chartContainerClassName}`}
+      >
         No equity snapshots yet
       </div>
     );
@@ -35,15 +41,13 @@ export function EquityCurve({ snapshots, loading }: EquityCurveProps) {
   }));
 
   return (
-    <div className="h-48 w-full">
-      <BaseAreaChart
-        data={data}
-        dataKey="equity"
-        color="#3b82f6"
-        gradientId="equityFill"
-        tooltipLabel="Equity"
-        tooltipValueFormatter={formatTooltipValue}
-      />
-    </div>
+    <BaseAreaChart
+      data={data}
+      dataKey="equity"
+      color="#3b82f6"
+      gradientId="equityFill"
+      tooltipLabel="Equity"
+      tooltipValueFormatter={formatTooltipValue}
+    />
   );
 }

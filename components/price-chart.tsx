@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 
 import type { CandleInterval, KlineCandle } from "@/types/binance";
 
+import { chartContainerClassName } from "@/components/chart-container";
+
 import { BaseAreaChart } from "./base-area-chart";
 
 interface PriceChartProps {
@@ -72,7 +74,9 @@ export function PriceChart({ symbol, interval }: PriceChartProps) {
 
   if (loading) {
     return (
-      <div className="flex h-72 items-center justify-center text-sm text-zinc-500">
+      <div
+        className={`flex items-center justify-center text-sm text-zinc-500 ${chartContainerClassName}`}
+      >
         Loading chart...
       </div>
     );
@@ -80,24 +84,24 @@ export function PriceChart({ symbol, interval }: PriceChartProps) {
 
   if (error) {
     return (
-      <div className="flex h-72 items-center justify-center text-sm text-red-500">
+      <div
+        className={`flex items-center justify-center text-sm text-red-500 ${chartContainerClassName}`}
+      >
         {error}
       </div>
     );
   }
 
   return (
-    <div className="h-72 w-full">
-      <BaseAreaChart
-        data={data}
-        dataKey="close"
-        color="#10b981"
-        gradientId="priceFill"
-        tooltipLabel="Close"
-        tooltipValueFormatter={formatTooltipValue}
-        yAxisDomain={["auto", "auto"]}
-        yAxisFormatter={formatYAxis}
-      />
-    </div>
+    <BaseAreaChart
+      data={data}
+      dataKey="close"
+      color="#10b981"
+      gradientId="priceFill"
+      tooltipLabel="Close"
+      tooltipValueFormatter={formatTooltipValue}
+      yAxisDomain={["auto", "auto"]}
+      yAxisFormatter={formatYAxis}
+    />
   );
 }

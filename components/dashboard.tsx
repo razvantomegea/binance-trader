@@ -335,11 +335,10 @@ export function Dashboard() {
               type="button"
               onClick={() => void toggleStrategy()}
               disabled={disableStrategyButton}
-              className={`rounded-md px-3 py-2 text-sm font-medium text-white disabled:opacity-50 ${
-                strategyStatus?.running
-                  ? "bg-rose-600 hover:bg-rose-500"
-                  : "bg-emerald-600 hover:bg-emerald-500"
-              }`}
+              className={`rounded-md px-3 py-2 text-sm font-medium text-white disabled:opacity-50 ${strategyStatus?.running
+                ? "bg-rose-600 hover:bg-rose-500"
+                : "bg-emerald-600 hover:bg-emerald-500"
+                }`}
             >
               {strategyActionPending
                 ? "Please wait..."
@@ -381,11 +380,10 @@ export function Dashboard() {
             {cronAlerts.map((alert) => (
               <p
                 key={alert.id}
-                className={`rounded-md border px-3 py-2 text-sm ${
-                  alert.severity === "error"
-                    ? "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-200"
-                    : "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200"
-                }`}
+                className={`rounded-md border px-3 py-2 text-sm ${alert.severity === "error"
+                  ? "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-200"
+                  : "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200"
+                  }`}
               >
                 {alert.message}
               </p>
@@ -397,56 +395,60 @@ export function Dashboard() {
         </div>
       </header>
 
-      <main className="flex min-h-0 w-full min-w-0 flex-1 flex-col gap-4 overflow-y-auto p-4 lg:flex-row lg:items-stretch">
-        <div className="w-full shrink-0 lg:flex lg:min-h-0 lg:w-80 lg:flex-col">
+      <main className="flex min-h-0 w-full flex-1 flex-col gap-4 overflow-y-auto p-4">
+        <div className="relative flex w-full shrink-0 flex-col gap-4">
           <SymbolList
             symbols={symbolRows}
             selectedSymbol={selectedSymbol}
             onSelect={setSelectedSymbol}
             loading={loadingSymbols}
           />
-        </div>
-
-        <div className="flex min-w-0 flex-1 flex-col gap-4">
-          <section className="shrink-0 min-h-0 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
-            <h2 className="mb-3 text-sm font-medium text-zinc-500">
-              {selectedSymbol} · H1
-            </h2>
-            <PriceChart symbol={selectedSymbol} interval={STRATEGY_INTERVAL} />
-          </section>
-
-          <section className="shrink-0 min-h-0 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
-            <h2 className="mb-3 text-sm font-medium text-zinc-500">
-              Strategy equity (hourly)
-            </h2>
-            <EquityCurve snapshots={snapshots} loading={loadingPortfolio} />
-          </section>
-
-          <div className="grid min-w-0 gap-4 lg:grid-cols-2">
-            <section className="flex min-h-[200px] min-w-0 flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
-              <h2 className="mb-3 shrink-0 text-sm font-medium text-zinc-500">
-                Open positions
+          <div className="flex min-w-0 flex-col gap-4 lg:ml-72 lg:pl-4 xl:ml-80">
+            <section className="w-full rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
+              <h2 className="mb-3 text-sm font-medium text-zinc-500">
+                {selectedSymbol} · H1
               </h2>
-              {closePositionError ? (
-                <p className="mb-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-200">
-                  {closePositionError}
-                </p>
-              ) : null}
-              <PositionsTable
-                positions={portfolio?.positions ?? []}
-                onSymbolSelect={setSelectedSymbol}
-                onClosePosition={closePosition}
-                closingSymbol={closingSymbol}
-              />
+              <PriceChart symbol={selectedSymbol} interval={STRATEGY_INTERVAL} />
             </section>
 
-            <section className="flex min-h-[200px] min-w-0 flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
-              <h2 className="mb-3 shrink-0 text-sm font-medium text-zinc-500">
-                Recent trades
+            <section className="w-full rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
+              <h2 className="mb-3 text-sm font-medium text-zinc-500">
+                Strategy equity (hourly)
               </h2>
-              <TradesTable trades={trades} onSymbolSelect={setSelectedSymbol} />
+              <EquityCurve snapshots={snapshots} loading={loadingPortfolio} />
             </section>
           </div>
+        </div>
+
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 lg:flex-row">
+          <section className="flex min-h-[24rem] min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
+            <h2 className="mb-3 shrink-0 text-sm font-medium text-zinc-500">
+              Open positions
+            </h2>
+            {closePositionError ? (
+              <p className="mb-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-200">
+                {closePositionError}
+              </p>
+            ) : null}
+            <PositionsTable
+              positions={portfolio?.positions ?? []}
+              onSymbolSelect={setSelectedSymbol}
+              onClosePosition={closePosition}
+              closingSymbol={closingSymbol}
+              loading={loadingPortfolio}
+            />
+          </section>
+
+          <section className="flex min-h-[24rem] min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
+            <h2 className="mb-3 shrink-0 text-sm font-medium text-zinc-500">
+              Recent trades
+            </h2>
+            <TradesTable
+              trades={trades}
+              onSymbolSelect={setSelectedSymbol}
+              loading={loadingPortfolio}
+            />
+          </section>
         </div>
       </main>
     </div>
