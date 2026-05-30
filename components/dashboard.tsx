@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { mobileDashboardPanelMinHeightClassName } from "@/constants/dashboard-layout";
 import { EquityCurve } from "@/components/equity-curve";
 import { PushNotificationToggle } from "@/components/push-notification-toggle";
 import { PortfolioSummary } from "@/components/portfolio-summary";
@@ -14,6 +15,7 @@ import {
   STRATEGY_CRON_STALE_MS,
 } from "@/constants/cron";
 import { STRATEGY_INTERVAL } from "@/constants/strategy";
+import { useDashboardHeaderHeight } from "@/hooks/use-dashboard-header-height";
 import { computeNextStrategyCronRunIso } from "@/utils/scheduler/compute-next-cron-run";
 import type {
   EquityCurveResponse,
@@ -126,6 +128,7 @@ function buildCronAlerts({
 }
 
 export function Dashboard() {
+  const headerRef = useDashboardHeaderHeight();
   const [selectedSymbol, setSelectedSymbol] = useState(DEFAULT_SYMBOL);
   const [symbolRows, setSymbolRows] = useState<SymbolRow[]>([]);
   const [portfolio, setPortfolio] = useState<PortfolioResponse | null>(null);
@@ -320,7 +323,10 @@ export function Dashboard() {
 
   return (
     <div className="flex h-screen w-full min-w-0 flex-col overflow-hidden bg-zinc-50 text-zinc-900 dark:bg-black dark:text-zinc-50">
-      <header className="shrink-0 border-b border-zinc-200 bg-white px-4 py-4 dark:border-zinc-800 dark:bg-zinc-950">
+      <header
+        ref={headerRef}
+        className="shrink-0 border-b border-zinc-200 bg-white px-4 py-4 dark:border-zinc-800 dark:bg-zinc-950"
+      >
         <div className="flex w-full flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="text-xl font-semibold">Binance Trading Dashboard</h1>
@@ -404,15 +410,19 @@ export function Dashboard() {
             loading={loadingSymbols}
           />
           <div className="flex min-w-0 flex-col gap-4 lg:ml-72 lg:pl-4 xl:ml-80">
-            <section className="w-full rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
-              <h2 className="mb-3 text-sm font-medium text-zinc-500">
+            <section
+              className={`flex w-full flex-col ${mobileDashboardPanelMinHeightClassName} rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950`}
+            >
+              <h2 className="mb-3 shrink-0 text-sm font-medium text-zinc-500">
                 {selectedSymbol} · H1
               </h2>
               <PriceChart symbol={selectedSymbol} interval={STRATEGY_INTERVAL} />
             </section>
 
-            <section className="w-full rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
-              <h2 className="mb-3 text-sm font-medium text-zinc-500">
+            <section
+              className={`flex w-full flex-col ${mobileDashboardPanelMinHeightClassName} rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950`}
+            >
+              <h2 className="mb-3 shrink-0 text-sm font-medium text-zinc-500">
                 Strategy equity (hourly)
               </h2>
               <EquityCurve snapshots={snapshots} loading={loadingPortfolio} />
@@ -420,13 +430,15 @@ export function Dashboard() {
           </div>
         </div>
 
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 lg:flex-row">
-          <section className="flex min-h-[24rem] min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
-            <h2 className="mb-3 shrink-0 text-sm font-medium text-zinc-500">
+        <div className="flex min-w-0 flex-col gap-4 max-lg:shrink-0 lg:min-h-0 lg:flex-1 lg:flex-row">
+          <section
+            className={`flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white pt-4 dark:border-zinc-800 dark:bg-zinc-950 ${mobileDashboardPanelMinHeightClassName} lg:min-h-[24rem]`}
+          >
+            <h2 className="mb-3 shrink-0 px-4 text-sm font-medium text-zinc-500">
               Open positions
             </h2>
             {closePositionError ? (
-              <p className="mb-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-200">
+              <p className="mb-3 mx-4 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-200">
                 {closePositionError}
               </p>
             ) : null}
@@ -439,8 +451,10 @@ export function Dashboard() {
             />
           </section>
 
-          <section className="flex min-h-[24rem] min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
-            <h2 className="mb-3 shrink-0 text-sm font-medium text-zinc-500">
+          <section
+            className={`flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white pt-4 dark:border-zinc-800 dark:bg-zinc-950 ${mobileDashboardPanelMinHeightClassName} lg:min-h-[24rem]`}
+          >
+            <h2 className="mb-3 shrink-0 px-4 text-sm font-medium text-zinc-500">
               Recent trades
             </h2>
             <TradesTable
