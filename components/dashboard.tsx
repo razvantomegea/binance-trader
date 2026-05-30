@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { mobileDashboardPanelMinHeightClassName } from "@/constants/dashboard-layout";
+import { MOBILE_DASHBOARD_PANEL_MIN_HEIGHT_CLASS_NAME } from "@/constants/dashboard-layout";
 import { EquityCurve } from "@/components/equity-curve";
 import { PushNotificationToggle } from "@/components/push-notification-toggle";
 import { PortfolioSummary } from "@/components/portfolio-summary";
@@ -411,7 +411,7 @@ export function Dashboard() {
           />
           <div className="flex min-w-0 flex-col gap-4 lg:ml-72 lg:pl-4 xl:ml-80">
             <section
-              className={`flex w-full flex-col ${mobileDashboardPanelMinHeightClassName} rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950`}
+              className={`flex w-full flex-col ${MOBILE_DASHBOARD_PANEL_MIN_HEIGHT_CLASS_NAME} rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950`}
             >
               <h2 className="mb-3 shrink-0 text-sm font-medium text-zinc-500">
                 {selectedSymbol} · H1
@@ -420,7 +420,7 @@ export function Dashboard() {
             </section>
 
             <section
-              className={`flex w-full flex-col ${mobileDashboardPanelMinHeightClassName} rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950`}
+              className={`flex w-full flex-col ${MOBILE_DASHBOARD_PANEL_MIN_HEIGHT_CLASS_NAME} rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950`}
             >
               <h2 className="mb-3 shrink-0 text-sm font-medium text-zinc-500">
                 Strategy equity (hourly)
@@ -432,7 +432,7 @@ export function Dashboard() {
 
         <div className="flex min-w-0 flex-col gap-4 max-lg:shrink-0 lg:min-h-0 lg:flex-1 lg:flex-row">
           <section
-            className={`flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white pt-4 dark:border-zinc-800 dark:bg-zinc-950 ${mobileDashboardPanelMinHeightClassName} lg:min-h-[24rem]`}
+            className={`flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white pt-4 dark:border-zinc-800 dark:bg-zinc-950 ${MOBILE_DASHBOARD_PANEL_MIN_HEIGHT_CLASS_NAME} lg:min-h-[24rem]`}
           >
             <h2 className="mb-3 shrink-0 px-4 text-sm font-medium text-zinc-500">
               Open positions
@@ -452,7 +452,7 @@ export function Dashboard() {
           </section>
 
           <section
-            className={`flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white pt-4 dark:border-zinc-800 dark:bg-zinc-950 ${mobileDashboardPanelMinHeightClassName} lg:min-h-[24rem]`}
+            className={`flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white pt-4 dark:border-zinc-800 dark:bg-zinc-950 ${MOBILE_DASHBOARD_PANEL_MIN_HEIGHT_CLASS_NAME} lg:min-h-[24rem]`}
           >
             <h2 className="mb-3 shrink-0 px-4 text-sm font-medium text-zinc-500">
               Recent trades

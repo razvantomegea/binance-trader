@@ -3,7 +3,7 @@
 import clsx from "clsx";
 import { useMemo, useState } from "react";
 
-import { mobileDashboardPanelFixedHeightClassName } from "@/constants/dashboard-layout";
+import { MOBILE_DASHBOARD_PANEL_FIXED_HEIGHT_CLASS_NAME } from "@/constants/dashboard-layout";
 
 interface SymbolRow {
   symbol: string;
@@ -37,7 +37,7 @@ export function SymbolList({
     <div
       className={clsx(
         "flex min-h-0 flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950 lg:absolute lg:inset-y-0 lg:left-0 lg:z-10 lg:max-h-none lg:w-72 xl:w-80",
-        mobileDashboardPanelFixedHeightClassName,
+        MOBILE_DASHBOARD_PANEL_FIXED_HEIGHT_CLASS_NAME,
       )}
     >
       <div className="shrink-0 border-b border-zinc-200 p-3 dark:border-zinc-800">
