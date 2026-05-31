@@ -84,9 +84,8 @@ export async function readHistoricalKlinesCache(params: {
   interval: CandleInterval;
   startTime: number;
 }): Promise<HistoricalKlinesCachePayload | null> {
-  const filePath = buildCacheFilePath(params);
-
   try {
+    const filePath = buildCacheFilePath(params);
     const raw = await readFile(filePath, "utf8");
     const parsed = JSON.parse(raw) as unknown;
     if (!isHistoricalKlinesCachePayload(parsed)) {

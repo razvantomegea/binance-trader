@@ -17,12 +17,7 @@ async function getExchangeSymbols(): Promise<
 }
 
 export async function getTradingSymbols(): Promise<string[]> {
-  const symbols = await getExchangeSymbols();
-
-  return symbols
-    .filter((item) => item.status === "TRADING")
-    .map((item) => item.symbol)
-    .sort();
+  return getUsdtSymbols();
 }
 
 export async function getUsdtSymbols(): Promise<string[]> {

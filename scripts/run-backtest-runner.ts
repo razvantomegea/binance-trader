@@ -77,7 +77,7 @@ function parseArgs(argv: string[]): CliOptions {
       case "--symbols":
         options.symbols = next
           ?.split(/[,\s]+/)
-          .map((symbol) => symbol.trim())
+          .map((symbol) => symbol.trim().toUpperCase())
           .filter(Boolean);
         i += 1;
         break;

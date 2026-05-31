@@ -26,6 +26,21 @@ import { getTradingSymbols } from "@/utils/binance/get-usdt-symbols";
 
 const DEFAULT_FEE_BPS = 0;
 
+function normalizeAndValidateUsdtSymbols(symbols: string[]): string[] {
+  const normalized = symbols
+    .map((symbol) => symbol.trim().toUpperCase())
+    .filter(Boolean);
+
+  const invalid = normalized.filter((symbol) => !symbol.endsWith("USDT"));
+  if (invalid.length > 0) {
+    throw new Error(
+      `Only USDT symbols are allowed. Invalid: ${invalid.join(", ")}`,
+    );
+  }
+
+  return [...new Set(normalized)].sort();
+}
+
 export function createDefaultBacktestConfig(
   overrides: Partial<BacktestConfig> = {},
 ): BacktestConfig {
@@ -47,7 +62,7 @@ export async function runBacktest(
 
   const symbols =
     config.symbols && config.symbols.length > 0
-      ? [...config.symbols].sort()
+      ? normalizeAndValidateUsdtSymbols(config.symbols)
       : [...(await getTradingSymbols())].sort();
 
   const { startTime: fetchStartTime, endTime } = getHistoricalRange({
