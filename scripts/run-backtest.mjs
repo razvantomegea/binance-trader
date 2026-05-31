@@ -22,4 +22,8 @@ const result = spawnSync(
   },
 );
 
+if (result.error) {
+  console.error(result.error.message);
+}
+
 process.exit(result.status ?? 1);

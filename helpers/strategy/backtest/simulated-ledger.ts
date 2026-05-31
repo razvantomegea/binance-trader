@@ -36,10 +36,7 @@ export class SimulatedLedger {
     };
   }
 
-  applyHoldUpdate(params: {
-    symbol: string;
-    updatedMaxPrice?: number;
-  }): void {
+  applyHoldUpdate(params: { symbol: string; updatedMaxPrice?: number }): void {
     const position = this.positions.get(params.symbol);
     if (!position || params.updatedMaxPrice === undefined) {
       return;

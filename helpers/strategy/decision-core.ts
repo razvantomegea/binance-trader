@@ -5,7 +5,10 @@ import {
   EXIT_DRAWDOWN_PCT,
   TAKE_PROFIT_PCT,
 } from "@/constants/binance";
-import { STRATEGY_LOOKBACK_CLOSES, SYMBOL_REENTRY_COOLDOWN_MS } from "@/constants/strategy";
+import {
+  STRATEGY_LOOKBACK_CLOSES,
+  SYMBOL_REENTRY_COOLDOWN_MS,
+} from "@/constants/strategy";
 import {
   hasGainVsAnyRef,
   hasLossVsAnyRef,

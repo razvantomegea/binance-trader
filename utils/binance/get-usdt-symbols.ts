@@ -1,7 +1,9 @@
 import { BINANCE_API_BASE_URL } from "@/constants/binance";
 import type { BinanceExchangeInfoResponse } from "@/types/binance";
 
-async function getExchangeSymbols(): Promise<BinanceExchangeInfoResponse["symbols"]> {
+async function getExchangeSymbols(): Promise<
+  BinanceExchangeInfoResponse["symbols"]
+> {
   const response = await fetch(`${BINANCE_API_BASE_URL}/api/v3/exchangeInfo`, {
     next: { revalidate: 3600 },
   });

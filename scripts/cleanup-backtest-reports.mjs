@@ -4,7 +4,11 @@ import { readdir, rm, stat } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const REPORT_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "backtest-results");
+const REPORT_DIR = join(
+  dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "backtest-results",
+);
 const REPORT_PATTERN = /^backtest-\d+\.json$/;
 
 function parseArgs(argv) {
@@ -44,7 +48,12 @@ async function listReports() {
   try {
     entries = await readdir(REPORT_DIR);
   } catch (error) {
-    if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") {
+    if (
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      error.code === "ENOENT"
+    ) {
       return [];
     }
     throw error;

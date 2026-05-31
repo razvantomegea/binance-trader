@@ -16,6 +16,7 @@
     "test:watch": "vitest",
     "backtest": "node scripts/run-backtest.mjs",
     "backtest:cleanup": "node scripts/cleanup-backtest-reports.mjs",
+    "backtest:cache:cleanup": "node scripts/cleanup-backtest-cache.mjs",
     "db:push": "drizzle-kit push",
     "cron:trigger": "node scripts/trigger-strategy-cron.mjs",
     "railway:up": "pnpm run railway:up:web",

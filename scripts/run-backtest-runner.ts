@@ -4,6 +4,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { BINANCE_FETCH_CONCURRENCY } from "@/constants/binance";
 import {
   createDefaultBacktestConfig,
   runBacktest,
@@ -19,11 +20,28 @@ interface CliOptions {
   output?: string;
 }
 
+function parseFiniteNumberArg(flag: string, value: string | undefined): number {
+  if (
+    typeof value !== "string" ||
+    value.trim().length === 0 ||
+    value.startsWith("--")
+  ) {
+    throw new Error(`Missing value for ${flag}`);
+  }
+
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    throw new Error(`Invalid numeric value for ${flag}: ${value}`);
+  }
+
+  return parsed;
+}
+
 function parseArgs(argv: string[]): CliOptions {
   const options: CliOptions = {
     days: 365,
     initialCash: 10_000,
-    concurrency: 10,
+    concurrency: BINANCE_FETCH_CONCURRENCY,
     feeBps: 0,
     checkEveryMinutes: 15,
   };
@@ -34,23 +52,26 @@ function parseArgs(argv: string[]): CliOptions {
 
     switch (arg) {
       case "--days":
-        options.days = Number(next);
+        options.days = parseFiniteNumberArg("--days", next);
         i += 1;
         break;
       case "--cash":
-        options.initialCash = Number(next);
+        options.initialCash = parseFiniteNumberArg("--cash", next);
         i += 1;
         break;
       case "--concurrency":
-        options.concurrency = Number(next);
+        options.concurrency = parseFiniteNumberArg("--concurrency", next);
         i += 1;
         break;
       case "--fee-bps":
-        options.feeBps = Number(next);
+        options.feeBps = parseFiniteNumberArg("--fee-bps", next);
         i += 1;
         break;
       case "--check-every-minutes":
-        options.checkEveryMinutes = Number(next);
+        options.checkEveryMinutes = parseFiniteNumberArg(
+          "--check-every-minutes",
+          next,
+        );
         i += 1;
         break;
       case "--symbols":

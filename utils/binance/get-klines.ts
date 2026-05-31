@@ -9,6 +9,10 @@ import type {
   KlineCandle,
 } from "@/types/binance";
 import { fetchWithRetry } from "@/utils/binance/fetch-with-retry";
+import {
+  readHistoricalKlinesCache,
+  writeHistoricalKlinesCache,
+} from "@/utils/binance/historical-klines-cache";
 import { getLastClosedCandleOpenTime } from "@/utils/binance/candle-time";
 
 interface GetKlinesParams {
@@ -108,6 +112,20 @@ export async function getRecentClosedKlines({
 
 const KLINE_PAGE_SIZE = 1000;
 
+function mergeAscendingKlines(
+  existing: KlineCandle[],
+  incoming: KlineCandle[],
+): KlineCandle[] {
+  const byOpenTime = new Map<number, KlineCandle>();
+  for (const candle of existing) {
+    byOpenTime.set(candle.openTime, candle);
+  }
+  for (const candle of incoming) {
+    byOpenTime.set(candle.openTime, candle);
+  }
+  return [...byOpenTime.values()].sort((a, b) => a.openTime - b.openTime);
+}
+
 /** Closed candles ascending by openTime (excludes currently forming candle). */
 export async function getHistoricalClosedKlines({
   symbol,
@@ -120,16 +138,43 @@ export async function getHistoricalClosedKlines({
   startTime: number;
   endTime: number;
 }): Promise<KlineCandle[]> {
-  const all: KlineCandle[] = [];
-  let cursor = startTime;
+  const cappedEndTime = Math.min(endTime, getLastClosedCandleOpenTime());
+  if (cappedEndTime < startTime) {
+    return [];
+  }
 
-  while (cursor <= endTime) {
+  const cached = await readHistoricalKlinesCache({
+    symbol,
+    interval,
+    startTime,
+  });
+
+  const cachedKlines =
+    cached?.klines.filter(
+      (candle) =>
+        candle.openTime >= startTime && candle.openTime <= cappedEndTime,
+    ) ?? [];
+  if (cachedKlines.length > 0) {
+    const lastCachedOpenTime = cachedKlines[cachedKlines.length - 1]!.openTime;
+    if (lastCachedOpenTime >= cappedEndTime) {
+      return cachedKlines;
+    }
+  }
+
+  const all: KlineCandle[] = [...cachedKlines];
+  const lastCachedOpenTime =
+    cachedKlines.length > 0
+      ? cachedKlines[cachedKlines.length - 1]!.openTime
+      : null;
+  let cursor = lastCachedOpenTime !== null ? lastCachedOpenTime + 1 : startTime;
+
+  while (cursor <= cappedEndTime) {
     const page = await getKlines({
       symbol,
       interval,
       limit: KLINE_PAGE_SIZE,
       startTime: cursor,
-      endTime,
+      endTime: cappedEndTime,
     });
 
     if (page.length === 0) {
@@ -139,13 +184,26 @@ export async function getHistoricalClosedKlines({
     all.push(...page);
 
     const lastOpenTime = page[page.length - 1]!.openTime;
-    if (page.length < KLINE_PAGE_SIZE || lastOpenTime >= endTime) {
+    if (page.length < KLINE_PAGE_SIZE || lastOpenTime >= cappedEndTime) {
       break;
     }
 
     cursor = lastOpenTime + 1;
   }
 
-  const cappedEndTime = Math.min(endTime, getLastClosedCandleOpenTime());
-  return all.filter((candle) => candle.openTime <= cappedEndTime);
+  const merged = mergeAscendingKlines(cachedKlines, all).filter(
+    (candle) =>
+      candle.openTime >= startTime && candle.openTime <= cappedEndTime,
+  );
+  if (merged.length > 0) {
+    await writeHistoricalKlinesCache({
+      symbol,
+      interval,
+      startTime,
+      endTime: merged[merged.length - 1]!.openTime,
+      klines: merged,
+    });
+  }
+
+  return merged;
 }

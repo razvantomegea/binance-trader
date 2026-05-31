@@ -1,5 +1,11 @@
-import { INITIAL_PAPER_CASH } from "@/constants/binance";
-import { STRATEGY_INTERVAL, STRATEGY_LOOKBACK_CLOSES } from "@/constants/strategy";
+import {
+  BINANCE_FETCH_CONCURRENCY,
+  INITIAL_PAPER_CASH,
+} from "@/constants/binance";
+import {
+  STRATEGY_INTERVAL,
+  STRATEGY_LOOKBACK_CLOSES,
+} from "@/constants/strategy";
 import { assertLocalhostOnly } from "@/helpers/strategy/backtest/assert-localhost-only";
 import { buildBacktestReport } from "@/helpers/strategy/backtest/build-backtest-report";
 import {
@@ -11,7 +17,11 @@ import {
 } from "@/helpers/strategy/backtest/historical-kline-provider";
 import { SimulatedLedger } from "@/helpers/strategy/backtest/simulated-ledger";
 import { evaluateDecision } from "@/helpers/strategy/decision-core";
-import type { BacktestConfig, BacktestReport, EquityPoint } from "@/types/backtest";
+import type {
+  BacktestConfig,
+  BacktestReport,
+  EquityPoint,
+} from "@/types/backtest";
 import { getTradingSymbols } from "@/utils/binance/get-usdt-symbols";
 
 const DEFAULT_FEE_BPS = 0;
@@ -22,7 +32,7 @@ export function createDefaultBacktestConfig(
   return {
     days: 365,
     initialCash: INITIAL_PAPER_CASH,
-    concurrency: 10,
+    concurrency: BINANCE_FETCH_CONCURRENCY,
     feeBps: DEFAULT_FEE_BPS,
     checkEveryMinutes: 15,
     interval: STRATEGY_INTERVAL,
@@ -69,6 +79,7 @@ export async function runBacktest(
 
   const ledger = new SimulatedLedger(config.initialCash, config.feeBps);
   const equityCurve: EquityPoint[] = [];
+  const markPriceCursorBySymbol = new Map<string, number>();
   let lastProcessedOpenTime: number | null = null;
 
   for (const openTime of timeline) {
@@ -106,26 +117,27 @@ export async function runBacktest(
     lastProcessedOpenTime = openTime;
 
     const markPrices = new Map<string, number>();
-    for (const symbol of symbols) {
+    for (const [symbol, position] of ledger.positions) {
       const klinesAsc = klinesBySymbol.get(symbol);
       if (!klinesAsc) {
+        markPrices.set(symbol, position.buyPrice);
         continue;
       }
 
-      const candle = [...klinesAsc]
-        .reverse()
-        .find((kline) => kline.openTime <= openTime);
-      if (candle) {
-        markPrices.set(symbol, candle.close);
+      let cursor = markPriceCursorBySymbol.get(symbol) ?? 0;
+      while (
+        cursor + 1 < klinesAsc.length &&
+        klinesAsc[cursor + 1]!.openTime <= openTime
+      ) {
+        cursor += 1;
       }
-    }
+      markPriceCursorBySymbol.set(symbol, cursor);
 
-    for (const symbol of ledger.positions.keys()) {
-      if (!markPrices.has(symbol)) {
-        const position = ledger.positions.get(symbol);
-        if (position) {
-          markPrices.set(symbol, position.buyPrice);
-        }
+      const candle = klinesAsc[cursor];
+      if (candle && candle.openTime <= openTime) {
+        markPrices.set(symbol, candle.close);
+      } else {
+        markPrices.set(symbol, position.buyPrice);
       }
     }
 

@@ -7,10 +7,10 @@ import { processInBatches } from "@/utils/process-in-batches";
 
 export { getLastClosedCandleOpenTime };
 
-export function getHistoricalRange(params: {
-  days: number;
-  now?: number;
-}): { startTime: number; endTime: number } {
+export function getHistoricalRange(params: { days: number; now?: number }): {
+  startTime: number;
+  endTime: number;
+} {
   const endTime = getLastClosedCandleOpenTime(params.now);
   const lookbackMs = (params.days * 24 + STRATEGY_LOOKBACK_CLOSES) * HOUR_MS;
   return { startTime: endTime - lookbackMs, endTime };
@@ -22,7 +22,10 @@ export function buildCheckTimeline(params: {
   checkEveryMinutes: number;
 }): number[] {
   const checkEveryMs = params.checkEveryMinutes * 60_000;
-  const safeStep = Number.isFinite(checkEveryMs) && checkEveryMs > 0 ? checkEveryMs : 15 * 60_000;
+  const safeStep =
+    Number.isFinite(checkEveryMs) && checkEveryMs > 0
+      ? checkEveryMs
+      : 15 * 60_000;
   const timeline: number[] = [];
   for (let t = params.startTime; t <= params.endTime; t += safeStep) {
     timeline.push(t);

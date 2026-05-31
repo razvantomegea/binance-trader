@@ -54,6 +54,7 @@ function computeWinRatePct(trades: SimTrade[]): {
   }
 
   let winningTrades = 0;
+  let matchedSells = 0;
 
   for (const sell of sells) {
     const queue = openBuys.get(sell.symbol);
@@ -61,6 +62,7 @@ function computeWinRatePct(trades: SimTrade[]): {
     if (!buy) {
       continue;
     }
+    matchedSells += 1;
 
     const buyCost = buy.notional + buy.fee;
     const sellProceeds = sell.notional - sell.fee;
@@ -70,7 +72,7 @@ function computeWinRatePct(trades: SimTrade[]): {
   }
 
   return {
-    winRatePct: (winningTrades / sells.length) * 100,
+    winRatePct: matchedSells > 0 ? (winningTrades / matchedSells) * 100 : 0,
     winningTrades,
     totalTrades: sells.length,
   };
