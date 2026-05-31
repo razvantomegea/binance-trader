@@ -6,29 +6,63 @@ import {
 } from "@/constants/strategy";
 import type { KlineCandle } from "@/types/binance";
 
-import { evaluateSymbol } from "./evaluate-symbol";
-import type { OpenPosition } from "./get-positions";
-
+vi.mock("@/db");
 vi.mock("@/utils/binance/get-klines");
 vi.mock("@/helpers/strategy/place-trade");
 vi.mock("@/helpers/strategy/get-last-symbol-close-time");
 
+import { getDb } from "@/db";
 import { getLastSymbolCloseTime } from "@/helpers/strategy/get-last-symbol-close-time";
 import { getRecentClosedKlines } from "@/utils/binance/get-klines";
 import { placeTrade } from "@/helpers/strategy/place-trade";
 
+import { evaluateSymbol } from "./evaluate-symbol";
+import type { OpenPosition } from "./get-positions";
+
+const mockedGetDb = vi.mocked(getDb);
 const mockedGetKlines = vi.mocked(getRecentClosedKlines);
 const mockedPlaceTrade = vi.mocked(placeTrade);
 const mockedGetLastClose = vi.mocked(getLastSymbolCloseTime);
 
 const HOUR_MS = 3_600_000;
 
-function makeCandle(openTime: number, close: number): KlineCandle {
-  return { openTime, open: close, high: close, low: close, close };
+function mockDbUpdate(): void {
+  const where = vi.fn().mockResolvedValue(undefined);
+  const set = vi.fn().mockReturnValue({ where });
+  const update = vi.fn().mockReturnValue({ set });
+  mockedGetDb.mockReturnValue({ update } as unknown as ReturnType<
+    typeof getDb
+  >);
 }
 
-function makeCandles(startOpenTime: number, closes: number[]): KlineCandle[] {
-  return closes.map((c, i) => makeCandle(startOpenTime - i * HOUR_MS, c));
+function makeCandle(
+  openTime: number,
+  close: number,
+  overrides: Partial<Pick<KlineCandle, "high" | "low" | "open">> = {},
+): KlineCandle {
+  return {
+    openTime,
+    open: overrides.open ?? close,
+    high: overrides.high ?? close,
+    low: overrides.low ?? close,
+    close,
+  };
+}
+
+function makeCandles(
+  startOpenTime: number,
+  specs: Array<number | { close: number; high?: number; low?: number }>,
+): KlineCandle[] {
+  return specs.map((spec, i) => {
+    const openTime = startOpenTime - i * HOUR_MS;
+    if (typeof spec === "number") {
+      return makeCandle(openTime, spec);
+    }
+    return makeCandle(openTime, spec.close, {
+      high: spec.high,
+      low: spec.low,
+    });
+  });
 }
 
 function position(overrides: Partial<OpenPosition> = {}): OpenPosition {
@@ -53,6 +87,7 @@ const BASE_PARAMS = {
 describe("evaluateSymbol exits", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockDbUpdate();
     mockedPlaceTrade.mockResolvedValue(undefined);
   });
 
@@ -60,8 +95,10 @@ describe("evaluateSymbol exits", () => {
     const buyOpenTime = 1000 * HOUR_MS;
     const latestOpenTime = buyOpenTime + HOUR_MS;
 
-    const closes = [149, ...Array(STRATEGY_LOOKBACK_CLOSES - 1).fill(100)];
-    const candles = makeCandles(latestOpenTime, closes as number[]);
+    const candles = makeCandles(latestOpenTime, [
+      149,
+      ...Array(STRATEGY_LOOKBACK_CLOSES - 1).fill(100),
+    ]);
     mockedGetKlines.mockResolvedValue(candles);
 
     const result = await evaluateSymbol({
@@ -77,8 +114,10 @@ describe("evaluateSymbol exits", () => {
     const buyOpenTime = 1000 * HOUR_MS;
     const latestOpenTime = buyOpenTime + HOUR_MS;
 
-    const closes = [150, ...Array(STRATEGY_LOOKBACK_CLOSES - 1).fill(100)];
-    const candles = makeCandles(latestOpenTime, closes as number[]);
+    const candles = makeCandles(latestOpenTime, [
+      150,
+      ...Array(STRATEGY_LOOKBACK_CLOSES - 1).fill(100),
+    ]);
     mockedGetKlines.mockResolvedValue(candles);
 
     const result = await evaluateSymbol({
@@ -95,24 +134,31 @@ describe("evaluateSymbol exits", () => {
     );
   });
 
-  it("SL when price rises 100% then falls 15% from buy", async () => {
+  it("drawdown exit when price falls 15% from peak", async () => {
     const buyOpenTime = 1000 * HOUR_MS;
     const latestOpenTime = buyOpenTime + 2 * HOUR_MS;
 
-    const closes = [85, 200, ...Array(STRATEGY_LOOKBACK_CLOSES - 2).fill(100)];
-    const candles = makeCandles(latestOpenTime, closes as number[]);
+    const candles = makeCandles(latestOpenTime, [
+      170,
+      200,
+      ...Array(STRATEGY_LOOKBACK_CLOSES - 2).fill(100),
+    ]);
     mockedGetKlines.mockResolvedValue(candles);
 
     const result = await evaluateSymbol({
       ...BASE_PARAMS,
-      position: position({ buyTime: new Date(buyOpenTime), buyPrice: 100 }),
+      position: position({
+        buyTime: new Date(buyOpenTime),
+        buyPrice: 100,
+        maxPriceAfterBuy: 200,
+      }),
     });
 
     expect(result.traded).toBe(true);
     expect(mockedPlaceTrade).toHaveBeenCalledWith(
       expect.objectContaining({
         side: "SELL",
-        reason: "stop_loss_15pct_vs_buy",
+        reason: "exit_drawdown_15pct_vs_peak",
       }),
     );
   });
@@ -121,13 +167,12 @@ describe("evaluateSymbol exits", () => {
     const buyOpenTime = 1000 * HOUR_MS;
     const latestOpenTime = buyOpenTime + 3 * HOUR_MS;
 
-    const closes = [
+    const candles = makeCandles(latestOpenTime, [
       150,
       120,
       110,
       ...Array(STRATEGY_LOOKBACK_CLOSES - 3).fill(90),
-    ];
-    const candles = makeCandles(latestOpenTime, closes as number[]);
+    ]);
     mockedGetKlines.mockResolvedValue(candles);
 
     const result = await evaluateSymbol({
@@ -144,17 +189,15 @@ describe("evaluateSymbol exits", () => {
     );
   });
 
-  it("no SL when price rises 90% then falls 15% from peak (still above buy)", async () => {
+  it("TP when price rises 90% then falls 15% from peak but still +50% vs buy", async () => {
     const buyOpenTime = 1000 * HOUR_MS;
     const latestOpenTime = buyOpenTime + 2 * HOUR_MS;
 
-    // 190 peak, 161.5 is -15% from peak but +61.5% vs buy => TP, not SL
-    const closes = [
+    const candles = makeCandles(latestOpenTime, [
       161.5,
       190,
       ...Array(STRATEGY_LOOKBACK_CLOSES - 2).fill(100),
-    ];
-    const candles = makeCandles(latestOpenTime, closes as number[]);
+    ]);
     mockedGetKlines.mockResolvedValue(candles);
 
     const result = await evaluateSymbol({
@@ -167,6 +210,30 @@ describe("evaluateSymbol exits", () => {
       expect.objectContaining({
         side: "SELL",
         reason: "take_profit_50pct_vs_buy",
+      }),
+    );
+  });
+
+  it("drawdown exit when price falls 15% from buy with no prior peak above buy", async () => {
+    const buyOpenTime = 1000 * HOUR_MS;
+    const latestOpenTime = buyOpenTime + HOUR_MS;
+
+    const candles = makeCandles(latestOpenTime, [
+      85,
+      ...Array(STRATEGY_LOOKBACK_CLOSES - 1).fill(100),
+    ]);
+    mockedGetKlines.mockResolvedValue(candles);
+
+    const result = await evaluateSymbol({
+      ...BASE_PARAMS,
+      position: position({ buyTime: new Date(buyOpenTime), buyPrice: 100 }),
+    });
+
+    expect(result.traded).toBe(true);
+    expect(mockedPlaceTrade).toHaveBeenCalledWith(
+      expect.objectContaining({
+        side: "SELL",
+        reason: "exit_drawdown_15pct_vs_peak",
       }),
     );
   });
@@ -175,8 +242,10 @@ describe("evaluateSymbol exits", () => {
     const buyOpenTime = 1000 * HOUR_MS;
     const latestOpenTime = buyOpenTime - HOUR_MS;
 
-    const closes = [50, ...Array(STRATEGY_LOOKBACK_CLOSES - 1).fill(100)];
-    const candles = makeCandles(latestOpenTime, closes as number[]);
+    const candles = makeCandles(latestOpenTime, [
+      50,
+      ...Array(STRATEGY_LOOKBACK_CLOSES - 1).fill(100),
+    ]);
     mockedGetKlines.mockResolvedValue(candles);
 
     const result = await evaluateSymbol({
@@ -196,11 +265,13 @@ describe("evaluateSymbol entry", () => {
     mockedGetLastClose.mockResolvedValue(null);
   });
 
-  it("buys when pump >= 50% vs prior closes", async () => {
+  it("buys when 24h range >= 50% and current is within 15% of 24h high", async () => {
     const latestOpenTime = 1000 * HOUR_MS;
 
-    const closes = [150, ...Array(STRATEGY_LOOKBACK_CLOSES - 1).fill(100)];
-    const candles = makeCandles(latestOpenTime, closes as number[]);
+    const candles = makeCandles(latestOpenTime, [
+      150,
+      ...Array(STRATEGY_LOOKBACK_CLOSES - 1).fill(100),
+    ]);
     mockedGetKlines.mockResolvedValue(candles);
 
     const result = await evaluateSymbol({
@@ -212,38 +283,19 @@ describe("evaluateSymbol entry", () => {
     expect(mockedPlaceTrade).toHaveBeenCalledWith(
       expect.objectContaining({
         side: "BUY",
-        reason: "entry_pump_50pct_vs_prior_23h",
+        reason: "entry_24h_range_50pct_near_high",
       }),
     );
   });
 
-  it("buys after 90% pump then 20% fall (still +52% vs prior)", async () => {
+  it("does not buy when current is more than 15% below 24h high", async () => {
     const latestOpenTime = 1000 * HOUR_MS;
 
-    // Prior candles show pump to 190 then current close fell 20% to 152
-    const closes = [152, 190, ...Array(STRATEGY_LOOKBACK_CLOSES - 2).fill(100)];
-    const candles = makeCandles(latestOpenTime, closes as number[]);
-    mockedGetKlines.mockResolvedValue(candles);
-
-    const result = await evaluateSymbol({
-      ...BASE_PARAMS,
-      position: undefined,
-    });
-
-    expect(result.traded).toBe(true);
-    expect(mockedPlaceTrade).toHaveBeenCalledWith(
-      expect.objectContaining({
-        side: "BUY",
-        reason: "entry_pump_50pct_vs_prior_23h",
-      }),
-    );
-  });
-
-  it("does not buy when pump < 50%", async () => {
-    const latestOpenTime = 1000 * HOUR_MS;
-
-    const closes = [149, ...Array(STRATEGY_LOOKBACK_CLOSES - 1).fill(100)];
-    const candles = makeCandles(latestOpenTime, closes as number[]);
+    const candles = makeCandles(latestOpenTime, [
+      { close: 152, high: 190, low: 100 },
+      { close: 190, high: 190, low: 100 },
+      ...Array(STRATEGY_LOOKBACK_CLOSES - 2).fill(100),
+    ]);
     mockedGetKlines.mockResolvedValue(candles);
 
     const result = await evaluateSymbol({
@@ -255,13 +307,52 @@ describe("evaluateSymbol entry", () => {
     expect(mockedPlaceTrade).not.toHaveBeenCalled();
   });
 
-  it("does not buy when last SELL was within 24h even if pump qualifies", async () => {
+  it("does not buy when current is exactly 15% below 24h high", async () => {
+    const latestOpenTime = 1000 * HOUR_MS;
+
+    const candles = makeCandles(latestOpenTime, [
+      { close: 170, high: 200, low: 100 },
+      { close: 200, high: 200, low: 100 },
+      ...Array(STRATEGY_LOOKBACK_CLOSES - 2).fill(100),
+    ]);
+    mockedGetKlines.mockResolvedValue(candles);
+
+    const result = await evaluateSymbol({
+      ...BASE_PARAMS,
+      position: undefined,
+    });
+
+    expect(result.traded).toBe(false);
+    expect(mockedPlaceTrade).not.toHaveBeenCalled();
+  });
+
+  it("does not buy when 24h range is less than 50%", async () => {
+    const latestOpenTime = 1000 * HOUR_MS;
+
+    const candles = makeCandles(latestOpenTime, [
+      149,
+      ...Array(STRATEGY_LOOKBACK_CLOSES - 1).fill(100),
+    ]);
+    mockedGetKlines.mockResolvedValue(candles);
+
+    const result = await evaluateSymbol({
+      ...BASE_PARAMS,
+      position: undefined,
+    });
+
+    expect(result.traded).toBe(false);
+    expect(mockedPlaceTrade).not.toHaveBeenCalled();
+  });
+
+  it("does not buy when last SELL was within 24h even if entry qualifies", async () => {
     const latestOpenTime = 1000 * HOUR_MS;
     const lastSellOpenTime =
       latestOpenTime - SYMBOL_REENTRY_COOLDOWN_MS + HOUR_MS;
 
-    const closes = [150, ...Array(STRATEGY_LOOKBACK_CLOSES - 1).fill(100)];
-    const candles = makeCandles(latestOpenTime, closes as number[]);
+    const candles = makeCandles(latestOpenTime, [
+      150,
+      ...Array(STRATEGY_LOOKBACK_CLOSES - 1).fill(100),
+    ]);
     mockedGetKlines.mockResolvedValue(candles);
     mockedGetLastClose.mockResolvedValue(lastSellOpenTime);
 
@@ -274,12 +365,14 @@ describe("evaluateSymbol entry", () => {
     expect(mockedPlaceTrade).not.toHaveBeenCalled();
   });
 
-  it("buys when last SELL was exactly 24h ago and pump qualifies", async () => {
+  it("buys when last SELL was exactly 24h ago and entry qualifies", async () => {
     const latestOpenTime = 1000 * HOUR_MS;
     const lastSellOpenTime = latestOpenTime - SYMBOL_REENTRY_COOLDOWN_MS;
 
-    const closes = [150, ...Array(STRATEGY_LOOKBACK_CLOSES - 1).fill(100)];
-    const candles = makeCandles(latestOpenTime, closes as number[]);
+    const candles = makeCandles(latestOpenTime, [
+      150,
+      ...Array(STRATEGY_LOOKBACK_CLOSES - 1).fill(100),
+    ]);
     mockedGetKlines.mockResolvedValue(candles);
     mockedGetLastClose.mockResolvedValue(lastSellOpenTime);
 
@@ -292,7 +385,7 @@ describe("evaluateSymbol entry", () => {
     expect(mockedPlaceTrade).toHaveBeenCalledWith(
       expect.objectContaining({
         side: "BUY",
-        reason: "entry_pump_50pct_vs_prior_23h",
+        reason: "entry_24h_range_50pct_near_high",
       }),
     );
   });

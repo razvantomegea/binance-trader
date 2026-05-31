@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { STOP_LOSS_PCT, TAKE_PROFIT_PCT } from "@/constants/binance";
+import { EXIT_DRAWDOWN_PCT, TAKE_PROFIT_PCT } from "@/constants/binance";
 
 import { hasGainVsAnyRef, hasLossVsAnyRef } from "./price-change-conditions";
 
@@ -78,7 +78,7 @@ describe("hasLossVsAnyRef", () => {
       hasLossVsAnyRef({
         reference: 85,
         refs: [100],
-        thresholdPct: STOP_LOSS_PCT,
+        thresholdPct: EXIT_DRAWDOWN_PCT,
       }),
     ).toBe(true);
   });
@@ -88,7 +88,7 @@ describe("hasLossVsAnyRef", () => {
       hasLossVsAnyRef({
         reference: 90,
         refs: [100],
-        thresholdPct: STOP_LOSS_PCT,
+        thresholdPct: EXIT_DRAWDOWN_PCT,
       }),
     ).toBe(false);
   });

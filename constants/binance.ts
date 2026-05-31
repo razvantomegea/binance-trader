@@ -23,7 +23,8 @@ export const KLINE_REVALIDATE_SECONDS: Record<CandleInterval, number> = {
 export const BINANCE_FETCH_CONCURRENCY = 20;
 
 export const INITIAL_PAPER_CASH = 10_000;
-export const ENTRY_PUMP_PCT = 0.5;
+export const ENTRY_RANGE_PCT = 0.5;
+export const ENTRY_PULLBACK_PCT = 0.15;
 export const BUY_NOTIONAL_PCT = 0.05;
-export const STOP_LOSS_PCT = 0.15;
+export const EXIT_DRAWDOWN_PCT = 0.15;
 export const TAKE_PROFIT_PCT = 0.5;

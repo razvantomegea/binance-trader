@@ -1,7 +1,8 @@
 import {
   BUY_NOTIONAL_PCT,
-  ENTRY_PUMP_PCT,
-  STOP_LOSS_PCT,
+  ENTRY_PULLBACK_PCT,
+  ENTRY_RANGE_PCT,
+  EXIT_DRAWDOWN_PCT,
   TAKE_PROFIT_PCT,
 } from "@/constants/binance";
 import { getDb } from "@/db";
@@ -34,6 +35,25 @@ export interface EvaluateSymbolResult {
   traded: boolean;
 }
 
+function get24hHighLow(closed: { high: number; low: number }[]): {
+  high24h: number;
+  low24h: number;
+} {
+  let high24h = closed[0]!.high;
+  let low24h = closed[0]!.low;
+
+  for (const candle of closed) {
+    if (candle.high > high24h) {
+      high24h = candle.high;
+    }
+    if (candle.low < low24h) {
+      low24h = candle.low;
+    }
+  }
+
+  return { high24h, low24h };
+}
+
 export async function evaluateSymbol({
   symbol,
   interval,
@@ -52,7 +72,6 @@ export async function evaluateSymbol({
   }
 
   const latest = closed[0]!;
-  const priorCloses = closed.slice(1).map((candle) => candle.close);
 
   if (
     lastProcessedOpenTime !== null &&
@@ -68,10 +87,13 @@ export async function evaluateSymbol({
     if (latest.openTime < buyOpenTime) {
       return { candleOpenTime: latest.openTime, traded: false };
     }
+
     const currentMax =
       position.maxPriceAfterBuy !== null
         ? position.maxPriceAfterBuy
         : position.buyPrice;
+    const updatedMax = close > currentMax ? close : currentMax;
+
     if (close > currentMax) {
       await getDb()
         .update(positions)
@@ -79,12 +101,12 @@ export async function evaluateSymbol({
         .where(eq(positions.symbol, symbol));
     }
 
-    const exitRefs = [position.buyPrice];
+    const trailingRef = Math.max(position.buyPrice, updatedMax);
 
     const shouldStop = hasLossVsAnyRef({
       reference: close,
-      refs: exitRefs,
-      thresholdPct: STOP_LOSS_PCT,
+      refs: [trailingRef],
+      thresholdPct: EXIT_DRAWDOWN_PCT,
     });
 
     if (shouldStop) {
@@ -95,14 +117,14 @@ export async function evaluateSymbol({
         price: close,
         interval,
         candleOpenTime: latest.openTime,
-        reason: "stop_loss_15pct_vs_buy",
+        reason: "exit_drawdown_15pct_vs_peak",
       });
       return { candleOpenTime: latest.openTime, traded: true };
     }
 
     const shouldTakeProfit = hasGainVsAnyRef({
       reference: close,
-      refs: exitRefs,
+      refs: [position.buyPrice],
       thresholdPct: TAKE_PROFIT_PCT,
     });
 
@@ -130,13 +152,18 @@ export async function evaluateSymbol({
     return { candleOpenTime: latest.openTime, traded: false };
   }
 
-  if (
-    !hasGainVsAnyRef({
-      reference: close,
-      refs: priorCloses,
-      thresholdPct: ENTRY_PUMP_PCT,
-    })
-  ) {
+  const { high24h, low24h } = get24hHighLow(closed);
+
+  const hasEntryRange = hasGainVsAnyRef({
+    reference: high24h,
+    refs: [low24h],
+    thresholdPct: ENTRY_RANGE_PCT,
+  });
+
+  const isNear24hHigh =
+    high24h > 0 && close > high24h * (1 - ENTRY_PULLBACK_PCT);
+
+  if (!hasEntryRange || !isNear24hHigh) {
     return { candleOpenTime: latest.openTime, traded: false };
   }
 
@@ -158,7 +185,7 @@ export async function evaluateSymbol({
     price: close,
     interval,
     candleOpenTime: latest.openTime,
-    reason: "entry_pump_50pct_vs_prior_23h",
+    reason: "entry_24h_range_50pct_near_high",
   });
 
   return { candleOpenTime: latest.openTime, traded: true };
