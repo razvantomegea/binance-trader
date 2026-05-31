@@ -180,8 +180,8 @@ export function Dashboard() {
         const rows: SymbolRow[] = symbols
           .filter((symbol) => isUsdtSymbol(symbol))
           .map((symbol) => ({
-          symbol,
-          close: null,
+            symbol,
+            close: null,
           }));
         setSymbolRows(rows);
 
