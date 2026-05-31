@@ -6,6 +6,7 @@ import type {
 } from "@/types/binance";
 import { getClosingPrice } from "@/utils/binance/get-closing-price";
 import { getUsdtSymbols } from "@/utils/binance/get-usdt-symbols";
+import { isUsdtSymbol } from "@/utils/binance/is-usdt-symbol";
 import { processInBatches } from "@/utils/process-in-batches";
 
 import { InvalidSymbolsError } from "./invalid-symbols-error";
@@ -24,11 +25,13 @@ export async function getClosingPrices({
   intervals,
   symbolsFilter,
 }: GetClosingPricesParams): Promise<ClosingPricesResponse> {
-  let symbols = await getUsdtSymbols();
+  let symbols = (await getUsdtSymbols()).filter(isUsdtSymbol);
 
   if (symbolsFilter?.length) {
     const allowed = new Set(symbols);
-    const invalid = symbolsFilter.filter((symbol) => !allowed.has(symbol));
+    const invalid = symbolsFilter.filter(
+      (symbol) => !isUsdtSymbol(symbol) || !allowed.has(symbol),
+    );
 
     if (invalid.length > 0) {
       throw new InvalidSymbolsError(invalid);

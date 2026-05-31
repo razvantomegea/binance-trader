@@ -9,6 +9,7 @@ import {
 import { getOpenPositions } from "@/helpers/strategy/get-positions";
 import { snapshotEquity } from "@/helpers/strategy/snapshot-equity";
 import { getUsdtSymbols } from "@/utils/binance/get-usdt-symbols";
+import { isUsdtSymbol } from "@/utils/binance/is-usdt-symbol";
 import { processInBatches } from "@/utils/process-in-batches";
 
 export interface RunStrategyResult {
@@ -21,7 +22,10 @@ export interface RunStrategyResult {
 
 export async function runStrategy(): Promise<RunStrategyResult> {
   const interval = STRATEGY_INTERVAL;
-  const symbols = await getUsdtSymbols();
+  const symbols = (await getUsdtSymbols()).filter(isUsdtSymbol);
+  if (symbols.length === 0) {
+    throw new Error("No valid USDT symbols available for strategy run.");
+  }
   const lastProcessed = await getLastCandleTime(interval);
   const positions = await getOpenPositions();
   let cash = await getCash();

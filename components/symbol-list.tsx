@@ -4,6 +4,7 @@ import clsx from "clsx";
 import { useMemo, useState } from "react";
 
 import { MOBILE_DASHBOARD_PANEL_FIXED_HEIGHT_CLASS_NAME } from "@/constants/dashboard-layout";
+import { isUsdtSymbol } from "@/utils/binance/is-usdt-symbol";
 
 interface SymbolRow {
   symbol: string;
@@ -26,11 +27,12 @@ export function SymbolList({
   const [query, setQuery] = useState("");
 
   const filtered = useMemo(() => {
+    const usdtSymbols = symbols.filter((row) => isUsdtSymbol(row.symbol));
     const normalized = query.trim().toUpperCase();
     if (!normalized) {
-      return symbols;
+      return usdtSymbols;
     }
-    return symbols.filter((row) => row.symbol.includes(normalized));
+    return usdtSymbols.filter((row) => row.symbol.includes(normalized));
   }, [query, symbols]);
 
   return (

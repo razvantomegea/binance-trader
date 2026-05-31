@@ -16,6 +16,7 @@ import {
 } from "@/constants/cron";
 import { STRATEGY_INTERVAL } from "@/constants/strategy";
 import { useDashboardHeaderHeight } from "@/hooks/use-dashboard-header-height";
+import { isUsdtSymbol } from "@/utils/binance/is-usdt-symbol";
 import { computeNextStrategyCronRunIso } from "@/utils/scheduler/compute-next-cron-run";
 import type {
   EquityCurveResponse,
@@ -154,6 +155,12 @@ export function Dashboard() {
   );
   const lastNotificationKeyRef = useRef<string | null>(null);
 
+  const selectUsdtSymbol = useCallback((symbol: string) => {
+    if (isUsdtSymbol(symbol)) {
+      setSelectedSymbol(symbol);
+    }
+  }, []);
+
   const refresh = useCallback(async () => {
     setLoadingPortfolio(true);
     setStatusRequestError(null);
@@ -170,10 +177,12 @@ export function Dashboard() {
 
       if (symbolsRes.ok) {
         const { symbols } = (await symbolsRes.json()) as { symbols: string[] };
-        const rows: SymbolRow[] = symbols.map((symbol) => ({
+        const rows: SymbolRow[] = symbols
+          .filter((symbol) => isUsdtSymbol(symbol))
+          .map((symbol) => ({
           symbol,
           close: null,
-        }));
+          }));
         setSymbolRows(rows);
 
         if (
@@ -408,7 +417,7 @@ export function Dashboard() {
           <SymbolList
             symbols={symbolRows}
             selectedSymbol={selectedSymbol}
-            onSelect={setSelectedSymbol}
+            onSelect={selectUsdtSymbol}
             loading={loadingSymbols}
           />
           <div className="flex min-w-0 flex-col gap-4 lg:ml-72 lg:pl-4 xl:ml-80">
@@ -449,7 +458,7 @@ export function Dashboard() {
             ) : null}
             <PositionsTable
               positions={portfolio?.positions ?? []}
-              onSymbolSelect={setSelectedSymbol}
+              onSymbolSelect={selectUsdtSymbol}
               onClosePosition={closePosition}
               closingSymbol={closingSymbol}
               loading={loadingPortfolio}
@@ -464,7 +473,7 @@ export function Dashboard() {
             </h2>
             <TradesTable
               trades={trades}
-              onSymbolSelect={setSelectedSymbol}
+              onSymbolSelect={selectUsdtSymbol}
               loading={loadingPortfolio}
             />
           </section>

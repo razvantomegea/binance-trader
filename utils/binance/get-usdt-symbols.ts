@@ -1,5 +1,6 @@
 import { BINANCE_API_BASE_URL } from "@/constants/binance";
 import type { BinanceExchangeInfoResponse } from "@/types/binance";
+import { isUsdtSymbol } from "@/utils/binance/is-usdt-symbol";
 
 async function getExchangeSymbols(): Promise<
   BinanceExchangeInfoResponse["symbols"]
@@ -24,7 +25,12 @@ export async function getUsdtSymbols(): Promise<string[]> {
   const symbols = await getExchangeSymbols();
 
   return symbols
-    .filter((item) => item.quoteAsset === "USDT" && item.status === "TRADING")
+    .filter(
+      (item) =>
+        item.quoteAsset === "USDT" &&
+        item.status === "TRADING" &&
+        isUsdtSymbol(item.symbol),
+    )
     .map((item) => item.symbol)
     .sort();
 }

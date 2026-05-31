@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { getKlinesResponse } from "@/helpers/klines/get-klines-response";
 import { parseBoundedInt } from "@/utils/api/parse-bounded-int";
+import { isUsdtSymbol } from "@/utils/binance/is-usdt-symbol";
 import { parseSingleCandleInterval } from "@/utils/parse-candle-interval";
 
 export async function GET(request: Request) {
@@ -17,6 +18,13 @@ export async function GET(request: Request) {
 
   if (!symbol) {
     return NextResponse.json({ error: "symbol is required" }, { status: 400 });
+  }
+
+  if (!isUsdtSymbol(symbol)) {
+    return NextResponse.json(
+      { error: "Only symbols ending with USDT are allowed" },
+      { status: 400 },
+    );
   }
 
   if (!interval) {
