@@ -8,11 +8,15 @@ import type {
   CandleInterval,
   KlineCandle,
 } from "@/types/binance";
+import { fetchWithRetry } from "@/utils/binance/fetch-with-retry";
+import { getLastClosedCandleOpenTime } from "@/utils/binance/candle-time";
 
 interface GetKlinesParams {
   symbol: string;
   interval: CandleInterval;
   limit?: number;
+  startTime?: number;
+  endTime?: number;
 }
 
 function isBinanceKline(value: unknown): value is BinanceKline {
@@ -33,15 +37,27 @@ export async function getKlines({
   symbol,
   interval,
   limit = 200,
+  startTime,
+  endTime,
 }: GetKlinesParams): Promise<KlineCandle[]> {
   const url = new URL(`${BINANCE_API_BASE_URL}/api/v3/klines`);
   url.searchParams.set("symbol", symbol);
   url.searchParams.set("interval", BINANCE_KLINE_INTERVAL[interval]);
   url.searchParams.set("limit", String(Math.min(Math.max(limit, 2), 1000)));
 
-  const response = await fetch(url, {
-    next: { revalidate: KLINE_REVALIDATE_SECONDS[interval] },
-  });
+  if (startTime !== undefined) {
+    url.searchParams.set("startTime", String(startTime));
+  }
+  if (endTime !== undefined) {
+    url.searchParams.set("endTime", String(endTime));
+  }
+
+  const useCache = startTime === undefined && endTime === undefined;
+  const response = useCache
+    ? await fetch(url, {
+        next: { revalidate: KLINE_REVALIDATE_SECONDS[interval] },
+      })
+    : await fetchWithRetry({ url });
 
   if (!response.ok) {
     const body = await response.text();
@@ -88,4 +104,48 @@ export async function getRecentClosedKlines({
   const closed = klines.length ? klines.slice(0, -1) : [];
 
   return closed.slice(-count).reverse();
+}
+
+const KLINE_PAGE_SIZE = 1000;
+
+/** Closed candles ascending by openTime (excludes currently forming candle). */
+export async function getHistoricalClosedKlines({
+  symbol,
+  interval,
+  startTime,
+  endTime,
+}: {
+  symbol: string;
+  interval: CandleInterval;
+  startTime: number;
+  endTime: number;
+}): Promise<KlineCandle[]> {
+  const all: KlineCandle[] = [];
+  let cursor = startTime;
+
+  while (cursor <= endTime) {
+    const page = await getKlines({
+      symbol,
+      interval,
+      limit: KLINE_PAGE_SIZE,
+      startTime: cursor,
+      endTime,
+    });
+
+    if (page.length === 0) {
+      break;
+    }
+
+    all.push(...page);
+
+    const lastOpenTime = page[page.length - 1]!.openTime;
+    if (page.length < KLINE_PAGE_SIZE || lastOpenTime >= endTime) {
+      break;
+    }
+
+    cursor = lastOpenTime + 1;
+  }
+
+  const cappedEndTime = Math.min(endTime, getLastClosedCandleOpenTime());
+  return all.filter((candle) => candle.openTime <= cappedEndTime);
 }
