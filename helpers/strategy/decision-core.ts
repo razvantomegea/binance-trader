@@ -1,5 +1,6 @@
 import {
   BUY_NOTIONAL_PCT,
+  ENTRY_MAX_RANGE_PCT,
   ENTRY_PULLBACK_PCT,
   ENTRY_RANGE_PCT,
   EXIT_DRAWDOWN_PCT,
@@ -146,16 +147,19 @@ export function evaluateDecision({
 
   const { high24h, low24h } = get24hHighLow(closed);
 
+  const rangePct =
+    low24h > 0 ? (high24h - low24h) / low24h : Number.POSITIVE_INFINITY;
   const hasEntryRange = hasGainVsAnyRef({
     reference: high24h,
     refs: [low24h],
     thresholdPct: ENTRY_RANGE_PCT,
   });
+  const isWithinEntryMaxRange = rangePct <= ENTRY_MAX_RANGE_PCT;
 
   const isNear24hHigh =
     high24h > 0 && close > high24h * (1 - ENTRY_PULLBACK_PCT);
 
-  if (!hasEntryRange || !isNear24hHigh) {
+  if (!hasEntryRange || !isWithinEntryMaxRange || !isNear24hHigh) {
     return { action: "HOLD", candleOpenTime: latest.openTime };
   }
 

@@ -139,6 +139,25 @@ describe("evaluateDecision entry", () => {
     expect(result.reason).toBe("entry_24h_range_50pct_near_high");
   });
 
+  it("does not buy when 24h range is more than 100%", () => {
+    const latestOpenTime = 1000 * HOUR_MS;
+    const closed = makeCandles(latestOpenTime, [
+      { close: 190, high: 200, low: 90 },
+      { close: 200, high: 200, low: 90 },
+      ...Array(STRATEGY_LOOKBACK_CLOSES - 2).fill(100),
+    ]);
+
+    const result = evaluateDecision({
+      closed,
+      position: undefined,
+      cash: 10_000,
+      lastProcessedOpenTime: null,
+      lastSellOpenTime: null,
+    });
+
+    expect(result.action).toBe("HOLD");
+  });
+
   it("does not buy when last SELL was within 24h", () => {
     const latestOpenTime = 1000 * HOUR_MS;
     const lastSellOpenTime =

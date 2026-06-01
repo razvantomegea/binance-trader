@@ -344,6 +344,25 @@ describe("evaluateSymbol entry", () => {
     expect(mockedPlaceTrade).not.toHaveBeenCalled();
   });
 
+  it("does not buy when 24h range is more than 100%", async () => {
+    const latestOpenTime = 1000 * HOUR_MS;
+
+    const candles = makeCandles(latestOpenTime, [
+      { close: 190, high: 200, low: 90 },
+      { close: 200, high: 200, low: 90 },
+      ...Array(STRATEGY_LOOKBACK_CLOSES - 2).fill(100),
+    ]);
+    mockedGetKlines.mockResolvedValue(candles);
+
+    const result = await evaluateSymbol({
+      ...BASE_PARAMS,
+      position: undefined,
+    });
+
+    expect(result.traded).toBe(false);
+    expect(mockedPlaceTrade).not.toHaveBeenCalled();
+  });
+
   it("does not buy when last SELL was within 24h even if entry qualifies", async () => {
     const latestOpenTime = 1000 * HOUR_MS;
     const lastSellOpenTime =
