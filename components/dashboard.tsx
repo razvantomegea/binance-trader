@@ -23,7 +23,10 @@ import {
   STRATEGY_CRON_NO_RUN_AFTER_START_MS,
   STRATEGY_CRON_STALE_MS,
 } from "@/constants/cron";
-import { STRATEGY_INTERVAL, STRATEGY_LOOKBACK_CLOSES } from "@/constants/strategy";
+import {
+  STRATEGY_INTERVAL,
+  STRATEGY_LOOKBACK_CLOSES,
+} from "@/constants/strategy";
 import { useDashboardHeaderHeight } from "@/hooks/use-dashboard-header-height";
 import { isUsdtSymbol } from "@/utils/binance/is-usdt-symbol";
 import { computeNextStrategyCronRunIso } from "@/utils/scheduler/compute-next-cron-run";
@@ -361,9 +364,7 @@ export function Dashboard() {
         <div className="flex w-full flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="text-xl font-semibold">Binance Trading Dashboard</h1>
-            <p className="text-sm text-zinc-500">
-              {STRATEGY_DESCRIPTION}
-            </p>
+            <p className="text-sm text-zinc-500">{STRATEGY_DESCRIPTION}</p>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-3">
             <PushNotificationToggle />

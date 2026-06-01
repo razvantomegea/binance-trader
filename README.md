@@ -157,7 +157,7 @@ Do **not** set `AUTO_START_STRATEGY=true` when using external cron (avoids dupli
 ### Cron service
 
 1. Add a second service in the same Railway project, same repo/branch.
-2. **Settings → Config-as-code** → `railway.cron.json` (schedule: `*/15 * * * *`).
+2. **Settings → Config-as-code** → `railway.cron.json` (schedule: `*/5 * * * *`).
 3. Variables (reference the web service by name in your project):
    - `CRON_SECRET` = `${{<web-service>.CRON_SECRET}}`
    - `CRON_URL` = `https://${{<web-service>.RAILWAY_PUBLIC_DOMAIN}}/api/cron/run-strategy`
