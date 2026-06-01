@@ -105,8 +105,24 @@ export async function backfillPostClose24hMetrics(): Promise<BackfillPostClose24
       updated += 1;
     } catch (error) {
       skipped += 1;
+      let markedAsAttempted = false;
+      try {
+        await getDb()
+          .update(trades)
+          .set({
+            postClose24hAttemptedAt: new Date(),
+          })
+          .where(eq(trades.id, row.id));
+        markedAsAttempted = true;
+      } catch (markError) {
+        console.error(
+          `Post-close 24h backfill failed to mark attempt for trade id=${row.id}:`,
+          markError,
+        );
+      }
+
       console.error(
-        `Post-close 24h backfill failed for trade id=${row.id} symbol=${row.symbol} interval=${row.interval}:`,
+        `Post-close 24h backfill failed for trade id=${row.id} symbol=${row.symbol} interval=${row.interval} (markedAttempted=${markedAsAttempted}):`,
         error,
       );
     }

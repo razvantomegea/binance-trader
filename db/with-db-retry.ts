@@ -7,10 +7,22 @@ const RETRYABLE_DB_ERROR_MESSAGES = [
   "Failed to acquire permit to connect to the database",
 ];
 
-function hasNeonRetryableFlag(value: unknown): boolean {
-  if (!value || typeof value !== "object") {
+function isObjectLike(value: unknown): value is object {
+  return (typeof value === "object" && value !== null) || typeof value === "function";
+}
+
+function hasNeonRetryableFlag(
+  value: unknown,
+  visited: WeakSet<object> = new WeakSet(),
+): boolean {
+  if (!isObjectLike(value)) {
     return false;
   }
+
+  if (visited.has(value)) {
+    return false;
+  }
+  visited.add(value);
 
   const asRecord = value as Record<string, unknown>;
   if (asRecord["neon:retryable"] === true) {
@@ -18,7 +30,7 @@ function hasNeonRetryableFlag(value: unknown): boolean {
   }
 
   if ("cause" in asRecord) {
-    return hasNeonRetryableFlag(asRecord.cause);
+    return hasNeonRetryableFlag(asRecord.cause, visited);
   }
 
   return false;
@@ -28,17 +40,27 @@ function includesRetryableMessage(error: Error): boolean {
   return RETRYABLE_DB_ERROR_MESSAGES.some((msg) => error.message.includes(msg));
 }
 
-export function isRetryableDbError(error: unknown): boolean {
+export function isRetryableDbError(
+  error: unknown,
+  visited: WeakSet<object> = new WeakSet(),
+): boolean {
+  if (isObjectLike(error)) {
+    if (visited.has(error)) {
+      return false;
+    }
+    visited.add(error);
+  }
+
   if (error instanceof Error && includesRetryableMessage(error)) {
     return true;
   }
 
-  if (hasNeonRetryableFlag(error)) {
+  if (hasNeonRetryableFlag(error, visited)) {
     return true;
   }
 
   if (error instanceof Error && error.cause) {
-    return isRetryableDbError(error.cause);
+    return isRetryableDbError(error.cause, visited);
   }
 
   return false;
@@ -71,6 +93,13 @@ export async function withDbRetry<T>(
       }
 
       const backoffMs = baseDelayMs * attempt;
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.warn("[withDbRetry] retrying database operation", {
+        attempt,
+        maxAttempts,
+        errorMessage,
+        backoffMs,
+      });
       await sleep(backoffMs);
     }
   }
