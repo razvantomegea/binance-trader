@@ -1,4 +1,4 @@
-import { and, asc, eq, isNull, lte } from "drizzle-orm";
+import { and, asc, eq, gt, lte } from "drizzle-orm";
 
 import { STRATEGY_INTERVAL } from "@/constants/strategy";
 import { getDb } from "@/db";
@@ -27,7 +27,7 @@ function toDbNumeric(value: number | null): string | null {
 export async function backfillPostClose24hMetrics(): Promise<BackfillPostClose24hResult> {
   const lastClosedOpenTime = getLastClosedCandleOpenTime();
   const windowMs = POST_CLOSE_WINDOW_CANDLES * HOUR_MS;
-  const eligibleBeforeOpenTime = lastClosedOpenTime - windowMs;
+  const eligibleAfterOpenTime = lastClosedOpenTime - windowMs;
 
   const rows = await getDb()
     .select({
@@ -41,9 +41,8 @@ export async function backfillPostClose24hMetrics(): Promise<BackfillPostClose24
     .where(
       and(
         eq(trades.side, "SELL"),
-        isNull(trades.maxPriceAfterClose24h),
-        isNull(trades.postClose24hAttemptedAt),
-        lte(trades.candleOpenTime, new Date(eligibleBeforeOpenTime)),
+        gt(trades.candleOpenTime, new Date(eligibleAfterOpenTime)),
+        lte(trades.candleOpenTime, new Date(lastClosedOpenTime)),
       ),
     )
     .orderBy(asc(trades.candleOpenTime), asc(trades.id))
@@ -77,13 +76,6 @@ export async function backfillPostClose24hMetrics(): Promise<BackfillPostClose24
       });
 
       if (metrics.maxPriceAfterClose24h === null) {
-        await getDb()
-          .update(trades)
-          .set({
-            postClose24hAttemptedAt: new Date(),
-          })
-          .where(eq(trades.id, row.id));
-
         skipped += 1;
         continue;
       }
@@ -105,24 +97,8 @@ export async function backfillPostClose24hMetrics(): Promise<BackfillPostClose24
       updated += 1;
     } catch (error) {
       skipped += 1;
-      let markedAsAttempted = false;
-      try {
-        await getDb()
-          .update(trades)
-          .set({
-            postClose24hAttemptedAt: new Date(),
-          })
-          .where(eq(trades.id, row.id));
-        markedAsAttempted = true;
-      } catch (markError) {
-        console.error(
-          `Post-close 24h backfill failed to mark attempt for trade id=${row.id}:`,
-          markError,
-        );
-      }
-
       console.error(
-        `Post-close 24h backfill failed for trade id=${row.id} symbol=${row.symbol} interval=${row.interval} (markedAttempted=${markedAsAttempted}):`,
+        `Post-close 24h backfill failed for trade id=${row.id} symbol=${row.symbol} interval=${row.interval}:`,
         error,
       );
     }
