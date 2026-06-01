@@ -12,6 +12,24 @@ Next.js dashboard for **paper trading** USDT pairs on Binance spot data. A sched
 - Optional web push notifications when trades execute
 - Production scheduling via Railway cron or in-process cron for local dev
 
+## Strategy
+
+The strategy evaluates once per closed hourly candle (`H1`) and uses close prices for decisions.
+
+- **Entry**:
+  - 24h range must be at least +50% (`ENTRY_RANGE_PCT = 0.5`)
+  - 24h range must not exceed +100% (`ENTRY_MAX_RANGE_PCT = 1`)
+  - Current close must be within 10% of 24h high (`ENTRY_PULLBACK_PCT = EXIT_DRAWDOWN_PCT = 0.1`)
+  - Position size is 5% of available cash (`BUY_NOTIONAL_PCT = 0.05`)
+
+- **Exit**:
+  - Trailing stop from peak after buy is 10% (`EXIT_DRAWDOWN_PCT = 0.1`)
+  - Break-even lock: once price reaches at least +5% vs buy, stop floor is buy price (0% PnL floor)
+  - Take profit remains +50% vs buy (`TAKE_PROFIT_PCT = 0.5`)
+
+- **Re-entry cooldown**:
+  - Symbol cooldown after sell is 24h (`SYMBOL_REENTRY_COOLDOWN_MS`)
+
 ## Stack
 
 - [Next.js](https://nextjs.org/) 16 (App Router)
@@ -76,9 +94,29 @@ Next.js dashboard for **paper trading** USDT pairs on Binance spot data. A sched
 | `pnpm dev`          | Next.js dev server                      |
 | `pnpm build`        | Production build                        |
 | `pnpm start`        | Production server                       |
+| `pnpm lint`         | Run ESLint                              |
+| `pnpm lint:fix`     | Run ESLint with autofix                 |
 | `pnpm test`         | Run Vitest                              |
+| `pnpm backtest`     | Run strategy backtest                   |
+| `pnpm analyze:post-close` | Analyze post-close 24h behavior   |
+| `pnpm backtest:cleanup` | Remove old backtest reports          |
+| `pnpm backtest:cache:cleanup` | Remove backtest cache files    |
 | `pnpm db:push`      | Apply Drizzle schema to `DATABASE_URL`  |
 | `pnpm cron:trigger` | Manually hit the strategy cron endpoint |
+
+### Backtest analysis
+
+Run a backtest and save a report:
+
+```bash
+pnpm backtest --days 180
+```
+
+Then analyze exits / TP / SL scenarios on a specific report:
+
+```bash
+python scripts/analyze-backtest-exits.py backtest-results/backtest-<timestamp>.json
+```
 
 ### Manual cron trigger (local)
 
