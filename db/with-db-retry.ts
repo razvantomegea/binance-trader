@@ -8,7 +8,9 @@ const RETRYABLE_DB_ERROR_MESSAGES = [
 ];
 
 function isObjectLike(value: unknown): value is object {
-  return (typeof value === "object" && value !== null) || typeof value === "function";
+  return (
+    (typeof value === "object" && value !== null) || typeof value === "function"
+  );
 }
 
 function hasNeonRetryableFlag(
@@ -93,7 +95,8 @@ export async function withDbRetry<T>(
       }
 
       const backoffMs = baseDelayMs * attempt;
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       console.warn("[withDbRetry] retrying database operation", {
         attempt,
         maxAttempts,

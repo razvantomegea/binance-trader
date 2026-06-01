@@ -89,20 +89,20 @@ The strategy evaluates once per closed hourly candle (`H1`) and uses close price
 
 ### Scripts
 
-| Command             | Description                             |
-| ------------------- | --------------------------------------- |
-| `pnpm dev`          | Next.js dev server                      |
-| `pnpm build`        | Production build                        |
-| `pnpm start`        | Production server                       |
-| `pnpm lint`         | Run ESLint                              |
-| `pnpm lint:fix`     | Run ESLint with autofix                 |
-| `pnpm test`         | Run Vitest                              |
-| `pnpm backtest`     | Run strategy backtest                   |
-| `pnpm analyze:post-close` | Analyze post-close 24h behavior   |
-| `pnpm backtest:cleanup` | Remove old backtest reports          |
-| `pnpm backtest:cache:cleanup` | Remove backtest cache files    |
-| `pnpm db:push`      | Apply Drizzle schema to `DATABASE_URL`  |
-| `pnpm cron:trigger` | Manually hit the strategy cron endpoint |
+| Command                       | Description                             |
+| ----------------------------- | --------------------------------------- |
+| `pnpm dev`                    | Next.js dev server                      |
+| `pnpm build`                  | Production build                        |
+| `pnpm start`                  | Production server                       |
+| `pnpm lint`                   | Run ESLint                              |
+| `pnpm lint:fix`               | Run ESLint with autofix                 |
+| `pnpm test`                   | Run Vitest                              |
+| `pnpm backtest`               | Run strategy backtest                   |
+| `pnpm analyze:post-close`     | Analyze post-close 24h behavior         |
+| `pnpm backtest:cleanup`       | Remove old backtest reports             |
+| `pnpm backtest:cache:cleanup` | Remove backtest cache files             |
+| `pnpm db:push`                | Apply Drizzle schema to `DATABASE_URL`  |
+| `pnpm cron:trigger`           | Manually hit the strategy cron endpoint |
 
 ### Backtest analysis
 
