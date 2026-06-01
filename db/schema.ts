@@ -33,6 +33,9 @@ export const trades = pgTable("trades", {
     precision: 12,
     scale: 6,
   }),
+  postClose24hAttemptedAt: timestamp("post_close_24h_attempted_at", {
+    withTimezone: true,
+  }),
   notional: numeric("notional", { precision: 24, scale: 8 }).notNull(),
   interval: text("interval").notNull(),
   candleOpenTime: timestamp("candle_open_time", {

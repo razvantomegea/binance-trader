@@ -26,9 +26,19 @@ def main() -> None:
     sells = [
         x
         for x in o["trades"]
-        if x["side"] == "SELL" and x.get("openPrice") and x.get("closePrice")
+        if x.get("side") == "SELL"
+        and x.get("openPrice")
+        and x.get("closePrice")
+        and x.get("maxPriceAfterBuy")
     ]
     n = len(sells)
+    if n == 0:
+        print("=== SUMMARY ===")
+        print("file", path.name)
+        print("closed_sells", n)
+        print("No valid SELL trades with open/close/maxPriceAfterBuy to analyze.")
+        return
+
     close = [(x["closePrice"] / x["openPrice"] - 1) * 100 for x in sells]
     maxp = [(x["maxPriceAfterBuy"] / x["openPrice"] - 1) * 100 for x in sells]
 

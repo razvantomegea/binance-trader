@@ -32,10 +32,7 @@ export function computePostClose24hExtrema({
     return { ...NULL_TRADE_POST_CLOSE_24H };
   }
 
-  const future = klinesAsc.slice(
-    idx + 1,
-    idx + 1 + POST_CLOSE_WINDOW_CANDLES,
-  );
+  const future = klinesAsc.slice(idx + 1, idx + 1 + POST_CLOSE_WINDOW_CANDLES);
 
   if (future.length === 0) {
     return { ...NULL_TRADE_POST_CLOSE_24H };

@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 
 import { getDb } from "@/db";
+import { withDbRetry } from "@/db/with-db-retry";
 import { trades } from "@/db/schema";
 import { mapPostClose24hFromDb } from "@/helpers/trades/map-post-close-24h-fields";
 import type { TradePostClose24hMetrics } from "@/types/trade-metrics";
@@ -37,15 +38,17 @@ async function loadBuysBySymbol(
     return new Map();
   }
 
-  const buyRows = await getDb()
-    .select({
-      symbol: trades.symbol,
-      price: trades.price,
-      createdAt: trades.createdAt,
-    })
-    .from(trades)
-    .where(and(inArray(trades.symbol, symbols), eq(trades.side, "BUY")))
-    .orderBy(asc(trades.createdAt));
+  const buyRows = await withDbRetry(() =>
+    getDb()
+      .select({
+        symbol: trades.symbol,
+        price: trades.price,
+        createdAt: trades.createdAt,
+      })
+      .from(trades)
+      .where(and(inArray(trades.symbol, symbols), eq(trades.side, "BUY")))
+      .orderBy(asc(trades.createdAt)),
+  );
 
   const buysBySymbol = new Map<string, BuyLookupRow[]>();
   for (const row of buyRows) {
@@ -120,16 +123,20 @@ export async function getTrades({
   limit,
   offset,
 }: GetTradesParams): Promise<TradesResponse> {
-  const rows = await getDb()
-    .select()
-    .from(trades)
-    .orderBy(desc(trades.createdAt))
-    .limit(limit)
-    .offset(offset);
+  const rows = await withDbRetry(() =>
+    getDb()
+      .select()
+      .from(trades)
+      .orderBy(desc(trades.createdAt))
+      .limit(limit)
+      .offset(offset),
+  );
 
-  const [countRow] = await getDb()
-    .select({ total: sql<number>`count(*)::int` })
-    .from(trades);
+  const [countRow] = await withDbRetry(() =>
+    getDb()
+      .select({ total: sql<number>`count(*)::int` })
+      .from(trades),
+  );
 
   const sellSymbols = [
     ...new Set(

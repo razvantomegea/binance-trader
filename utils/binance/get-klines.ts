@@ -13,7 +13,10 @@ import {
   findReusableHistoricalKlinesCache,
   writeHistoricalKlinesCache,
 } from "@/utils/binance/historical-klines-cache";
-import { getLastClosedCandleOpenTime, HOUR_MS } from "@/utils/binance/candle-time";
+import {
+  getLastClosedCandleOpenTime,
+  HOUR_MS,
+} from "@/utils/binance/candle-time";
 
 interface GetKlinesParams {
   symbol: string;
@@ -203,7 +206,10 @@ export async function getHistoricalClosedKlines({
   });
 
   const firstOpenTime = merged[0]?.openTime;
-  if (merged.length === 0 || (firstOpenTime !== undefined && firstOpenTime > startTime)) {
+  if (
+    merged.length === 0 ||
+    (firstOpenTime !== undefined && firstOpenTime > startTime)
+  ) {
     const prependEnd =
       firstOpenTime !== undefined ? firstOpenTime - HOUR_MS : cappedEndTime;
     if (prependEnd >= startTime) {
@@ -222,7 +228,10 @@ export async function getHistoricalClosedKlines({
   }
 
   const lastOpenTime = merged[merged.length - 1]?.openTime;
-  if (merged.length === 0 || (lastOpenTime !== undefined && lastOpenTime < cappedEndTime)) {
+  if (
+    merged.length === 0 ||
+    (lastOpenTime !== undefined && lastOpenTime < cappedEndTime)
+  ) {
     const appendStart =
       lastOpenTime !== undefined ? lastOpenTime + HOUR_MS : startTime;
     if (appendStart <= cappedEndTime) {

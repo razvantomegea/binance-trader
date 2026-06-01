@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { isRetryableDbError } from "@/db/with-db-retry";
 import { getTrades } from "@/helpers/trades/get-trades";
 import { parseBoundedInt } from "@/utils/api/parse-bounded-int";
 
@@ -21,10 +22,9 @@ export async function GET(request: Request) {
   try {
     const response = await getTrades({ limit, offset });
     return NextResponse.json(response);
-  } catch {
-    return NextResponse.json(
-      { error: "Failed to load trades" },
-      { status: 500 },
-    );
+  } catch (error) {
+    console.error("[trades] failed", error);
+    const status = isRetryableDbError(error) ? 503 : 500;
+    return NextResponse.json({ error: "Failed to load trades" }, { status });
   }
 }

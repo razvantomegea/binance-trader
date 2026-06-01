@@ -1,4 +1,5 @@
 import {
+  BREAK_EVEN_LOCK_TRIGGER_PCT,
   BUY_NOTIONAL_PCT,
   ENTRY_MAX_RANGE_PCT,
   ENTRY_PULLBACK_PCT,
@@ -100,14 +101,23 @@ export function evaluateDecision({
     const updatedMax = close > currentMax ? close : currentMax;
 
     const trailingRef = Math.max(position.buyPrice, updatedMax);
+    const hasReachedBreakEvenLock =
+      updatedMax >= position.buyPrice * (1 + BREAK_EVEN_LOCK_TRIGGER_PCT);
 
     const shouldStop = hasLossVsAnyRef({
       reference: close,
       refs: [trailingRef],
       thresholdPct: EXIT_DRAWDOWN_PCT,
     });
+    const shouldBreakEvenStop =
+      hasReachedBreakEvenLock &&
+      hasLossVsAnyRef({
+        reference: close,
+        refs: [position.buyPrice],
+        thresholdPct: 0,
+      });
 
-    if (shouldStop) {
+    if (shouldStop || shouldBreakEvenStop) {
       return {
         action: "SELL",
         candleOpenTime: latest.openTime,

@@ -77,7 +77,12 @@ export async function runStrategy(): Promise<RunStrategyResult> {
   }
 
   const { cash: finalCash, equity } = await snapshotEquity({ interval });
-  const postClose24hBackfill = await backfillPostClose24hForInterval(interval);
+  const postClose24hBackfill = await backfillPostClose24hForInterval(
+    interval,
+  ).catch((error) => {
+    console.error("Post-close 24h backfill failed:", error);
+    return { scanned: 0, updated: 0, skipped: 0 };
+  });
 
   return {
     interval,

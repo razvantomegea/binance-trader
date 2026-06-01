@@ -1,4 +1,5 @@
 import { getDb } from "@/db";
+import { withDbRetry } from "@/db/with-db-retry";
 import { positions } from "@/db/schema";
 import { parseFiniteNumber } from "@/utils/parse-finite-number";
 
@@ -12,7 +13,7 @@ export interface OpenPosition {
 }
 
 export async function getOpenPositions(): Promise<Map<string, OpenPosition>> {
-  const rows = await getDb().select().from(positions);
+  const rows = await withDbRetry(() => getDb().select().from(positions));
   const map = new Map<string, OpenPosition>();
 
   for (const row of rows) {

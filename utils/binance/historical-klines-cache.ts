@@ -117,7 +117,10 @@ async function readCachePayloadFromFile(
       return null;
     }
 
-    if (parsed.symbol !== params.symbol || parsed.interval !== params.interval) {
+    if (
+      parsed.symbol !== params.symbol ||
+      parsed.interval !== params.interval
+    ) {
       return null;
     }
 

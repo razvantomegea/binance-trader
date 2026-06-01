@@ -104,10 +104,7 @@ async function preloadHistoricalKlines(params: {
     endTime: params.endTime,
     concurrency: params.concurrency,
     onSymbolLoaded: ({ loadedCount, totalCount }) => {
-      if (
-        loadedCount % PRELOAD_LOG_EVERY === 0 ||
-        loadedCount === totalCount
-      ) {
+      if (loadedCount % PRELOAD_LOG_EVERY === 0 || loadedCount === totalCount) {
         console.log(`Preload progress: ${loadedCount}/${totalCount}`);
       }
     },
@@ -164,15 +161,15 @@ async function runBacktestSimulation(params: {
           return;
         }
 
-        const decision = evaluateDecision({
-          closed,
-          position: ledger.getPosition(symbol),
-          cash: ledger.cash,
-          lastProcessedOpenTime,
-          lastSellOpenTime: ledger.lastSellOpenTime.get(symbol) ?? null,
-        });
-
         await ledgerMutex.run(() => {
+          const decision = evaluateDecision({
+            closed,
+            position: ledger.getPosition(symbol),
+            cash: ledger.cash,
+            lastProcessedOpenTime,
+            lastSellOpenTime: ledger.lastSellOpenTime.get(symbol) ?? null,
+          });
+
           ledger.applyDecision({
             symbol,
             decision,

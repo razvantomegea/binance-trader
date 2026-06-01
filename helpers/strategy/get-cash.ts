@@ -1,17 +1,20 @@
 import { sql } from "drizzle-orm";
 
 import { getDb } from "@/db";
+import { withDbRetry } from "@/db/with-db-retry";
 import { trades } from "@/db/schema";
 import { INITIAL_PAPER_CASH } from "@/constants/binance";
 import { parseFiniteNumber } from "@/utils/parse-finite-number";
 
 export async function getCash(): Promise<number> {
-  const [row] = await getDb()
-    .select({
-      buyTotal: sql<string>`coalesce(sum(case when ${trades.side} = 'BUY' then ${trades.notional}::numeric else 0 end), 0)`,
-      sellTotal: sql<string>`coalesce(sum(case when ${trades.side} = 'SELL' then ${trades.notional}::numeric else 0 end), 0)`,
-    })
-    .from(trades);
+  const [row] = await withDbRetry(() =>
+    getDb()
+      .select({
+        buyTotal: sql<string>`coalesce(sum(case when ${trades.side} = 'BUY' then ${trades.notional}::numeric else 0 end), 0)`,
+        sellTotal: sql<string>`coalesce(sum(case when ${trades.side} = 'SELL' then ${trades.notional}::numeric else 0 end), 0)`,
+      })
+      .from(trades),
+  );
 
   const buyTotal = parseFiniteNumber(row?.buyTotal ?? 0);
   const sellTotal = parseFiniteNumber(row?.sellTotal ?? 0);

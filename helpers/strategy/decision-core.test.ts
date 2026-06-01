@@ -117,6 +117,31 @@ describe("evaluateDecision exits", () => {
     expect(result.action).toBe("SELL");
     expect(result.reason).toBe("exit_drawdown_15pct_vs_peak");
   });
+
+  it("break-even exit after price reached +5% and falls back to buy price", () => {
+    const buyOpenTime = 1000 * HOUR_MS;
+    const latestOpenTime = buyOpenTime + 2 * HOUR_MS;
+    const closed = makeCandles(latestOpenTime, [
+      100,
+      105,
+      ...Array(STRATEGY_LOOKBACK_CLOSES - 2).fill(100),
+    ]);
+
+    const result = evaluateDecision({
+      closed,
+      position: position({
+        buyOpenTime,
+        buyPrice: 100,
+        maxPriceAfterBuy: 105,
+      }),
+      cash: 10_000,
+      lastProcessedOpenTime: null,
+      lastSellOpenTime: null,
+    });
+
+    expect(result.action).toBe("SELL");
+    expect(result.reason).toBe("exit_drawdown_15pct_vs_peak");
+  });
 });
 
 describe("evaluateDecision entry", () => {

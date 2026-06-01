@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 
 import { getDb } from "@/db";
+import { withDbRetry } from "@/db/with-db-retry";
 import { strategyMeta } from "@/db/schema";
 import type { RunStrategyResult } from "@/helpers/strategy/strategy-runner";
 
@@ -11,20 +12,24 @@ const LAST_ERROR_KEY = "scheduler_last_error";
 const LAST_RESULT_KEY = "scheduler_last_result";
 
 async function getMetaValue(key: string): Promise<string | null> {
-  const [row] = await getDb()
-    .select()
-    .from(strategyMeta)
-    .where(eq(strategyMeta.key, key))
-    .limit(1);
+  const [row] = await withDbRetry(() =>
+    getDb()
+      .select()
+      .from(strategyMeta)
+      .where(eq(strategyMeta.key, key))
+      .limit(1),
+  );
 
   return row?.value ?? null;
 }
 
 async function setMetaValue(key: string, value: string): Promise<void> {
-  await getDb().insert(strategyMeta).values({ key, value }).onConflictDoUpdate({
-    target: strategyMeta.key,
-    set: { value },
-  });
+  await withDbRetry(() =>
+    getDb().insert(strategyMeta).values({ key, value }).onConflictDoUpdate({
+      target: strategyMeta.key,
+      set: { value },
+    }),
+  );
 }
 
 export function isServerlessScheduler(): boolean {

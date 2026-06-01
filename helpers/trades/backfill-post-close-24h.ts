@@ -1,4 +1,4 @@
-import { and, eq, isNull, lte } from "drizzle-orm";
+import { and, asc, eq, isNull, lte } from "drizzle-orm";
 
 import { STRATEGY_INTERVAL } from "@/constants/strategy";
 import { getDb } from "@/db";
@@ -42,53 +42,74 @@ export async function backfillPostClose24hMetrics(): Promise<BackfillPostClose24
       and(
         eq(trades.side, "SELL"),
         isNull(trades.maxPriceAfterClose24h),
+        isNull(trades.postClose24hAttemptedAt),
         lte(trades.candleOpenTime, new Date(eligibleBeforeOpenTime)),
       ),
     )
+    .orderBy(asc(trades.candleOpenTime), asc(trades.id))
     .limit(50);
 
   let updated = 0;
   let skipped = 0;
 
   for (const row of rows) {
-    const sellClosePrice = parseFiniteNumber(row.price);
-    const sellCandleOpenTime = row.candleOpenTime.getTime();
+    try {
+      const sellClosePrice = parseFiniteNumber(row.price);
+      const sellCandleOpenTime = row.candleOpenTime.getTime();
 
-    if (!Number.isFinite(sellClosePrice) || sellClosePrice <= 0) {
+      if (!Number.isFinite(sellClosePrice) || sellClosePrice <= 0) {
+        skipped += 1;
+        continue;
+      }
+
+      const interval = row.interval as CandleInterval;
+      const klinesAsc = await getHistoricalClosedKlines({
+        symbol: row.symbol,
+        interval,
+        startTime: sellCandleOpenTime,
+        endTime: sellCandleOpenTime + windowMs,
+      });
+
+      const metrics = computePostClose24hExtrema({
+        klinesAsc,
+        sellCandleOpenTime,
+        sellClosePrice,
+      });
+
+      if (metrics.maxPriceAfterClose24h === null) {
+        await getDb()
+          .update(trades)
+          .set({
+            postClose24hAttemptedAt: new Date(),
+          })
+          .where(eq(trades.id, row.id));
+
+        skipped += 1;
+        continue;
+      }
+
+      await getDb()
+        .update(trades)
+        .set({
+          maxPriceAfterClose24h: toDbNumeric(metrics.maxPriceAfterClose24h),
+          minPriceAfterClose24h: toDbNumeric(metrics.minPriceAfterClose24h),
+          maxPriceAfterClose24hPct: toDbNumeric(
+            metrics.maxPriceAfterClose24hPct,
+          ),
+          minPriceAfterClose24hPct: toDbNumeric(
+            metrics.minPriceAfterClose24hPct,
+          ),
+        })
+        .where(eq(trades.id, row.id));
+
+      updated += 1;
+    } catch (error) {
       skipped += 1;
-      continue;
+      console.error(
+        `Post-close 24h backfill failed for trade id=${row.id} symbol=${row.symbol} interval=${row.interval}:`,
+        error,
+      );
     }
-
-    const interval = row.interval as CandleInterval;
-    const klinesAsc = await getHistoricalClosedKlines({
-      symbol: row.symbol,
-      interval,
-      startTime: sellCandleOpenTime,
-      endTime: sellCandleOpenTime + windowMs,
-    });
-
-    const metrics = computePostClose24hExtrema({
-      klinesAsc,
-      sellCandleOpenTime,
-      sellClosePrice,
-    });
-
-    if (metrics.maxPriceAfterClose24h === null) {
-      skipped += 1;
-      continue;
-    }
-
-    await getDb()
-      .update(trades)
-      .set({
-        maxPriceAfterClose24h: toDbNumeric(metrics.maxPriceAfterClose24h),
-        minPriceAfterClose24h: toDbNumeric(metrics.minPriceAfterClose24h),
-        maxPriceAfterClose24hPct: toDbNumeric(metrics.maxPriceAfterClose24hPct),
-        minPriceAfterClose24hPct: toDbNumeric(metrics.minPriceAfterClose24hPct),
-      })
-      .where(eq(trades.id, row.id));
-
-    updated += 1;
   }
 
   return {

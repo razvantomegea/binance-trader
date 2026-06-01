@@ -14,8 +14,8 @@ function summarize(trades) {
   const sells = trades.filter(
     (t) =>
       t.side === "SELL" &&
-      t.maxPriceAfterClose24hPct !== null &&
-      t.minPriceAfterClose24hPct !== null,
+      Number.isFinite(t.maxPriceAfterClose24hPct) &&
+      Number.isFinite(t.minPriceAfterClose24hPct),
   );
 
   const maxPct = sells.map((t) => t.maxPriceAfterClose24hPct);
@@ -44,11 +44,21 @@ function summarize(trades) {
 
 const reportPath = process.argv[2];
 if (!reportPath) {
-  console.error("Usage: node scripts/analyze-post-close-24h.mjs <backtest-json>");
+  console.error(
+    "Usage: node scripts/analyze-post-close-24h.mjs <backtest-json>",
+  );
   process.exit(1);
 }
 
-const raw = await readFile(resolve(reportPath), "utf8");
-const report = JSON.parse(raw);
+let report;
+try {
+  const raw = await readFile(resolve(reportPath), "utf8");
+  report = JSON.parse(raw);
+} catch (error) {
+  console.error(`Failed to read or parse report file: ${reportPath}`);
+  console.error(error);
+  process.exit(1);
+}
+
 const stats = summarize(report.trades ?? []);
 console.log(JSON.stringify(stats, null, 2));
