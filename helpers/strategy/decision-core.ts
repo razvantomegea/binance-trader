@@ -121,7 +121,7 @@ export function evaluateDecision({
       return {
         action: "SELL",
         candleOpenTime: latest.openTime,
-        reason: "exit_drawdown_15pct_vs_peak",
+        reason: "exit_drawdown_10pct_vs_peak",
         qty: position.qty,
       };
     }

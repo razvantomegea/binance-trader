@@ -341,7 +341,7 @@ export function Dashboard() {
             <h1 className="text-xl font-semibold">Binance Trading Dashboard</h1>
             <p className="text-sm text-zinc-500">
               Hourly paper strategy: last close vs prior 23 hourly closes (+50%
-              buy, -15% / +50% sell)
+              buy, -10% / +50% sell)
             </p>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-3">

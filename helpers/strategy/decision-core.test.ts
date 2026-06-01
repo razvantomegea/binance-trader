@@ -93,7 +93,7 @@ describe("evaluateDecision exits", () => {
     expect(result.reason).toBe("take_profit_50pct_vs_buy");
   });
 
-  it("drawdown exit when price falls 15% from peak", () => {
+  it("drawdown exit when price falls 10% from peak", () => {
     const buyOpenTime = 1000 * HOUR_MS;
     const latestOpenTime = buyOpenTime + 2 * HOUR_MS;
     const closed = makeCandles(latestOpenTime, [
@@ -115,7 +115,7 @@ describe("evaluateDecision exits", () => {
     });
 
     expect(result.action).toBe("SELL");
-    expect(result.reason).toBe("exit_drawdown_15pct_vs_peak");
+    expect(result.reason).toBe("exit_drawdown_10pct_vs_peak");
   });
 
   it("break-even exit after price reached +5% and falls back to buy price", () => {
@@ -140,12 +140,12 @@ describe("evaluateDecision exits", () => {
     });
 
     expect(result.action).toBe("SELL");
-    expect(result.reason).toBe("exit_drawdown_15pct_vs_peak");
+    expect(result.reason).toBe("exit_drawdown_10pct_vs_peak");
   });
 });
 
 describe("evaluateDecision entry", () => {
-  it("buys when 24h range >= 50% and current is within 15% of 24h high", () => {
+  it("buys when 24h range >= 50% and current is within 10% of 24h high", () => {
     const latestOpenTime = 1000 * HOUR_MS;
     const closed = makeCandles(latestOpenTime, [
       150,

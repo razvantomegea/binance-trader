@@ -134,7 +134,7 @@ describe("evaluateSymbol exits", () => {
     );
   });
 
-  it("drawdown exit when price falls 15% from peak", async () => {
+  it("drawdown exit when price falls 10% from peak", async () => {
     const buyOpenTime = 1000 * HOUR_MS;
     const latestOpenTime = buyOpenTime + 2 * HOUR_MS;
 
@@ -158,7 +158,7 @@ describe("evaluateSymbol exits", () => {
     expect(mockedPlaceTrade).toHaveBeenCalledWith(
       expect.objectContaining({
         side: "SELL",
-        reason: "exit_drawdown_15pct_vs_peak",
+        reason: "exit_drawdown_10pct_vs_peak",
       }),
     );
   });
@@ -189,7 +189,7 @@ describe("evaluateSymbol exits", () => {
     );
   });
 
-  it("TP when price rises 90% then falls 15% from peak but still +50% vs buy", async () => {
+  it("TP when price rises 90% then falls 10% from peak but still +50% vs buy", async () => {
     const buyOpenTime = 1000 * HOUR_MS;
     const latestOpenTime = buyOpenTime + 2 * HOUR_MS;
 
@@ -214,7 +214,7 @@ describe("evaluateSymbol exits", () => {
     );
   });
 
-  it("drawdown exit when price falls 15% from buy with no prior peak above buy", async () => {
+  it("drawdown exit when price falls 10% from buy with no prior peak above buy", async () => {
     const buyOpenTime = 1000 * HOUR_MS;
     const latestOpenTime = buyOpenTime + HOUR_MS;
 
@@ -233,7 +233,7 @@ describe("evaluateSymbol exits", () => {
     expect(mockedPlaceTrade).toHaveBeenCalledWith(
       expect.objectContaining({
         side: "SELL",
-        reason: "exit_drawdown_15pct_vs_peak",
+        reason: "exit_drawdown_10pct_vs_peak",
       }),
     );
   });
@@ -265,7 +265,7 @@ describe("evaluateSymbol entry", () => {
     mockedGetLastClose.mockResolvedValue(null);
   });
 
-  it("buys when 24h range >= 50% and current is within 15% of 24h high", async () => {
+  it("buys when 24h range >= 50% and current is within 10% of 24h high", async () => {
     const latestOpenTime = 1000 * HOUR_MS;
 
     const candles = makeCandles(latestOpenTime, [
@@ -288,7 +288,7 @@ describe("evaluateSymbol entry", () => {
     );
   });
 
-  it("does not buy when current is more than 15% below 24h high", async () => {
+  it("does not buy when current is more than 10% below 24h high", async () => {
     const latestOpenTime = 1000 * HOUR_MS;
 
     const candles = makeCandles(latestOpenTime, [
@@ -307,7 +307,7 @@ describe("evaluateSymbol entry", () => {
     expect(mockedPlaceTrade).not.toHaveBeenCalled();
   });
 
-  it("does not buy when current is exactly 15% below 24h high", async () => {
+  it("does not buy when current is exactly 10% below 24h high", async () => {
     const latestOpenTime = 1000 * HOUR_MS;
 
     const candles = makeCandles(latestOpenTime, [
