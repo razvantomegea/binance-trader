@@ -15,6 +15,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "backtest": "node scripts/run-backtest.mjs",
+    "analyze:post-close": "node scripts/analyze-post-close-24h.mjs",
     "backtest:cleanup": "node scripts/cleanup-backtest-reports.mjs",
     "backtest:cache:cleanup": "node scripts/cleanup-backtest-cache.mjs",
     "db:push": "drizzle-kit push",

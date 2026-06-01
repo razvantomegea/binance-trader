@@ -1,9 +1,9 @@
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import type { CandleInterval, KlineCandle } from "@/types/binance";
 
-interface HistoricalKlinesCachePayload {
+export interface HistoricalKlinesCachePayload {
   version: 1;
   symbol: string;
   interval: CandleInterval;
@@ -17,17 +17,26 @@ function getCacheDirectory(): string {
   return join(process.cwd(), "backtest-cache", "binance-klines");
 }
 
+function toSafeCacheToken(value: string): string {
+  return value.replace(/[^A-Z0-9_-]/gi, "_");
+}
+
+function buildCacheFilePrefix(params: {
+  symbol: string;
+  interval: CandleInterval;
+}): string {
+  return `${toSafeCacheToken(params.symbol)}-${toSafeCacheToken(params.interval)}-`;
+}
+
 function buildCacheFilePath(params: {
   symbol: string;
   interval: CandleInterval;
   startTime: number;
 }): string {
-  const safeSymbol = params.symbol.replace(/[^A-Z0-9_-]/gi, "_");
-  const safeInterval = params.interval.replace(/[^A-Z0-9_-]/gi, "_");
   const startDate = new Date(params.startTime).toISOString().slice(0, 10);
   return join(
     getCacheDirectory(),
-    `${safeSymbol}-${safeInterval}-${startDate}-${params.startTime}.json`,
+    `${buildCacheFilePrefix(params)}${startDate}-${params.startTime}.json`,
   );
 }
 
@@ -84,19 +93,31 @@ export async function readHistoricalKlinesCache(params: {
   interval: CandleInterval;
   startTime: number;
 }): Promise<HistoricalKlinesCachePayload | null> {
+  const filePath = buildCacheFilePath(params);
+  const payload = await readCachePayloadFromFile(filePath, {
+    symbol: params.symbol,
+    interval: params.interval,
+  });
+
+  if (!payload || payload.startTime !== params.startTime) {
+    return null;
+  }
+
+  return payload;
+}
+
+async function readCachePayloadFromFile(
+  filePath: string,
+  params: { symbol: string; interval: CandleInterval },
+): Promise<HistoricalKlinesCachePayload | null> {
   try {
-    const filePath = buildCacheFilePath(params);
     const raw = await readFile(filePath, "utf8");
     const parsed = JSON.parse(raw) as unknown;
     if (!isHistoricalKlinesCachePayload(parsed)) {
       return null;
     }
 
-    if (
-      parsed.symbol !== params.symbol ||
-      parsed.interval !== params.interval ||
-      parsed.startTime !== params.startTime
-    ) {
+    if (parsed.symbol !== params.symbol || parsed.interval !== params.interval) {
       return null;
     }
 
@@ -107,6 +128,99 @@ export async function readHistoricalKlinesCache(params: {
   } catch {
     return null;
   }
+}
+
+export async function listHistoricalKlinesCacheCandidates(params: {
+  symbol: string;
+  interval: CandleInterval;
+}): Promise<HistoricalKlinesCachePayload[]> {
+  const directory = getCacheDirectory();
+  const prefix = buildCacheFilePrefix(params);
+  let fileNames: string[];
+
+  try {
+    fileNames = await readdir(directory);
+  } catch {
+    return [];
+  }
+
+  const payloads: HistoricalKlinesCachePayload[] = [];
+  for (const fileName of fileNames) {
+    if (!fileName.startsWith(prefix) || !fileName.endsWith(".json")) {
+      continue;
+    }
+
+    const payload = await readCachePayloadFromFile(join(directory, fileName), {
+      symbol: params.symbol,
+      interval: params.interval,
+    });
+    if (payload && payload.klines.length > 0) {
+      payloads.push(payload);
+    }
+  }
+
+  return payloads;
+}
+
+function scoreReusableCache(params: {
+  payload: HistoricalKlinesCachePayload;
+  startTime: number;
+  endTime: number;
+}): number {
+  const { payload, startTime, endTime } = params;
+  const firstOpenTime = payload.klines[0]!.openTime;
+  const lastOpenTime = payload.klines[payload.klines.length - 1]!.openTime;
+  const inRangeCount = payload.klines.filter(
+    (candle) => candle.openTime >= startTime && candle.openTime <= endTime,
+  ).length;
+
+  let score = inRangeCount;
+  if (lastOpenTime >= endTime) {
+    score += 1_000_000;
+  }
+  if (firstOpenTime <= startTime) {
+    score += 500_000;
+  }
+
+  return score;
+}
+
+export async function findReusableHistoricalKlinesCache(params: {
+  symbol: string;
+  interval: CandleInterval;
+  startTime: number;
+  endTime: number;
+}): Promise<HistoricalKlinesCachePayload | null> {
+  const exact = await readHistoricalKlinesCache({
+    symbol: params.symbol,
+    interval: params.interval,
+    startTime: params.startTime,
+  });
+  if (exact && exact.klines.length > 0) {
+    return exact;
+  }
+
+  const candidates = await listHistoricalKlinesCacheCandidates({
+    symbol: params.symbol,
+    interval: params.interval,
+  });
+
+  let best: HistoricalKlinesCachePayload | null = null;
+  let bestScore = -1;
+
+  for (const payload of candidates) {
+    const score = scoreReusableCache({
+      payload,
+      startTime: params.startTime,
+      endTime: params.endTime,
+    });
+    if (score > bestScore) {
+      bestScore = score;
+      best = payload;
+    }
+  }
+
+  return bestScore > 0 ? best : null;
 }
 
 export async function writeHistoricalKlinesCache(params: {

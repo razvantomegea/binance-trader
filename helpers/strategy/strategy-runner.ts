@@ -8,6 +8,7 @@ import {
 } from "@/helpers/strategy/get-last-candle-time";
 import { getOpenPositions } from "@/helpers/strategy/get-positions";
 import { snapshotEquity } from "@/helpers/strategy/snapshot-equity";
+import { backfillPostClose24hForInterval } from "@/helpers/trades/backfill-post-close-24h";
 import { getUsdtSymbols } from "@/utils/binance/get-usdt-symbols";
 import { isUsdtSymbol } from "@/utils/binance/is-usdt-symbol";
 import { processInBatches } from "@/utils/process-in-batches";
@@ -18,6 +19,11 @@ export interface RunStrategyResult {
   tradesExecuted: number;
   cash: number;
   equity: number;
+  postClose24hBackfill: {
+    scanned: number;
+    updated: number;
+    skipped: number;
+  };
 }
 
 export async function runStrategy(): Promise<RunStrategyResult> {
@@ -71,6 +77,7 @@ export async function runStrategy(): Promise<RunStrategyResult> {
   }
 
   const { cash: finalCash, equity } = await snapshotEquity({ interval });
+  const postClose24hBackfill = await backfillPostClose24hForInterval(interval);
 
   return {
     interval,
@@ -78,5 +85,6 @@ export async function runStrategy(): Promise<RunStrategyResult> {
     tradesExecuted,
     cash: finalCash,
     equity,
+    postClose24hBackfill,
   };
 }

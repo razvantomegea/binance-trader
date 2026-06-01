@@ -22,9 +22,13 @@ import type {
   BacktestReport,
   EquityPoint,
 } from "@/types/backtest";
+import type { KlineCandle } from "@/types/binance";
 import { getTradingSymbols } from "@/utils/binance/get-usdt-symbols";
+import { createAsyncMutex } from "@/utils/create-async-mutex";
+import { processInBatches } from "@/utils/process-in-batches";
 
 const DEFAULT_FEE_BPS = 0;
+const PRELOAD_LOG_EVERY = 50;
 export const BACKTEST_CHECK_EVERY_MINUTES = 60;
 
 function normalizeAndValidateUsdtSymbols(symbols: string[]): string[] {
@@ -74,85 +78,115 @@ export function createDefaultBacktestConfig(
   };
 }
 
-export async function runBacktest(
+async function resolveBacktestSymbols(
   config: BacktestConfig,
-): Promise<BacktestReport> {
-  assertLocalhostOnly();
+): Promise<string[]> {
+  return config.symbols && config.symbols.length > 0
+    ? normalizeAndValidateUsdtSymbols(config.symbols)
+    : [...(await getTradingSymbols())].sort();
+}
 
-  const symbols =
-    config.symbols && config.symbols.length > 0
-      ? normalizeAndValidateUsdtSymbols(config.symbols)
-      : [...(await getTradingSymbols())].sort();
-
-  const { startTime: fetchStartTime, endTime } = getHistoricalRange({
-    days: config.days,
-    now: config.now,
-  });
-
-  const evalStartTime = getEvaluationStartOpenTime({
-    rangeStartTime: fetchStartTime,
-    lookbackCloses: STRATEGY_LOOKBACK_CLOSES,
-  });
-
-  const simulationStartTime = evalStartTime;
-  const simulationEndTime = endTime;
+async function preloadHistoricalKlines(params: {
+  symbols: string[];
+  interval: BacktestConfig["interval"];
+  startTime: number;
+  endTime: number;
+  concurrency: number;
+}): Promise<Map<string, KlineCandle[]>> {
+  console.log(
+    `Phase 1: preloading ${params.symbols.length} symbols (concurrency=${params.concurrency})...`,
+  );
 
   const klinesBySymbol = await loadHistoricalKlinesBySymbol({
-    symbols,
-    interval: config.interval,
-    startTime: fetchStartTime,
-    endTime,
-    concurrency: config.concurrency,
+    symbols: params.symbols,
+    interval: params.interval,
+    startTime: params.startTime,
+    endTime: params.endTime,
+    concurrency: params.concurrency,
+    onSymbolLoaded: ({ loadedCount, totalCount }) => {
+      if (
+        loadedCount % PRELOAD_LOG_EVERY === 0 ||
+        loadedCount === totalCount
+      ) {
+        console.log(`Preload progress: ${loadedCount}/${totalCount}`);
+      }
+    },
   });
 
-  const timeline = buildCheckTimeline({
-    startTime: simulationStartTime,
-    endTime: simulationEndTime,
-    checkEveryMinutes: BACKTEST_CHECK_EVERY_MINUTES,
-  });
+  const withData = [...klinesBySymbol.values()].filter(
+    (klines) => klines.length > 0,
+  ).length;
+  console.log(
+    `Phase 1 complete: ${withData}/${params.symbols.length} symbols have klines.`,
+  );
 
-  const ledger = new SimulatedLedger(config.initialCash, config.feeBps);
+  return klinesBySymbol;
+}
+
+async function runBacktestSimulation(params: {
+  symbols: string[];
+  klinesBySymbol: Map<string, KlineCandle[]>;
+  timeline: number[];
+  initialCash: number;
+  feeBps: number;
+  concurrency: number;
+}): Promise<{
+  ledger: SimulatedLedger;
+  equityCurve: EquityPoint[];
+}> {
+  console.log(
+    `Phase 2: simulating ${params.timeline.length} hourly checks across ${params.symbols.length} symbols (concurrency=${params.concurrency})...`,
+  );
+
+  const ledger = new SimulatedLedger(params.initialCash, params.feeBps);
+  const ledgerMutex = createAsyncMutex();
   const equityCurve: EquityPoint[] = [];
   const markPriceCursorBySymbol = new Map<string, number>();
   let lastProcessedOpenTime: number | null = null;
 
-  for (const openTime of timeline) {
-    for (const symbol of symbols) {
-      const klinesAsc = klinesBySymbol.get(symbol);
-      if (!klinesAsc || klinesAsc.length === 0) {
-        continue;
-      }
+  for (const openTime of params.timeline) {
+    await processInBatches({
+      items: params.symbols,
+      batchSize: params.concurrency,
+      processItem: async (symbol) => {
+        const klinesAsc = params.klinesBySymbol.get(symbol);
+        if (!klinesAsc || klinesAsc.length === 0) {
+          return;
+        }
 
-      const closed = getClosedWindowAt({
-        klinesAsc,
-        targetTime: openTime,
-        count: STRATEGY_LOOKBACK_CLOSES,
-      });
+        const closed = getClosedWindowAt({
+          klinesAsc,
+          targetTime: openTime,
+          count: STRATEGY_LOOKBACK_CLOSES,
+        });
 
-      if (!closed) {
-        continue;
-      }
+        if (!closed) {
+          return;
+        }
 
-      const decision = evaluateDecision({
-        closed,
-        position: ledger.getPosition(symbol),
-        cash: ledger.cash,
-        lastProcessedOpenTime,
-        lastSellOpenTime: ledger.lastSellOpenTime.get(symbol) ?? null,
-      });
+        const decision = evaluateDecision({
+          closed,
+          position: ledger.getPosition(symbol),
+          cash: ledger.cash,
+          lastProcessedOpenTime,
+          lastSellOpenTime: ledger.lastSellOpenTime.get(symbol) ?? null,
+        });
 
-      ledger.applyDecision({
-        symbol,
-        decision,
-        price: closed[0]!.close,
-      });
-    }
+        await ledgerMutex.run(() => {
+          ledger.applyDecision({
+            symbol,
+            decision,
+            price: closed[0]!.close,
+          });
+        });
+      },
+    });
 
     lastProcessedOpenTime = openTime;
 
     const markPrices = new Map<string, number>();
     for (const [symbol, position] of ledger.positions) {
-      const klinesAsc = klinesBySymbol.get(symbol);
+      const klinesAsc = params.klinesBySymbol.get(symbol);
       if (!klinesAsc) {
         markPrices.set(symbol, position.buyPrice);
         continue;
@@ -181,6 +215,54 @@ export async function runBacktest(
       equity: ledger.getEquity(markPrices),
     });
   }
+
+  console.log("Phase 2 complete.");
+
+  return { ledger, equityCurve };
+}
+
+export async function runBacktest(
+  config: BacktestConfig,
+): Promise<BacktestReport> {
+  assertLocalhostOnly();
+
+  const symbols = await resolveBacktestSymbols(config);
+
+  const { startTime: fetchStartTime, endTime } = getHistoricalRange({
+    days: config.days,
+    now: config.now,
+  });
+
+  const evalStartTime = getEvaluationStartOpenTime({
+    rangeStartTime: fetchStartTime,
+    lookbackCloses: STRATEGY_LOOKBACK_CLOSES,
+  });
+
+  const simulationStartTime = evalStartTime;
+  const simulationEndTime = endTime;
+
+  const klinesBySymbol = await preloadHistoricalKlines({
+    symbols,
+    interval: config.interval,
+    startTime: fetchStartTime,
+    endTime,
+    concurrency: config.concurrency,
+  });
+
+  const timeline = buildCheckTimeline({
+    startTime: simulationStartTime,
+    endTime: simulationEndTime,
+    checkEveryMinutes: BACKTEST_CHECK_EVERY_MINUTES,
+  });
+
+  const { ledger, equityCurve } = await runBacktestSimulation({
+    symbols,
+    klinesBySymbol,
+    timeline,
+    initialCash: config.initialCash,
+    feeBps: config.feeBps,
+    concurrency: config.concurrency,
+  });
 
   const finalMarkPrices = new Map<string, number>();
   for (const [symbol, position] of ledger.positions) {

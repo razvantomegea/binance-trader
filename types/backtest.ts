@@ -1,4 +1,5 @@
 import type { CandleInterval } from "@/types/binance";
+import type { TradePostClose24hMetrics } from "@/types/trade-metrics";
 
 export interface BacktestConfig {
   days: number;
@@ -11,7 +12,7 @@ export interface BacktestConfig {
   now?: number;
 }
 
-export interface SimTrade {
+export interface SimTrade extends TradePostClose24hMetrics {
   symbol: string;
   side: "BUY" | "SELL";
   qty: number;

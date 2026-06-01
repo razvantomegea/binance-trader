@@ -63,8 +63,15 @@ export async function loadHistoricalKlinesBySymbol(params: {
   startTime: number;
   endTime: number;
   concurrency: number;
+  onSymbolLoaded?: (params: {
+    symbol: string;
+    loadedCount: number;
+    totalCount: number;
+  }) => void;
 }): Promise<Map<string, KlineCandle[]>> {
   const result = new Map<string, KlineCandle[]>();
+  let loadedCount = 0;
+  const totalCount = params.symbols.length;
 
   await processInBatches({
     items: params.symbols,
@@ -77,6 +84,8 @@ export async function loadHistoricalKlinesBySymbol(params: {
         endTime: params.endTime,
       });
       result.set(symbol, klines);
+      loadedCount += 1;
+      params.onSymbolLoaded?.({ symbol, loadedCount, totalCount });
     },
   });
 

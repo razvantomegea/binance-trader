@@ -35,6 +35,8 @@ export function TradesTable({
       <th className="whitespace-nowrap py-2 pr-3">Open</th>
       <th className="whitespace-nowrap py-2 pr-3">Close</th>
       <th className="whitespace-nowrap py-2 pr-3">Max After Buy</th>
+      <th className="whitespace-nowrap py-2 pr-3">Max 24h After Close</th>
+      <th className="whitespace-nowrap py-2 pr-3">Min 24h After Close</th>
       <th className="whitespace-nowrap py-2 pr-3">P&amp;L %</th>
       <th className="whitespace-nowrap py-2">Reason</th>
     </tr>
@@ -82,6 +84,16 @@ export function TradesTable({
                     <td className="whitespace-nowrap py-2 pr-3 tabular-nums">
                       {row.maxPriceAfterBuy !== null
                         ? Number(row.maxPriceAfterBuy).toFixed(6)
+                        : "—"}
+                    </td>
+                    <td className="whitespace-nowrap py-2 pr-3 tabular-nums">
+                      {row.maxPriceAfterClose24hPct !== null
+                        ? `${row.maxPriceAfterClose24hPct >= 0 ? "+" : ""}${row.maxPriceAfterClose24hPct.toFixed(2)}%`
+                        : "—"}
+                    </td>
+                    <td className="whitespace-nowrap py-2 pr-3 tabular-nums">
+                      {row.minPriceAfterClose24hPct !== null
+                        ? `${row.minPriceAfterClose24hPct >= 0 ? "+" : ""}${row.minPriceAfterClose24hPct.toFixed(2)}%`
                         : "—"}
                     </td>
                     <td

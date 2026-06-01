@@ -10,10 +10,10 @@ import type {
 } from "@/types/binance";
 import { fetchWithRetry } from "@/utils/binance/fetch-with-retry";
 import {
-  readHistoricalKlinesCache,
+  findReusableHistoricalKlinesCache,
   writeHistoricalKlinesCache,
 } from "@/utils/binance/historical-klines-cache";
-import { getLastClosedCandleOpenTime } from "@/utils/binance/candle-time";
+import { getLastClosedCandleOpenTime, HOUR_MS } from "@/utils/binance/candle-time";
 
 interface GetKlinesParams {
   symbol: string;
@@ -126,6 +126,52 @@ function mergeAscendingKlines(
   return [...byOpenTime.values()].sort((a, b) => a.openTime - b.openTime);
 }
 
+function filterKlinesInRange(params: {
+  klines: KlineCandle[];
+  startTime: number;
+  endTime: number;
+}): KlineCandle[] {
+  return params.klines.filter(
+    (candle) =>
+      candle.openTime >= params.startTime && candle.openTime <= params.endTime,
+  );
+}
+
+async function fetchKlinesRange(params: {
+  symbol: string;
+  interval: CandleInterval;
+  startTime: number;
+  endTime: number;
+}): Promise<KlineCandle[]> {
+  const fetched: KlineCandle[] = [];
+  let cursor = params.startTime;
+
+  while (cursor <= params.endTime) {
+    const page = await getKlines({
+      symbol: params.symbol,
+      interval: params.interval,
+      limit: KLINE_PAGE_SIZE,
+      startTime: cursor,
+      endTime: params.endTime,
+    });
+
+    if (page.length === 0) {
+      break;
+    }
+
+    fetched.push(...page);
+
+    const lastOpenTime = page[page.length - 1]!.openTime;
+    if (page.length < KLINE_PAGE_SIZE || lastOpenTime >= params.endTime) {
+      break;
+    }
+
+    cursor = lastOpenTime + HOUR_MS;
+  }
+
+  return fetched;
+}
+
 /** Closed candles ascending by openTime (excludes currently forming candle). */
 export async function getHistoricalClosedKlines({
   symbol,
@@ -143,58 +189,57 @@ export async function getHistoricalClosedKlines({
     return [];
   }
 
-  const cached = await readHistoricalKlinesCache({
+  const reusable = await findReusableHistoricalKlinesCache({
     symbol,
     interval,
     startTime,
+    endTime: cappedEndTime,
   });
 
-  const cachedKlines =
-    cached?.klines.filter(
-      (candle) =>
-        candle.openTime >= startTime && candle.openTime <= cappedEndTime,
-    ) ?? [];
-  if (cachedKlines.length > 0) {
-    const lastCachedOpenTime = cachedKlines[cachedKlines.length - 1]!.openTime;
-    if (lastCachedOpenTime >= cappedEndTime) {
-      return cachedKlines;
+  let merged = filterKlinesInRange({
+    klines: reusable?.klines ?? [],
+    startTime,
+    endTime: cappedEndTime,
+  });
+
+  const firstOpenTime = merged[0]?.openTime;
+  if (merged.length === 0 || (firstOpenTime !== undefined && firstOpenTime > startTime)) {
+    const prependEnd =
+      firstOpenTime !== undefined ? firstOpenTime - HOUR_MS : cappedEndTime;
+    if (prependEnd >= startTime) {
+      const prepended = await fetchKlinesRange({
+        symbol,
+        interval,
+        startTime,
+        endTime: prependEnd,
+      });
+      merged = filterKlinesInRange({
+        klines: mergeAscendingKlines(prepended, merged),
+        startTime,
+        endTime: cappedEndTime,
+      });
     }
   }
 
-  const all: KlineCandle[] = [...cachedKlines];
-  const lastCachedOpenTime =
-    cachedKlines.length > 0
-      ? cachedKlines[cachedKlines.length - 1]!.openTime
-      : null;
-  let cursor = lastCachedOpenTime !== null ? lastCachedOpenTime + 1 : startTime;
-
-  while (cursor <= cappedEndTime) {
-    const page = await getKlines({
-      symbol,
-      interval,
-      limit: KLINE_PAGE_SIZE,
-      startTime: cursor,
-      endTime: cappedEndTime,
-    });
-
-    if (page.length === 0) {
-      break;
+  const lastOpenTime = merged[merged.length - 1]?.openTime;
+  if (merged.length === 0 || (lastOpenTime !== undefined && lastOpenTime < cappedEndTime)) {
+    const appendStart =
+      lastOpenTime !== undefined ? lastOpenTime + HOUR_MS : startTime;
+    if (appendStart <= cappedEndTime) {
+      const appended = await fetchKlinesRange({
+        symbol,
+        interval,
+        startTime: appendStart,
+        endTime: cappedEndTime,
+      });
+      merged = filterKlinesInRange({
+        klines: mergeAscendingKlines(merged, appended),
+        startTime,
+        endTime: cappedEndTime,
+      });
     }
-
-    all.push(...page);
-
-    const lastOpenTime = page[page.length - 1]!.openTime;
-    if (page.length < KLINE_PAGE_SIZE || lastOpenTime >= cappedEndTime) {
-      break;
-    }
-
-    cursor = lastOpenTime + 1;
   }
 
-  const merged = mergeAscendingKlines(cachedKlines, all).filter(
-    (candle) =>
-      candle.openTime >= startTime && candle.openTime <= cappedEndTime,
-  );
   if (merged.length > 0) {
     await writeHistoricalKlinesCache({
       symbol,

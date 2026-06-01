@@ -46,6 +46,16 @@ export async function placeTrade({
       ? (openPosition?.maxPriceAfterBuy ?? openPosition?.buyPrice ?? null)
       : String(price);
 
+  const postClose24hFields =
+    side === "SELL"
+      ? {
+          maxPriceAfterClose24h: null,
+          minPriceAfterClose24h: null,
+          maxPriceAfterClose24hPct: null,
+          minPriceAfterClose24hPct: null,
+        }
+      : {};
+
   const [trade] = await db
     .insert(trades)
     .values({
@@ -58,6 +68,7 @@ export async function placeTrade({
       interval,
       candleOpenTime: candleDate,
       reason,
+      ...postClose24hFields,
     })
     .returning({ id: trades.id });
 

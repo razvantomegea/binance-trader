@@ -17,6 +17,22 @@ export const trades = pgTable("trades", {
     precision: 24,
     scale: 12,
   }),
+  maxPriceAfterClose24h: numeric("max_price_after_close_24h", {
+    precision: 24,
+    scale: 12,
+  }),
+  minPriceAfterClose24h: numeric("min_price_after_close_24h", {
+    precision: 24,
+    scale: 12,
+  }),
+  maxPriceAfterClose24hPct: numeric("max_price_after_close_24h_pct", {
+    precision: 12,
+    scale: 6,
+  }),
+  minPriceAfterClose24hPct: numeric("min_price_after_close_24h_pct", {
+    precision: 12,
+    scale: 6,
+  }),
   notional: numeric("notional", { precision: 24, scale: 8 }).notNull(),
   interval: text("interval").notNull(),
   candleOpenTime: timestamp("candle_open_time", {

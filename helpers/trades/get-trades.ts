@@ -2,6 +2,9 @@ import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 
 import { getDb } from "@/db";
 import { trades } from "@/db/schema";
+import { mapPostClose24hFromDb } from "@/helpers/trades/map-post-close-24h-fields";
+import type { TradePostClose24hMetrics } from "@/types/trade-metrics";
+import { NULL_TRADE_POST_CLOSE_24H } from "@/types/trade-metrics";
 import type { TradeRow, TradesResponse } from "@/types/portfolio";
 import { pnlPercentFromPrices } from "@/utils/pnl-percent";
 
@@ -62,6 +65,10 @@ function toTradeRow(
     qty: string;
     price: string;
     maxPriceAfterBuy: string | null;
+    maxPriceAfterClose24h: string | null;
+    minPriceAfterClose24h: string | null;
+    maxPriceAfterClose24hPct: string | null;
+    minPriceAfterClose24hPct: string | null;
     notional: string;
     interval: string;
     candleOpenTime: Date;
@@ -73,11 +80,13 @@ function toTradeRow(
     closePrice,
     maxPriceAfterBuy,
     realizedPnlPct,
+    postClose24h,
   }: {
     openPrice: string | null;
     closePrice: string | null;
     maxPriceAfterBuy: string | null;
     realizedPnlPct: number | null;
+    postClose24h: TradePostClose24hMetrics;
   },
 ): TradeRow {
   return {
@@ -95,6 +104,10 @@ function toTradeRow(
     reason: row.reason,
     createdAt: row.createdAt.toISOString(),
     realizedPnlPct,
+    maxPriceAfterClose24h: postClose24h.maxPriceAfterClose24h,
+    minPriceAfterClose24h: postClose24h.minPriceAfterClose24h,
+    maxPriceAfterClose24hPct: postClose24h.maxPriceAfterClose24hPct,
+    minPriceAfterClose24hPct: postClose24h.minPriceAfterClose24hPct,
   };
 }
 
@@ -134,6 +147,7 @@ export async function getTrades({
           closePrice: null,
           maxPriceAfterBuy: row.maxPriceAfterBuy,
           realizedPnlPct: null,
+          postClose24h: NULL_TRADE_POST_CLOSE_24H,
         });
       }
 
@@ -149,6 +163,7 @@ export async function getTrades({
         closePrice: row.price,
         maxPriceAfterBuy: row.maxPriceAfterBuy,
         realizedPnlPct,
+        postClose24h: mapPostClose24hFromDb(row),
       });
     }),
   };

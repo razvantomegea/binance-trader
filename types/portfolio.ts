@@ -1,3 +1,5 @@
+import type { TradePostClose24hMetrics } from "@/types/trade-metrics";
+
 export type TradeSide = "BUY" | "SELL";
 
 export interface PositionRow {
@@ -24,7 +26,7 @@ export interface PortfolioResponse {
   positions: PositionRow[];
 }
 
-export interface TradeRow {
+export interface TradeRow extends TradePostClose24hMetrics {
   id: number;
   symbol: string;
   side: TradeSide;

@@ -1,6 +1,10 @@
 import type { SimTrade } from "@/types/backtest";
 import type { DecisionPositionState } from "@/helpers/strategy/decision-core";
 import type { EvaluateDecisionResult } from "@/helpers/strategy/decision-core";
+import {
+  NULL_TRADE_POST_CLOSE_24H,
+  type TradePostClose24hMetrics,
+} from "@/types/trade-metrics";
 import { pnlPercentFromPrices } from "@/utils/pnl-percent";
 
 export interface SimPosition {
@@ -53,6 +57,7 @@ export class SimulatedLedger {
     symbol: string;
     decision: EvaluateDecisionResult;
     price: number;
+    postClose24h?: TradePostClose24hMetrics;
   }): boolean {
     const { symbol, decision, price } = params;
 
@@ -122,6 +127,7 @@ export class SimulatedLedger {
         closePrice: price,
         maxPriceAfterBuy,
         realizedPnlPct,
+        ...(params.postClose24h ?? NULL_TRADE_POST_CLOSE_24H),
       });
 
       return true;
@@ -140,6 +146,7 @@ export class SimulatedLedger {
       closePrice: null,
       maxPriceAfterBuy: price,
       realizedPnlPct: null,
+      ...NULL_TRADE_POST_CLOSE_24H,
     });
 
     return true;

@@ -9,6 +9,7 @@ import {
 } from "@/helpers/strategy/backtest/historical-kline-provider";
 import { SimulatedLedger } from "@/helpers/strategy/backtest/simulated-ledger";
 import { evaluateDecision } from "@/helpers/strategy/decision-core";
+import { NULL_TRADE_POST_CLOSE_24H } from "@/types/trade-metrics";
 import { HOUR_MS } from "@/utils/binance/candle-time";
 import type { KlineCandle } from "@/types/binance";
 
@@ -132,6 +133,7 @@ describe("simulated ledger", () => {
     expect(sellTrade.closePrice).toBe(225);
     expect(sellTrade.maxPriceAfterBuy).toBeGreaterThanOrEqual(150);
     expect(sellTrade.realizedPnlPct).toBeCloseTo(50);
+    expect(sellTrade).toMatchObject(NULL_TRADE_POST_CLOSE_24H);
   });
 });
 
@@ -156,6 +158,7 @@ describe("buildBacktestReport", () => {
           closePrice: null,
           maxPriceAfterBuy: 100,
           realizedPnlPct: null,
+          ...NULL_TRADE_POST_CLOSE_24H,
         },
         {
           symbol: "A",
@@ -170,6 +173,10 @@ describe("buildBacktestReport", () => {
           closePrice: 120,
           maxPriceAfterBuy: 120,
           realizedPnlPct: 20,
+          maxPriceAfterClose24h: 130,
+          minPriceAfterClose24h: 110,
+          maxPriceAfterClose24hPct: 8.333333,
+          minPriceAfterClose24hPct: -8.333333,
         },
       ],
       equityCurve: [
@@ -212,6 +219,11 @@ describe("runBacktest", () => {
     expect(report.trades.length).toBeGreaterThan(0);
     expect(report.equityCurve.length).toBeGreaterThan(0);
     expect(report.finalEquity).toBeGreaterThan(0);
+
+    for (const trade of report.trades) {
+      expect(trade).toHaveProperty("maxPriceAfterClose24h");
+      expect(trade).toHaveProperty("minPriceAfterClose24hPct");
+    }
   });
 
   it("blocks production environment", async () => {
