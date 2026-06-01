@@ -11,10 +11,19 @@ import { PriceChart } from "@/components/price-chart";
 import { SymbolList } from "@/components/symbol-list";
 import { TradesTable } from "@/components/trades-table";
 import {
+  BREAK_EVEN_LOCK_TRIGGER_PCT,
+  BUY_NOTIONAL_PCT,
+  ENTRY_MAX_RANGE_PCT,
+  ENTRY_PULLBACK_PCT,
+  ENTRY_RANGE_PCT,
+  EXIT_DRAWDOWN_PCT,
+  TAKE_PROFIT_PCT,
+} from "@/constants/binance";
+import {
   STRATEGY_CRON_NO_RUN_AFTER_START_MS,
   STRATEGY_CRON_STALE_MS,
 } from "@/constants/cron";
-import { STRATEGY_INTERVAL } from "@/constants/strategy";
+import { STRATEGY_INTERVAL, STRATEGY_LOOKBACK_CLOSES } from "@/constants/strategy";
 import { useDashboardHeaderHeight } from "@/hooks/use-dashboard-header-height";
 import { isUsdtSymbol } from "@/utils/binance/is-usdt-symbol";
 import { computeNextStrategyCronRunIso } from "@/utils/scheduler/compute-next-cron-run";
@@ -26,6 +35,19 @@ import type {
 
 const POLL_MS = 30_000;
 const DEFAULT_SYMBOL = "BTCUSDT";
+const STRATEGY_PRIOR_CLOSES = STRATEGY_LOOKBACK_CLOSES - 1;
+
+function formatPct(value: number): string {
+  return `${(value * 100).toFixed(Number.isInteger(value * 100) ? 0 : 1)}%`;
+}
+
+const STRATEGY_DESCRIPTION = [
+  `${STRATEGY_INTERVAL} paper strategy`,
+  `last close vs prior ${STRATEGY_PRIOR_CLOSES} closes`,
+  `entry: 24h range ${formatPct(ENTRY_RANGE_PCT)}-${formatPct(ENTRY_MAX_RANGE_PCT)} and within ${formatPct(ENTRY_PULLBACK_PCT)} of 24h high`,
+  `size: ${formatPct(BUY_NOTIONAL_PCT)} cash`,
+  `exit: trailing ${formatPct(EXIT_DRAWDOWN_PCT)} / TP ${formatPct(TAKE_PROFIT_PCT)} / break-even lock at +${formatPct(BREAK_EVEN_LOCK_TRIGGER_PCT)}`,
+].join(" | ");
 
 interface SymbolRow {
   symbol: string;
@@ -340,8 +362,7 @@ export function Dashboard() {
           <div>
             <h1 className="text-xl font-semibold">Binance Trading Dashboard</h1>
             <p className="text-sm text-zinc-500">
-              Hourly paper strategy: last close vs prior 23 hourly closes (+50%
-              buy, -10% / +50% sell)
+              {STRATEGY_DESCRIPTION}
             </p>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-3">
