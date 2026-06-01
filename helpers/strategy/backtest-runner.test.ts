@@ -120,6 +120,18 @@ describe("simulated ledger", () => {
     expect(ledger.positions.size).toBe(0);
     expect(ledger.trades).toHaveLength(2);
     expect(ledger.cash).toBeGreaterThan(10_000);
+
+    const buyTrade = ledger.trades[0]!;
+    expect(buyTrade.openPrice).toBe(150);
+    expect(buyTrade.closePrice).toBeNull();
+    expect(buyTrade.maxPriceAfterBuy).toBe(150);
+    expect(buyTrade.realizedPnlPct).toBeNull();
+
+    const sellTrade = ledger.trades[1]!;
+    expect(sellTrade.openPrice).toBe(150);
+    expect(sellTrade.closePrice).toBe(225);
+    expect(sellTrade.maxPriceAfterBuy).toBeGreaterThanOrEqual(150);
+    expect(sellTrade.realizedPnlPct).toBeCloseTo(50);
   });
 });
 
@@ -140,6 +152,10 @@ describe("buildBacktestReport", () => {
           fee: 0,
           candleOpenTime: HOUR_MS,
           reason: "entry",
+          openPrice: 100,
+          closePrice: null,
+          maxPriceAfterBuy: 100,
+          realizedPnlPct: null,
         },
         {
           symbol: "A",
@@ -150,6 +166,10 @@ describe("buildBacktestReport", () => {
           fee: 0,
           candleOpenTime: 2 * HOUR_MS,
           reason: "exit",
+          openPrice: 100,
+          closePrice: 120,
+          maxPriceAfterBuy: 120,
+          realizedPnlPct: 20,
         },
       ],
       equityCurve: [

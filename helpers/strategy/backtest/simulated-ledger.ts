@@ -1,6 +1,7 @@
 import type { SimTrade } from "@/types/backtest";
 import type { DecisionPositionState } from "@/helpers/strategy/decision-core";
 import type { EvaluateDecisionResult } from "@/helpers/strategy/decision-core";
+import { pnlPercentFromPrices } from "@/utils/pnl-percent";
 
 export interface SimPosition {
   symbol: string;
@@ -99,9 +100,31 @@ export class SimulatedLedger {
         return false;
       }
 
+      const buyPrice = position.buyPrice;
+      const maxPriceAfterBuy =
+        position.maxPriceAfterBuy ?? position.buyPrice;
+      const realizedPnlPct = pnlPercentFromPrices(buyPrice, price);
+
       this.cash += notional - fee;
       this.positions.delete(symbol);
       this.lastSellOpenTime.set(symbol, decision.candleOpenTime);
+
+      this.trades.push({
+        symbol,
+        side: decision.action,
+        qty,
+        price,
+        notional,
+        fee,
+        candleOpenTime: decision.candleOpenTime,
+        reason: decision.reason,
+        openPrice: buyPrice,
+        closePrice: price,
+        maxPriceAfterBuy,
+        realizedPnlPct,
+      });
+
+      return true;
     }
 
     this.trades.push({
@@ -113,6 +136,10 @@ export class SimulatedLedger {
       fee,
       candleOpenTime: decision.candleOpenTime,
       reason: decision.reason,
+      openPrice: price,
+      closePrice: null,
+      maxPriceAfterBuy: price,
+      realizedPnlPct: null,
     });
 
     return true;

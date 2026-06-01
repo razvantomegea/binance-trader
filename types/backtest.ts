@@ -20,6 +20,14 @@ export interface SimTrade {
   fee: number;
   candleOpenTime: number;
   reason: string;
+  /** Entry price (BUY fill, or paired BUY on SELL) */
+  openPrice: number | null;
+  /** Exit price (SELL fill only) */
+  closePrice: number | null;
+  /** Maximum observed price from BUY until close */
+  maxPriceAfterBuy: number | null;
+  /** Realized P&L % on SELL (vs paired BUY); null for BUY */
+  realizedPnlPct: number | null;
 }
 
 export interface EquityPoint {
