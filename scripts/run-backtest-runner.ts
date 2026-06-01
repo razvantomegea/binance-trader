@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 
 import { BINANCE_FETCH_CONCURRENCY } from "@/constants/binance";
 import {
+  BACKTEST_CHECK_EVERY_MINUTES,
   createDefaultBacktestConfig,
   runBacktest,
 } from "@/helpers/strategy/backtest-runner";
@@ -15,7 +16,6 @@ interface CliOptions {
   initialCash: number;
   concurrency: number;
   feeBps: number;
-  checkEveryMinutes: number;
   symbols?: string[];
   output?: string;
 }
@@ -43,7 +43,6 @@ function parseArgs(argv: string[]): CliOptions {
     initialCash: 10_000,
     concurrency: BINANCE_FETCH_CONCURRENCY,
     feeBps: 0,
-    checkEveryMinutes: 15,
   };
 
   for (let i = 0; i < argv.length; i += 1) {
@@ -65,13 +64,6 @@ function parseArgs(argv: string[]): CliOptions {
         break;
       case "--fee-bps":
         options.feeBps = parseFiniteNumberArg("--fee-bps", next);
-        i += 1;
-        break;
-      case "--check-every-minutes":
-        options.checkEveryMinutes = parseFiniteNumberArg(
-          "--check-every-minutes",
-          next,
-        );
         i += 1;
         break;
       case "--symbols":
@@ -100,12 +92,11 @@ async function main(): Promise<void> {
     initialCash: options.initialCash,
     concurrency: options.concurrency,
     feeBps: options.feeBps,
-    checkEveryMinutes: options.checkEveryMinutes,
     symbols: options.symbols,
   });
 
   console.log(
-    `Running backtest: days=${config.days}, cash=${config.initialCash}, concurrency=${config.concurrency}, checkEveryMinutes=${config.checkEveryMinutes}, symbols=${config.symbols?.length ?? "ALL_TRADING"}`,
+    `Running backtest: days=${config.days}, cash=${config.initialCash}, concurrency=${config.concurrency}, checkEveryMinutes=${BACKTEST_CHECK_EVERY_MINUTES}, symbols=${config.symbols?.length ?? "ALL_TRADING"}`,
   );
 
   const report = await runBacktest(config);

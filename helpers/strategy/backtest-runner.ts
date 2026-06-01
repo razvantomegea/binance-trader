@@ -25,6 +25,7 @@ import type {
 import { getTradingSymbols } from "@/utils/binance/get-usdt-symbols";
 
 const DEFAULT_FEE_BPS = 0;
+export const BACKTEST_CHECK_EVERY_MINUTES = 60;
 
 function normalizeAndValidateUsdtSymbols(symbols: string[]): string[] {
   const normalized = symbols
@@ -68,7 +69,6 @@ export function createDefaultBacktestConfig(
     initialCash: INITIAL_PAPER_CASH,
     concurrency: BINANCE_FETCH_CONCURRENCY,
     feeBps: DEFAULT_FEE_BPS,
-    checkEveryMinutes: 15,
     interval: STRATEGY_INTERVAL,
     ...overrides,
   };
@@ -108,7 +108,7 @@ export async function runBacktest(
   const timeline = buildCheckTimeline({
     startTime: simulationStartTime,
     endTime: simulationEndTime,
-    checkEveryMinutes: config.checkEveryMinutes,
+    checkEveryMinutes: BACKTEST_CHECK_EVERY_MINUTES,
   });
 
   const ledger = new SimulatedLedger(config.initialCash, config.feeBps);

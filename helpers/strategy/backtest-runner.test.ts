@@ -185,7 +185,6 @@ describe("runBacktest", () => {
       initialCash: 10_000,
       concurrency: 1,
       feeBps: 0,
-      checkEveryMinutes: 15,
       interval: "H1",
       now: 48 * HOUR_MS + 1,
     });
@@ -206,7 +205,6 @@ describe("runBacktest", () => {
         initialCash: 10_000,
         concurrency: 1,
         feeBps: 0,
-        checkEveryMinutes: 15,
         interval: "H1",
       }),
     ).rejects.toThrow(/localhost-only/i);
@@ -229,7 +227,6 @@ describe("runBacktest", () => {
       initialCash: 10_000,
       concurrency: 1,
       feeBps: 0,
-      checkEveryMinutes: 15,
       interval: "H1",
       now: 48 * HOUR_MS + 1,
     });

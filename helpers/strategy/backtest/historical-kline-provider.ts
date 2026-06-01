@@ -25,7 +25,7 @@ export function buildCheckTimeline(params: {
   const safeStep =
     Number.isFinite(checkEveryMs) && checkEveryMs > 0
       ? checkEveryMs
-      : 15 * 60_000;
+      : 60 * 60_000;
   const timeline: number[] = [];
   for (let t = params.startTime; t <= params.endTime; t += safeStep) {
     timeline.push(t);

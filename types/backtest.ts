@@ -6,7 +6,6 @@ export interface BacktestConfig {
   initialCash: number;
   concurrency: number;
   feeBps: number;
-  checkEveryMinutes: number;
   interval: CandleInterval;
   /** Test hook: fixed clock for reproducible historical ranges. */
   now?: number;
