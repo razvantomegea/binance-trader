@@ -54,7 +54,7 @@ function position(
 }
 
 describe("evaluateDecision exits", () => {
-  it("no TP when price increases less than 50%", () => {
+  it("holds when price increases less than 50%", () => {
     const buyOpenTime = 1000 * HOUR_MS;
     const latestOpenTime = buyOpenTime + HOUR_MS;
     const closed = makeCandles(latestOpenTime, [
@@ -73,7 +73,7 @@ describe("evaluateDecision exits", () => {
     expect(result.action).toBe("HOLD");
   });
 
-  it("TP when price increases exactly 50%", () => {
+  it("holds when price increases exactly 50%", () => {
     const buyOpenTime = 1000 * HOUR_MS;
     const latestOpenTime = buyOpenTime + HOUR_MS;
     const closed = makeCandles(latestOpenTime, [
@@ -89,8 +89,7 @@ describe("evaluateDecision exits", () => {
       lastSellOpenTime: null,
     });
 
-    expect(result.action).toBe("SELL");
-    expect(result.reason).toBe("take_profit_50pct_vs_buy");
+    expect(result.action).toBe("HOLD");
   });
 
   it("drawdown exit when price falls 10% from peak", () => {
@@ -118,7 +117,7 @@ describe("evaluateDecision exits", () => {
     expect(result.reason).toBe("exit_drawdown_10pct_vs_peak");
   });
 
-  it("break-even exit after price reached +5% and falls back to buy price", () => {
+  it("holds when price reached +5% and falls back to buy price", () => {
     const buyOpenTime = 1000 * HOUR_MS;
     const latestOpenTime = buyOpenTime + 2 * HOUR_MS;
     const closed = makeCandles(latestOpenTime, [
@@ -139,8 +138,7 @@ describe("evaluateDecision exits", () => {
       lastSellOpenTime: null,
     });
 
-    expect(result.action).toBe("SELL");
-    expect(result.reason).toBe("exit_drawdown_10pct_vs_peak");
+    expect(result.action).toBe("HOLD");
   });
 });
 

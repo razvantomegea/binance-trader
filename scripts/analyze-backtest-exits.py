@@ -1,4 +1,4 @@
-"""Analyze backtest exit patterns and simulate TP/DD parameters."""
+"""Analyze backtest exits and simulate trailing-stop parameters."""
 from __future__ import annotations
 
 import json
@@ -46,8 +46,9 @@ def main() -> None:
     for x in sells:
         op, cp, mp = x["openPrice"], x["closePrice"], x["maxPriceAfterBuy"]
         close_pct = (cp / op - 1) * 100
-        max_mult = mp / op
-        dd = (mp - cp) / mp * 100 if mp else 0.0
+        trail_ref = max(op, mp)
+        dd = (trail_ref - cp) / trail_ref * 100 if trail_ref else 0.0
+        max_mult = trail_ref / op
         dd_rows.append((close_pct, max_mult, dd))
 
     print("=== SUMMARY ===")
@@ -73,24 +74,7 @@ def main() -> None:
 
     print("sell_reasons", dict(Counter(x["reason"] for x in sells)))
 
-    print("=== TP GRID ===")
-    tp_best: list[tuple[float, float, float, float]] = []
-    for t_int in range(2, 81, 2):
-        t = t_int / 2
-        pnl = [t if m >= t else c for m, c in zip(maxp, close)]
-        tp_best.append((sum(pnl) / n, t, sum(1 for v in pnl if v > 0) / n * 100, st.median(pnl)))
-    tp_best.sort(reverse=True)
-    for avg, t, win, med in tp_best[:8]:
-        print(f"best tp={t:.1f}% avg={avg:.4f}% win={win:.2f}% med={med:.4f}%")
-    for t in [5, 8, 10, 12, 15, 18, 20, 25, 30, 40, 50]:
-        pnl = [t if m >= t else c for m, c in zip(maxp, close)]
-        hit = sum(1 for m in maxp if m >= t) / n * 100
-        print(
-            f"tp={t}% hit={hit:.1f}% avg={sum(pnl)/n:.4f}% "
-            f"win={sum(1 for v in pnl if v>0)/n*100:.2f}%"
-        )
-
-    print("=== DRAWDOWN FROM PEAK ===")
+    print("=== TRAILING STOP GRID (max(entry, peak)) ===")
     dd_best: list[tuple[float, int, float, float, float]] = []
     for d in range(3, 26):
         pnl: list[float] = []
@@ -104,53 +88,21 @@ def main() -> None:
         dd_best.append((sum(pnl) / n, d, trig / n * 100, sum(1 for v in pnl if v > 0) / n * 100, st.median(pnl)))
     dd_best.sort(reverse=True)
     for avg, d, trig, win, med in dd_best[:10]:
-        print(f"dd={d}% trigger={trig:.1f}% avg={avg:.4f}% win={win:.2f}% med={med:.4f}%")
+        print(f"trail={d}% trigger={trig:.1f}% avg={avg:.4f}% win={win:.2f}% med={med:.4f}%")
 
-    print("=== LOCK AFTER +5% ===")
-    for lock in [0, 2, 3, 5, 8]:
-        pnl2 = [lock if m >= 5 else c for m, c in zip(maxp, close)]
+    for d in [5, 8, 10, 12, 15]:
+        pnl = []
+        trig = 0
+        for close_pct, max_mult, peak_dd in dd_rows:
+            if peak_dd >= d:
+                trig += 1
+                pnl.append(((max_mult * (1 - d / 100)) - 1) * 100)
+            else:
+                pnl.append(close_pct)
         print(
-            f"touch5_exit_{lock}%: avg={sum(pnl2)/n:.4f}% "
-            f"win={sum(1 for v in pnl2 if v>0)/n*100:.2f}%"
+            f"trail={d}% trigger={trig/n*100:.1f}% avg={sum(pnl)/n:.4f}% "
+            f"win={sum(1 for v in pnl if v>0)/n*100:.2f}%"
         )
-
-    reach5 = [(m, c) for m, c in zip(maxp, close) if m >= 5]
-    if reach5:
-        neg = sum(1 for _, c in reach5 if c < 0)
-        print(f"touched +5%: {len(reach5)} closed negative: {neg} ({neg/len(reach5)*100:.1f}%)")
-
-    # SL proxy: cap loss at -X% (if close worse, use -X)
-    print("=== STOP LOSS CAP (sim) ===")
-    sl_best: list[tuple[float, int, float]] = []
-    for sl in range(3, 21):
-        pnl = [max(c, -sl) for c in close]
-        sl_best.append((sum(pnl) / n, sl, sum(1 for v in pnl if v > 0) / n * 100))
-    sl_best.sort(reverse=True)
-    for avg, sl, win in sl_best[:8]:
-        print(f"sl=-{sl}% avg={avg:.4f}% win={win:.2f}%")
-
-    print("=== COMBO: DD exit + lock after +5% ===")
-    combos: list[tuple[float, int, int, float]] = []
-    for dd in [5, 8, 10, 12, 15]:
-        for lock in [0, 2, 3, 5]:
-            pnl: list[float] = []
-            for close_pct, max_mult, peak_dd in dd_rows:
-                m = (max_mult - 1) * 100
-                if m >= 5:
-                    floor = lock
-                    if peak_dd >= dd:
-                        exit_pct = ((max_mult * (1 - dd / 100)) - 1) * 100
-                        pnl.append(max(floor, exit_pct))
-                    else:
-                        pnl.append(max(floor, close_pct))
-                elif peak_dd >= dd:
-                    pnl.append(((max_mult * (1 - dd / 100)) - 1) * 100)
-                else:
-                    pnl.append(close_pct)
-            combos.append((sum(pnl) / n, dd, lock, sum(1 for v in pnl if v > 0) / n * 100))
-    combos.sort(reverse=True)
-    for avg, dd, lock, win in combos[:12]:
-        print(f"dd={dd}% lock_after_5={lock}% avg={avg:.4f}% win={win:.2f}%")
 
 
 if __name__ == "__main__":

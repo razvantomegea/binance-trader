@@ -23,9 +23,7 @@ The strategy evaluates once per closed hourly candle (`H1`) and uses close price
   - Position size is 5% of available cash (`BUY_NOTIONAL_PCT = 0.05`)
 
 - **Exit**:
-  - Trailing stop from peak after buy is 10% (`EXIT_DRAWDOWN_PCT = 0.1`)
-  - Break-even lock: once price reaches at least +5% vs buy, stop floor is buy price (0% PnL floor)
-  - Take profit remains +50% vs buy (`TAKE_PROFIT_PCT = 0.5`)
+  - 10% trailing stop (`EXIT_DRAWDOWN_PCT = 0.1`) measured from `max(entry price, highest close since buy)`
 
 - **Re-entry cooldown**:
   - Symbol cooldown after sell is 24h (`SYMBOL_REENTRY_COOLDOWN_MS`)
@@ -112,7 +110,7 @@ Run a backtest and save a report:
 pnpm backtest --days 180
 ```
 
-Then analyze exits / TP / SL scenarios on a specific report:
+Then analyze exit / trailing-stop scenarios on a specific report:
 
 ```bash
 python scripts/analyze-backtest-exits.py backtest-results/backtest-<timestamp>.json

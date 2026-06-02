@@ -11,13 +11,11 @@ import { PriceChart } from "@/components/price-chart";
 import { SymbolList } from "@/components/symbol-list";
 import { TradesTable } from "@/components/trades-table";
 import {
-  BREAK_EVEN_LOCK_TRIGGER_PCT,
   BUY_NOTIONAL_PCT,
   ENTRY_MAX_RANGE_PCT,
   ENTRY_PULLBACK_PCT,
   ENTRY_RANGE_PCT,
   EXIT_DRAWDOWN_PCT,
-  TAKE_PROFIT_PCT,
 } from "@/constants/binance";
 import {
   STRATEGY_CRON_NO_RUN_AFTER_START_MS,
@@ -49,7 +47,7 @@ const STRATEGY_DESCRIPTION = [
   `last close vs prior ${STRATEGY_PRIOR_CLOSES} closes`,
   `entry: 24h range ${formatPct(ENTRY_RANGE_PCT)}-${formatPct(ENTRY_MAX_RANGE_PCT)} and within ${formatPct(ENTRY_PULLBACK_PCT)} of 24h high`,
   `size: ${formatPct(BUY_NOTIONAL_PCT)} cash`,
-  `exit: trailing ${formatPct(EXIT_DRAWDOWN_PCT)} / TP ${formatPct(TAKE_PROFIT_PCT)} / break-even lock at +${formatPct(BREAK_EVEN_LOCK_TRIGGER_PCT)}`,
+  `exit: ${formatPct(EXIT_DRAWDOWN_PCT)} trailing stop vs max(entry, peak since buy)`,
 ].join(" | ");
 
 interface SymbolRow {

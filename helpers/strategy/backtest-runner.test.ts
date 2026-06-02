@@ -98,16 +98,32 @@ describe("simulated ledger", () => {
     expect(ledger.positions.size).toBe(1);
     expect(ledger.trades).toHaveLength(1);
 
-    const sell = evaluateDecision({
+    const hold = evaluateDecision({
       closed: Array.from({ length: STRATEGY_LOOKBACK_CLOSES }, (_, i) => ({
         openTime: openTime + HOUR_MS - i * HOUR_MS,
-        high: 225,
+        high: 200,
         low: 150,
-        close: 225,
+        close: 200,
       })),
       position: ledger.getPosition("TESTUSDT"),
       cash: ledger.cash,
-      lastProcessedOpenTime: null,
+      lastProcessedOpenTime: buy.candleOpenTime,
+      lastSellOpenTime: null,
+    });
+
+    expect(hold.action).toBe("HOLD");
+    ledger.applyDecision({ symbol: "TESTUSDT", decision: hold, price: 200 });
+
+    const sell = evaluateDecision({
+      closed: Array.from({ length: STRATEGY_LOOKBACK_CLOSES }, (_, i) => ({
+        openTime: openTime + 2 * HOUR_MS - i * HOUR_MS,
+        high: 200,
+        low: 170,
+        close: 170,
+      })),
+      position: ledger.getPosition("TESTUSDT"),
+      cash: ledger.cash,
+      lastProcessedOpenTime: hold.candleOpenTime,
       lastSellOpenTime: null,
     });
 
@@ -115,7 +131,7 @@ describe("simulated ledger", () => {
     ledger.applyDecision({
       symbol: "TESTUSDT",
       decision: sell,
-      price: 225,
+      price: 170,
     });
 
     expect(ledger.positions.size).toBe(0);
@@ -130,9 +146,9 @@ describe("simulated ledger", () => {
 
     const sellTrade = ledger.trades[1]!;
     expect(sellTrade.openPrice).toBe(150);
-    expect(sellTrade.closePrice).toBe(225);
-    expect(sellTrade.maxPriceAfterBuy).toBeGreaterThanOrEqual(150);
-    expect(sellTrade.realizedPnlPct).toBeCloseTo(50);
+    expect(sellTrade.closePrice).toBe(170);
+    expect(sellTrade.maxPriceAfterBuy).toBe(200);
+    expect(sellTrade.realizedPnlPct).toBeCloseTo(13.333, 2);
     expect(sellTrade).toMatchObject(NULL_TRADE_POST_CLOSE_24H);
   });
 });

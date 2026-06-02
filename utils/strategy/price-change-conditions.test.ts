@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { EXIT_DRAWDOWN_PCT, TAKE_PROFIT_PCT } from "@/constants/binance";
+import { ENTRY_RANGE_PCT, EXIT_DRAWDOWN_PCT } from "@/constants/binance";
 
 import { hasGainVsAnyRef, hasLossVsAnyRef } from "./price-change-conditions";
 
@@ -28,7 +28,7 @@ describe("hasGainVsAnyRef", () => {
       hasGainVsAnyRef({
         reference: 150,
         refs: [100],
-        thresholdPct: TAKE_PROFIT_PCT,
+        thresholdPct: ENTRY_RANGE_PCT,
       }),
     ).toBe(true);
   });
@@ -38,7 +38,7 @@ describe("hasGainVsAnyRef", () => {
       hasGainVsAnyRef({
         reference: 149,
         refs: [100],
-        thresholdPct: TAKE_PROFIT_PCT,
+        thresholdPct: ENTRY_RANGE_PCT,
       }),
     ).toBe(false);
   });
@@ -48,7 +48,7 @@ describe("hasGainVsAnyRef", () => {
       hasGainVsAnyRef({
         reference: 200,
         refs: [100],
-        thresholdPct: TAKE_PROFIT_PCT,
+        thresholdPct: ENTRY_RANGE_PCT,
       }),
     ).toBe(true);
   });

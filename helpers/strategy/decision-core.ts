@@ -1,11 +1,9 @@
 import {
-  BREAK_EVEN_LOCK_TRIGGER_PCT,
   BUY_NOTIONAL_PCT,
   ENTRY_MAX_RANGE_PCT,
   ENTRY_PULLBACK_PCT,
   ENTRY_RANGE_PCT,
   EXIT_DRAWDOWN_PCT,
-  TAKE_PROFIT_PCT,
 } from "@/constants/binance";
 import {
   STRATEGY_LOOKBACK_CLOSES,
@@ -101,42 +99,18 @@ export function evaluateDecision({
     const updatedMax = close > currentMax ? close : currentMax;
 
     const trailingRef = Math.max(position.buyPrice, updatedMax);
-    const hasReachedBreakEvenLock =
-      updatedMax >= position.buyPrice * (1 + BREAK_EVEN_LOCK_TRIGGER_PCT);
 
     const shouldStop = hasLossVsAnyRef({
       reference: close,
       refs: [trailingRef],
       thresholdPct: EXIT_DRAWDOWN_PCT,
     });
-    const shouldBreakEvenStop =
-      hasReachedBreakEvenLock &&
-      hasLossVsAnyRef({
-        reference: close,
-        refs: [position.buyPrice],
-        thresholdPct: 0,
-      });
 
-    if (shouldStop || shouldBreakEvenStop) {
+    if (shouldStop) {
       return {
         action: "SELL",
         candleOpenTime: latest.openTime,
         reason: "exit_drawdown_10pct_vs_peak",
-        qty: position.qty,
-      };
-    }
-
-    const shouldTakeProfit = hasGainVsAnyRef({
-      reference: close,
-      refs: [position.buyPrice],
-      thresholdPct: TAKE_PROFIT_PCT,
-    });
-
-    if (shouldTakeProfit) {
-      return {
-        action: "SELL",
-        candleOpenTime: latest.openTime,
-        reason: "take_profit_50pct_vs_buy",
         qty: position.qty,
       };
     }

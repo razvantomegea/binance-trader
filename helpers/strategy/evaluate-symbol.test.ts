@@ -91,7 +91,7 @@ describe("evaluateSymbol exits", () => {
     mockedPlaceTrade.mockResolvedValue(undefined);
   });
 
-  it("no TP when price increases less than 50%", async () => {
+  it("holds when price increases less than 50%", async () => {
     const buyOpenTime = 1000 * HOUR_MS;
     const latestOpenTime = buyOpenTime + HOUR_MS;
 
@@ -110,7 +110,7 @@ describe("evaluateSymbol exits", () => {
     expect(mockedPlaceTrade).not.toHaveBeenCalled();
   });
 
-  it("TP when price increases exactly 50%", async () => {
+  it("holds when price increases exactly 50%", async () => {
     const buyOpenTime = 1000 * HOUR_MS;
     const latestOpenTime = buyOpenTime + HOUR_MS;
 
@@ -125,13 +125,8 @@ describe("evaluateSymbol exits", () => {
       position: position({ buyTime: new Date(buyOpenTime), buyPrice: 100 }),
     });
 
-    expect(result.traded).toBe(true);
-    expect(mockedPlaceTrade).toHaveBeenCalledWith(
-      expect.objectContaining({
-        side: "SELL",
-        reason: "take_profit_50pct_vs_buy",
-      }),
-    );
+    expect(result.traded).toBe(false);
+    expect(mockedPlaceTrade).not.toHaveBeenCalled();
   });
 
   it("drawdown exit when price falls 10% from peak", async () => {
@@ -163,7 +158,7 @@ describe("evaluateSymbol exits", () => {
     );
   });
 
-  it("TP when price increases 50% after buy", async () => {
+  it("holds when price increases 50% after buy", async () => {
     const buyOpenTime = 1000 * HOUR_MS;
     const latestOpenTime = buyOpenTime + 3 * HOUR_MS;
 
@@ -180,16 +175,11 @@ describe("evaluateSymbol exits", () => {
       position: position({ buyTime: new Date(buyOpenTime), buyPrice: 100 }),
     });
 
-    expect(result.traded).toBe(true);
-    expect(mockedPlaceTrade).toHaveBeenCalledWith(
-      expect.objectContaining({
-        side: "SELL",
-        reason: "take_profit_50pct_vs_buy",
-      }),
-    );
+    expect(result.traded).toBe(false);
+    expect(mockedPlaceTrade).not.toHaveBeenCalled();
   });
 
-  it("TP when price rises 90% then falls 10% from peak but still +50% vs buy", async () => {
+  it("holds when price rises 90% then falls 10% from peak but still +50% vs buy", async () => {
     const buyOpenTime = 1000 * HOUR_MS;
     const latestOpenTime = buyOpenTime + 2 * HOUR_MS;
 
@@ -205,13 +195,8 @@ describe("evaluateSymbol exits", () => {
       position: position({ buyTime: new Date(buyOpenTime), buyPrice: 100 }),
     });
 
-    expect(result.traded).toBe(true);
-    expect(mockedPlaceTrade).toHaveBeenCalledWith(
-      expect.objectContaining({
-        side: "SELL",
-        reason: "take_profit_50pct_vs_buy",
-      }),
-    );
+    expect(result.traded).toBe(false);
+    expect(mockedPlaceTrade).not.toHaveBeenCalled();
   });
 
   it("drawdown exit when price falls 10% from buy with no prior peak above buy", async () => {

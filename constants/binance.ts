@@ -28,5 +28,3 @@ export const ENTRY_MAX_RANGE_PCT = 1;
 export const BUY_NOTIONAL_PCT = 0.05;
 export const EXIT_DRAWDOWN_PCT = 0.1;
 export const ENTRY_PULLBACK_PCT = EXIT_DRAWDOWN_PCT;
-export const BREAK_EVEN_LOCK_TRIGGER_PCT = 0.05;
-export const TAKE_PROFIT_PCT = 0.5;
