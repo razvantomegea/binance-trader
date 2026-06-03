@@ -7,6 +7,7 @@ import {
   setLastCandleTime,
 } from "@/helpers/strategy/get-last-candle-time";
 import { getOpenPositions } from "@/helpers/strategy/get-positions";
+import { enforcePortfolioDrawdownCap } from "@/helpers/strategy/enforce-portfolio-drawdown-cap";
 import { snapshotEquity } from "@/helpers/strategy/snapshot-equity";
 import { backfillPostClose24hMetrics } from "@/helpers/trades/backfill-post-close-24h";
 import { getUsdtSymbols } from "@/utils/binance/get-usdt-symbols";
@@ -75,6 +76,8 @@ export async function runStrategy(): Promise<RunStrategyResult> {
   if (latestCandleOpenTime !== null) {
     await setLastCandleTime({ interval, openTime: latestCandleOpenTime });
   }
+
+  await enforcePortfolioDrawdownCap({ interval });
 
   const { cash: finalCash, equity } = await snapshotEquity({ interval });
   const postClose24hBackfill = await backfillPostClose24hMetrics().catch(

@@ -9,10 +9,13 @@ import {
   STRATEGY_LOOKBACK_CLOSES,
   SYMBOL_REENTRY_COOLDOWN_MS,
 } from "@/constants/strategy";
+import { hasGainVsAnyRef } from "@/utils/strategy/price-change-conditions";
 import {
-  hasGainVsAnyRef,
-  hasLossVsAnyRef,
-} from "@/utils/strategy/price-change-conditions";
+  getTrailingExitPrice,
+  getUpdatedPeakPrice,
+  getWorstObservedPrice,
+  shouldTriggerTrailingStop,
+} from "@/utils/strategy/trailing-stop";
 
 export interface CandleSlice {
   openTime: number;
@@ -34,6 +37,8 @@ export interface EvaluateDecisionParams {
   cash: number;
   lastProcessedOpenTime: number | null;
   lastSellOpenTime: number | null;
+  /** Live/backtest mark price for intrabar stop checks (defaults to latest close). */
+  markPrice?: number;
 }
 
 export type DecisionAction = "BUY" | "SELL" | "HOLD" | "SKIP";
@@ -44,6 +49,8 @@ export interface EvaluateDecisionResult {
   reason?: string;
   qty?: number;
   updatedMaxPrice?: number;
+  /** Fill price for SELL; capped to trailing stop (max 15% loss vs entry/peak). */
+  exitPrice?: number;
 }
 
 export function get24hHighLow(
@@ -79,6 +86,7 @@ export function evaluateDecision({
   cash,
   lastProcessedOpenTime,
   lastSellOpenTime,
+  markPrice,
 }: EvaluateDecisionParams): EvaluateDecisionResult {
   if (closed.length < STRATEGY_LOOKBACK_CLOSES) {
     return { action: "SKIP", candleOpenTime: null };
@@ -104,30 +112,40 @@ export function evaluateDecision({
       position.maxPriceAfterBuy !== null
         ? position.maxPriceAfterBuy
         : position.buyPrice;
-    const updatedMax = close > currentMax ? close : currentMax;
-
-    const trailingRef = Math.max(position.buyPrice, updatedMax);
-
-    const { lowOpenTime, highOpenTime } = get24hHighLow(closed);
-    const isLowNewerThanHigh = lowOpenTime > highOpenTime;
-
-    const hasTrailingStop = hasLossVsAnyRef({
-      reference: close,
-      refs: [trailingRef],
-      thresholdPct: EXIT_DRAWDOWN_PCT,
+    const updatedMax = getUpdatedPeakPrice({
+      currentMax,
+      high: latest.high,
+      close,
+      markPrice,
     });
 
-    const shouldStop = isLowNewerThanHigh || hasTrailingStop;
+    const stopPosition = {
+      buyPrice: position.buyPrice,
+      maxPriceAfterBuy: updatedMax,
+    };
+    const worstPrice = getWorstObservedPrice({
+      low: latest.low,
+      markPrice: markPrice ?? close,
+    });
 
-    if (shouldStop) {
+    if (
+      shouldTriggerTrailingStop({
+        position: stopPosition,
+        worstPrice,
+        thresholdPct: EXIT_DRAWDOWN_PCT,
+      })
+    ) {
+      const exitPrice = getTrailingExitPrice({
+        position: stopPosition,
+        thresholdPct: EXIT_DRAWDOWN_PCT,
+      });
+
       return {
         action: "SELL",
         candleOpenTime: latest.openTime,
-        reason:
-          isLowNewerThanHigh && !hasTrailingStop
-            ? "exit_bearish_structure_low_newer_than_high"
-            : "exit_drawdown_15pct_vs_peak",
+        reason: "exit_drawdown_15pct_vs_peak",
         qty: position.qty,
+        exitPrice,
       };
     }
 

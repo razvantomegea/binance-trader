@@ -47,7 +47,7 @@ const STRATEGY_DESCRIPTION = [
   `last close vs prior ${STRATEGY_PRIOR_CLOSES} closes`,
   `entry: 24h range ${formatPct(ENTRY_RANGE_PCT)}-${formatPct(ENTRY_MAX_RANGE_PCT)} and within ${formatPct(ENTRY_PULLBACK_PCT)} of 24h high`,
   `size: ${formatPct(BUY_NOTIONAL_PCT)} cash`,
-  `exit: ${formatPct(EXIT_DRAWDOWN_PCT)} trailing stop vs max(entry, peak since buy)`,
+  `exit: ${formatPct(EXIT_DRAWDOWN_PCT)} trailing stop (max loss per trade and while positions open)`,
 ].join(" | ");
 
 interface SymbolRow {

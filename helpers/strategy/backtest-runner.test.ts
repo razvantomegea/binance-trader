@@ -102,7 +102,7 @@ describe("simulated ledger", () => {
       closed: Array.from({ length: STRATEGY_LOOKBACK_CLOSES }, (_, i) => ({
         openTime: openTime + HOUR_MS - i * HOUR_MS,
         high: 200,
-        low: 150,
+        low: 185,
         close: 200,
       })),
       position: ledger.getPosition("TESTUSDT"),
@@ -196,11 +196,31 @@ describe("buildBacktestReport", () => {
         },
       ],
       equityCurve: [
-        { openTime: 0, cash: 10_000, equity: 10_000 },
-        { openTime: HOUR_MS, cash: 9_900, equity: 10_100 },
-        { openTime: 2 * HOUR_MS, cash: 10_020, equity: 10_020 },
-        { openTime: 3 * HOUR_MS, cash: 10_020, equity: 9_500 },
-        { openTime: 4 * HOUR_MS, cash: 10_020, equity: 11_000 },
+        { openTime: 0, cash: 10_000, equity: 10_000, openPositionCount: 0 },
+        {
+          openTime: HOUR_MS,
+          cash: 9_900,
+          equity: 10_100,
+          openPositionCount: 1,
+        },
+        {
+          openTime: 2 * HOUR_MS,
+          cash: 10_020,
+          equity: 10_020,
+          openPositionCount: 1,
+        },
+        {
+          openTime: 3 * HOUR_MS,
+          cash: 10_020,
+          equity: 9_500,
+          openPositionCount: 1,
+        },
+        {
+          openTime: 4 * HOUR_MS,
+          cash: 10_020,
+          equity: 11_000,
+          openPositionCount: 0,
+        },
       ],
     });
 

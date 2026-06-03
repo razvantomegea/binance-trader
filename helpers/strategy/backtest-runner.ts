@@ -8,6 +8,7 @@ import {
 } from "@/constants/strategy";
 import { assertLocalhostOnly } from "@/helpers/strategy/backtest/assert-localhost-only";
 import { buildBacktestReport } from "@/helpers/strategy/backtest/build-backtest-report";
+import { liquidateAllOpenPositions } from "@/helpers/strategy/backtest/liquidate-open-positions";
 import {
   buildCheckTimeline,
   getClosedWindowAt,
@@ -16,7 +17,12 @@ import {
   loadHistoricalKlinesBySymbol,
 } from "@/helpers/strategy/backtest/historical-kline-provider";
 import { SimulatedLedger } from "@/helpers/strategy/backtest/simulated-ledger";
+import { EXIT_DRAWDOWN_PCT } from "@/constants/binance";
 import { evaluateDecision } from "@/helpers/strategy/decision-core";
+import {
+  isPortfolioDrawdownBreached,
+  nextExposurePeakEquity,
+} from "@/helpers/strategy/exposure-peak-equity";
 import type {
   BacktestConfig,
   BacktestReport,
@@ -30,7 +36,7 @@ import { processInBatches } from "@/utils/process-in-batches";
 
 const DEFAULT_FEE_BPS = 0;
 const PRELOAD_LOG_EVERY = 50;
-export const BACKTEST_CHECK_EVERY_MINUTES = 60;
+export const BACKTEST_CHECK_EVERY_MINUTES = 5;
 
 function normalizeAndValidateUsdtSymbols(symbols: string[]): string[] {
   const normalized = symbols
@@ -121,6 +127,41 @@ async function preloadHistoricalKlines(params: {
   return klinesBySymbol;
 }
 
+function buildMarkPricesForOpenPositions(params: {
+  ledger: SimulatedLedger;
+  klinesBySymbol: Map<string, KlineCandle[]>;
+  openTime: number;
+  markPriceCursorBySymbol: Map<string, number>;
+}): Map<string, number> {
+  const markPrices = new Map<string, number>();
+
+  for (const [symbol, position] of params.ledger.positions) {
+    const klinesAsc = params.klinesBySymbol.get(symbol);
+    if (!klinesAsc) {
+      markPrices.set(symbol, position.buyPrice);
+      continue;
+    }
+
+    let cursor = params.markPriceCursorBySymbol.get(symbol) ?? 0;
+    while (
+      cursor + 1 < klinesAsc.length &&
+      klinesAsc[cursor + 1]!.openTime <= params.openTime
+    ) {
+      cursor += 1;
+    }
+    params.markPriceCursorBySymbol.set(symbol, cursor);
+
+    const candle = klinesAsc[cursor];
+    if (candle && candle.openTime <= params.openTime) {
+      markPrices.set(symbol, candle.close);
+    } else {
+      markPrices.set(symbol, position.buyPrice);
+    }
+  }
+
+  return markPrices;
+}
+
 async function runBacktestSimulation(params: {
   symbols: string[];
   klinesBySymbol: Map<string, KlineCandle[]>;
@@ -141,8 +182,16 @@ async function runBacktestSimulation(params: {
   const equityCurve: EquityPoint[] = [];
   const markPriceCursorBySymbol = new Map<string, number>();
   let lastProcessedOpenTime: number | null = null;
+  let exposurePeakEquity: number | null = null;
 
   for (const openTime of params.timeline) {
+    const markPrices = buildMarkPricesForOpenPositions({
+      ledger,
+      klinesBySymbol: params.klinesBySymbol,
+      openTime,
+      markPriceCursorBySymbol,
+    });
+
     await processInBatches({
       items: params.symbols,
       batchSize: params.concurrency,
@@ -163,18 +212,26 @@ async function runBacktestSimulation(params: {
         }
 
         await ledgerMutex.run(() => {
+          const markPrice = markPrices.get(symbol) ?? closed[0]!.close;
+
           const decision = evaluateDecision({
             closed,
             position: ledger.getPosition(symbol),
             cash: ledger.cash,
             lastProcessedOpenTime,
             lastSellOpenTime: ledger.lastSellOpenTime.get(symbol) ?? null,
+            markPrice,
           });
+
+          const tradePrice =
+            decision.action === "SELL" && decision.exitPrice !== undefined
+              ? decision.exitPrice
+              : closed[0]!.close;
 
           ledger.applyDecision({
             symbol,
             decision,
-            price: closed[0]!.close,
+            price: tradePrice,
           });
         });
       },
@@ -182,35 +239,43 @@ async function runBacktestSimulation(params: {
 
     lastProcessedOpenTime = openTime - HOUR_MS;
 
-    const markPrices = new Map<string, number>();
-    for (const [symbol, position] of ledger.positions) {
-      const klinesAsc = params.klinesBySymbol.get(symbol);
-      if (!klinesAsc) {
-        markPrices.set(symbol, position.buyPrice);
-        continue;
-      }
+    const markPricesAfterTrades = buildMarkPricesForOpenPositions({
+      ledger,
+      klinesBySymbol: params.klinesBySymbol,
+      openTime,
+      markPriceCursorBySymbol,
+    });
 
-      let cursor = markPriceCursorBySymbol.get(symbol) ?? 0;
-      while (
-        cursor + 1 < klinesAsc.length &&
-        klinesAsc[cursor + 1]!.openTime <= openTime
-      ) {
-        cursor += 1;
-      }
-      markPriceCursorBySymbol.set(symbol, cursor);
+    const equity = ledger.getEquity(markPricesAfterTrades);
+    const openPositionCount = ledger.positions.size;
 
-      const candle = klinesAsc[cursor];
-      if (candle && candle.openTime <= openTime) {
-        markPrices.set(symbol, candle.close);
-      } else {
-        markPrices.set(symbol, position.buyPrice);
-      }
+    exposurePeakEquity = nextExposurePeakEquity({
+      currentPeak: exposurePeakEquity,
+      equity,
+      hasOpenPositions: openPositionCount > 0,
+    });
+
+    if (
+      exposurePeakEquity !== null &&
+      isPortfolioDrawdownBreached({
+        equity,
+        exposurePeakEquity,
+        thresholdPct: EXIT_DRAWDOWN_PCT,
+      })
+    ) {
+      liquidateAllOpenPositions({
+        ledger,
+        markPrices: markPricesAfterTrades,
+        candleOpenTime: openTime,
+      });
+      exposurePeakEquity = null;
     }
 
     equityCurve.push({
       openTime,
       cash: ledger.cash,
-      equity: ledger.getEquity(markPrices),
+      equity: ledger.getEquity(markPricesAfterTrades),
+      openPositionCount: ledger.positions.size,
     });
   }
 

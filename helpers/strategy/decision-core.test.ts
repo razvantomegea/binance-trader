@@ -117,6 +117,27 @@ describe("evaluateDecision exits", () => {
     expect(result.reason).toBe("exit_drawdown_15pct_vs_peak");
   });
 
+  it("sells at stop price when low gaps below 15% but close recovers", () => {
+    const buyOpenTime = 1000 * HOUR_MS;
+    const latestOpenTime = buyOpenTime + HOUR_MS;
+    const closed = makeCandles(latestOpenTime, [
+      { close: 90, high: 90, low: 60 },
+      ...Array(STRATEGY_LOOKBACK_CLOSES - 1).fill(100),
+    ]);
+
+    const result = evaluateDecision({
+      closed,
+      position: position({ buyOpenTime, buyPrice: 100 }),
+      cash: 10_000,
+      lastProcessedOpenTime: null,
+      lastSellOpenTime: null,
+    });
+
+    expect(result.action).toBe("SELL");
+    expect(result.exitPrice).toBe(85);
+    expect(result.reason).toBe("exit_drawdown_15pct_vs_peak");
+  });
+
   it("holds when price peaked at +5% and trailing stop not reached", () => {
     const buyOpenTime = 1000 * HOUR_MS;
     const latestOpenTime = buyOpenTime + HOUR_MS;
