@@ -46,7 +46,7 @@ describe("historical kline helpers", () => {
 
     const window = getClosedWindowAt({
       klinesAsc,
-      targetTime: 23 * HOUR_MS,
+      targetTime: 24 * HOUR_MS,
       count: STRATEGY_LOOKBACK_CLOSES,
     });
 
@@ -84,7 +84,7 @@ describe("simulated ledger", () => {
       closed: Array.from({ length: STRATEGY_LOOKBACK_CLOSES }, (_, i) => ({
         openTime: openTime - i * HOUR_MS,
         high: 150,
-        low: 100,
+        low: i === 0 ? 150 : 100,
         close: 150,
       })),
       position: undefined,

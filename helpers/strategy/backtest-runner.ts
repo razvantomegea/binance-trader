@@ -23,6 +23,7 @@ import type {
   EquityPoint,
 } from "@/types/backtest";
 import type { KlineCandle } from "@/types/binance";
+import { HOUR_MS } from "@/utils/binance/candle-time";
 import { getTradingSymbols } from "@/utils/binance/get-usdt-symbols";
 import { createAsyncMutex } from "@/utils/create-async-mutex";
 import { processInBatches } from "@/utils/process-in-batches";
@@ -179,7 +180,7 @@ async function runBacktestSimulation(params: {
       },
     });
 
-    lastProcessedOpenTime = openTime;
+    lastProcessedOpenTime = openTime - HOUR_MS;
 
     const markPrices = new Map<string, number>();
     for (const [symbol, position] of ledger.positions) {

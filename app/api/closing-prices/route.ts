@@ -1,23 +1,22 @@
 import { NextResponse } from "next/server";
 
-import { CANDLE_INTERVALS } from "@/constants/binance";
+import type { CandleInterval } from "@/types/binance";
 import { getClosingPrices } from "@/helpers/closing-prices/get-closing-prices";
 import { InvalidSymbolsError } from "@/helpers/closing-prices/invalid-symbols-error";
 import { parseSymbolsFilter } from "@/utils/api/parse-symbols-filter";
-import { parseCandleIntervals } from "@/utils/binance/parse-candle-intervals";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const intervals = parseCandleIntervals(searchParams.get("intervals"));
+  const intervalsParam = searchParams.get("intervals");
 
-  if (!intervals) {
+  if (intervalsParam && intervalsParam.trim().toUpperCase() !== "H1") {
     return NextResponse.json(
-      {
-        error: `Invalid intervals. Use comma-separated values from: ${CANDLE_INTERVALS.join(", ")}`,
-      },
+      { error: "Invalid intervals. Supported: H1" },
       { status: 400 },
     );
   }
+
+  const intervals: CandleInterval[] = ["H1"];
 
   try {
     let symbolsFilter: string[] | undefined;

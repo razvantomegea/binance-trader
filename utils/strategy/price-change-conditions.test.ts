@@ -73,10 +73,10 @@ describe("hasLossVsAnyRef", () => {
     ).toBe(false);
   });
 
-  it("returns true at exactly 10% loss boundary", () => {
+  it("returns true at exactly 15% loss boundary", () => {
     expect(
       hasLossVsAnyRef({
-        reference: 90,
+        reference: 85,
         refs: [100],
         thresholdPct: EXIT_DRAWDOWN_PCT,
       }),

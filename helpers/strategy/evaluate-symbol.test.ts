@@ -153,7 +153,7 @@ describe("evaluateSymbol exits", () => {
     expect(mockedPlaceTrade).toHaveBeenCalledWith(
       expect.objectContaining({
         side: "SELL",
-        reason: "exit_drawdown_10pct_vs_peak",
+        reason: "exit_drawdown_15pct_vs_peak",
       }),
     );
   });
@@ -218,7 +218,7 @@ describe("evaluateSymbol exits", () => {
     expect(mockedPlaceTrade).toHaveBeenCalledWith(
       expect.objectContaining({
         side: "SELL",
-        reason: "exit_drawdown_10pct_vs_peak",
+        reason: "exit_drawdown_15pct_vs_peak",
       }),
     );
   });

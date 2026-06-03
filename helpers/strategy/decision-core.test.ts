@@ -114,16 +114,15 @@ describe("evaluateDecision exits", () => {
     });
 
     expect(result.action).toBe("SELL");
-    expect(result.reason).toBe("exit_drawdown_10pct_vs_peak");
+    expect(result.reason).toBe("exit_drawdown_15pct_vs_peak");
   });
 
-  it("holds when price reached +5% and falls back to buy price", () => {
+  it("holds when price peaked at +5% and trailing stop not reached", () => {
     const buyOpenTime = 1000 * HOUR_MS;
-    const latestOpenTime = buyOpenTime + 2 * HOUR_MS;
+    const latestOpenTime = buyOpenTime + HOUR_MS;
     const closed = makeCandles(latestOpenTime, [
-      100,
-      105,
-      ...Array(STRATEGY_LOOKBACK_CLOSES - 2).fill(100),
+      { close: 100, high: 105, low: 100 },
+      ...Array(STRATEGY_LOOKBACK_CLOSES - 1).fill(100),
     ]);
 
     const result = evaluateDecision({

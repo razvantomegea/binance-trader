@@ -1,6 +1,5 @@
 import { and, asc, eq, gt, lte } from "drizzle-orm";
 
-import { STRATEGY_INTERVAL } from "@/constants/strategy";
 import { getDb } from "@/db";
 import { trades } from "@/db/schema";
 import type { CandleInterval } from "@/types/binance";
@@ -109,11 +108,4 @@ export async function backfillPostClose24hMetrics(): Promise<BackfillPostClose24
     updated,
     skipped,
   };
-}
-
-export async function backfillPostClose24hForInterval(
-  interval: typeof STRATEGY_INTERVAL = STRATEGY_INTERVAL,
-): Promise<BackfillPostClose24hResult> {
-  void interval;
-  return backfillPostClose24hMetrics();
 }
