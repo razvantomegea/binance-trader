@@ -72,16 +72,23 @@ export async function enforcePortfolioDrawdownCap(params: {
         thresholdPct: EXIT_DRAWDOWN_PCT,
       });
 
-      await placeTrade({
-        symbol,
-        side: "SELL",
-        qty: position.qty,
-        price: sellPrice,
-        interval,
-        candleOpenTime: candle?.openTime ?? Date.now(),
-        reason: EXIT_PORTFOLIO_DRAWDOWN_REASON,
-      });
-      liquidated += 1;
+      try {
+        await placeTrade({
+          symbol,
+          side: "SELL",
+          qty: position.qty,
+          price: sellPrice,
+          interval,
+          candleOpenTime: candle?.openTime ?? Date.now(),
+          reason: EXIT_PORTFOLIO_DRAWDOWN_REASON,
+        });
+        liquidated += 1;
+      } catch (error) {
+        console.error(
+          `Portfolio drawdown liquidation failed for ${symbol}:`,
+          error,
+        );
+      }
     },
   });
 
