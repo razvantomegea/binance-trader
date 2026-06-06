@@ -85,7 +85,7 @@ describe("simulated ledger", () => {
         openTime: openTime - i * HOUR_MS,
         high: 150,
         low: i === 0 ? 150 : 100,
-        close: 150,
+        close: i === 0 ? 150 : 100,
       })),
       position: undefined,
       cash: ledger.cash,

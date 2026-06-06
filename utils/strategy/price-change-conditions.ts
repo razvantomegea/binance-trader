@@ -4,6 +4,24 @@ interface CompareToRefsParams {
   thresholdPct: number;
 }
 
+interface GainWithinBandParams {
+  value: number;
+  ref: number;
+  minPct: number;
+  maxPct: number;
+}
+
+export function isGainWithinBand({
+  value,
+  ref,
+  minPct,
+  maxPct,
+}: GainWithinBandParams): boolean {
+  if (ref <= 0) return false;
+  const gain = (value - ref) / ref;
+  return gain >= minPct && gain <= maxPct;
+}
+
 export function hasGainVsAnyRef({
   reference,
   refs,

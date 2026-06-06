@@ -1,7 +1,6 @@
 import {
   BUY_NOTIONAL_PCT,
-  ENTRY_MAX_RANGE_PCT,
-  ENTRY_PULLBACK_PCT,
+  ENTRY_RANGE_MAX_PCT,
   ENTRY_RANGE_PCT,
   EXIT_DRAWDOWN_PCT,
 } from "@/constants/binance";
@@ -9,7 +8,7 @@ import {
   STRATEGY_LOOKBACK_CLOSES,
   SYMBOL_REENTRY_COOLDOWN_MS,
 } from "@/constants/strategy";
-import { hasGainVsAnyRef } from "@/utils/strategy/price-change-conditions";
+import { isGainWithinBand } from "@/utils/strategy/price-change-conditions";
 import {
   getTrailingExitPrice,
   getUpdatedPeakPrice,
@@ -78,6 +77,19 @@ export function get24hHighLow(
   }
 
   return { high24h, low24h, highOpenTime, lowOpenTime };
+}
+
+export function getCloseHighLow(closed: Pick<CandleSlice, "close">[]): {
+  highClose: number;
+  lowClose: number;
+} {
+  let highClose = closed[0]!.close;
+  let lowClose = closed[0]!.close;
+  for (const c of closed) {
+    if (c.close > highClose) highClose = c.close;
+    if (c.close < lowClose) lowClose = c.close;
+  }
+  return { highClose, lowClose };
 }
 
 export function evaluateDecision({
@@ -163,28 +175,22 @@ export function evaluateDecision({
     return { action: "HOLD", candleOpenTime: latest.openTime };
   }
 
-  const { high24h, low24h, highOpenTime, lowOpenTime } = get24hHighLow(closed);
+  const { highClose, lowClose } = getCloseHighLow(closed);
 
-  const rangePct =
-    low24h > 0 ? (high24h - low24h) / low24h : Number.POSITIVE_INFINITY;
-  const hasEntryRange = hasGainVsAnyRef({
-    reference: high24h,
-    refs: [low24h],
-    thresholdPct: ENTRY_RANGE_PCT,
+  const closeInBand = isGainWithinBand({
+    value: close,
+    ref: lowClose,
+    minPct: ENTRY_RANGE_PCT,
+    maxPct: ENTRY_RANGE_MAX_PCT,
   });
-  const isWithinEntryMaxRange = rangePct <= ENTRY_MAX_RANGE_PCT;
+  const highInBand = isGainWithinBand({
+    value: highClose,
+    ref: lowClose,
+    minPct: ENTRY_RANGE_PCT,
+    maxPct: ENTRY_RANGE_MAX_PCT,
+  });
 
-  const isNear24hHigh =
-    high24h > 0 && close > high24h * (1 - ENTRY_PULLBACK_PCT);
-
-  const isHighNewerThanLow = highOpenTime > lowOpenTime;
-
-  if (
-    !hasEntryRange ||
-    !isWithinEntryMaxRange ||
-    !isNear24hHigh ||
-    !isHighNewerThanLow
-  ) {
+  if (!closeInBand || !highInBand) {
     return { action: "HOLD", candleOpenTime: latest.openTime };
   }
 
@@ -202,7 +208,7 @@ export function evaluateDecision({
   return {
     action: "BUY",
     candleOpenTime: latest.openTime,
-    reason: "entry_24h_range_50pct_near_high",
+    reason: "entry_24h_band_50_75pct",
     qty,
   };
 }

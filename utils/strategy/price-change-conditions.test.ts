@@ -2,7 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import { ENTRY_RANGE_PCT, EXIT_DRAWDOWN_PCT } from "@/constants/binance";
 
-import { hasGainVsAnyRef, hasLossVsAnyRef } from "./price-change-conditions";
+import {
+  hasGainVsAnyRef,
+  hasLossVsAnyRef,
+  isGainWithinBand,
+} from "./price-change-conditions";
 
 describe("hasGainVsAnyRef", () => {
   it("returns true when gain meets threshold", () => {
@@ -90,6 +94,44 @@ describe("hasLossVsAnyRef", () => {
         refs: [100],
         thresholdPct: EXIT_DRAWDOWN_PCT,
       }),
+    ).toBe(false);
+  });
+});
+
+describe("isGainWithinBand", () => {
+  it("returns true when gain is within min and max", () => {
+    expect(
+      isGainWithinBand({ value: 160, ref: 100, minPct: 0.5, maxPct: 0.75 }),
+    ).toBe(true);
+  });
+
+  it("returns true at exact min boundary", () => {
+    expect(
+      isGainWithinBand({ value: 150, ref: 100, minPct: 0.5, maxPct: 0.75 }),
+    ).toBe(true);
+  });
+
+  it("returns true at exact max boundary", () => {
+    expect(
+      isGainWithinBand({ value: 175, ref: 100, minPct: 0.5, maxPct: 0.75 }),
+    ).toBe(true);
+  });
+
+  it("returns false below min", () => {
+    expect(
+      isGainWithinBand({ value: 149, ref: 100, minPct: 0.5, maxPct: 0.75 }),
+    ).toBe(false);
+  });
+
+  it("returns false above max", () => {
+    expect(
+      isGainWithinBand({ value: 176, ref: 100, minPct: 0.5, maxPct: 0.75 }),
+    ).toBe(false);
+  });
+
+  it("returns false for non-positive ref", () => {
+    expect(
+      isGainWithinBand({ value: 150, ref: 0, minPct: 0.5, maxPct: 0.75 }),
     ).toBe(false);
   });
 });

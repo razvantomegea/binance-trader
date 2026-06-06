@@ -179,7 +179,7 @@ describe("evaluateDecision entry", () => {
     });
 
     expect(result.action).toBe("BUY");
-    expect(result.reason).toBe("entry_24h_range_50pct_near_high");
+    expect(result.reason).toBe("entry_24h_band_50_75pct");
   });
 
   it("does not buy when 24h range is more than 100%", () => {
@@ -219,6 +219,63 @@ describe("evaluateDecision entry", () => {
     });
 
     expect(result.action).toBe("HOLD");
+  });
+
+  it("does not buy when current close is above 75% above lowest close", () => {
+    const latestOpenTime = 1000 * HOUR_MS;
+    const closed = makeCandles(latestOpenTime, [
+      180,
+      ...Array(STRATEGY_LOOKBACK_CLOSES - 1).fill(100),
+    ]);
+
+    const result = evaluateDecision({
+      closed,
+      position: undefined,
+      cash: 10_000,
+      lastProcessedOpenTime: null,
+      lastSellOpenTime: null,
+    });
+
+    expect(result.action).toBe("HOLD");
+  });
+
+  it("does not buy when highest close is above 75% above lowest close", () => {
+    const latestOpenTime = 1000 * HOUR_MS;
+    const closed = makeCandles(latestOpenTime, [
+      160,
+      190,
+      ...Array(STRATEGY_LOOKBACK_CLOSES - 2).fill(100),
+    ]);
+
+    const result = evaluateDecision({
+      closed,
+      position: undefined,
+      cash: 10_000,
+      lastProcessedOpenTime: null,
+      lastSellOpenTime: null,
+    });
+
+    expect(result.action).toBe("HOLD");
+  });
+
+  it("buys when current and highest close are both within 50-75% band", () => {
+    const latestOpenTime = 1000 * HOUR_MS;
+    const closed = makeCandles(latestOpenTime, [
+      160,
+      170,
+      ...Array(STRATEGY_LOOKBACK_CLOSES - 2).fill(100),
+    ]);
+
+    const result = evaluateDecision({
+      closed,
+      position: undefined,
+      cash: 10_000,
+      lastProcessedOpenTime: null,
+      lastSellOpenTime: null,
+    });
+
+    expect(result.action).toBe("BUY");
+    expect(result.reason).toBe("entry_24h_band_50_75pct");
   });
 });
 

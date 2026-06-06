@@ -17,7 +17,6 @@ export const BINANCE_FETCH_CONCURRENCY = 20;
 
 export const INITIAL_PAPER_CASH = 10_000;
 export const ENTRY_RANGE_PCT = 0.5;
-export const ENTRY_MAX_RANGE_PCT = 1;
+export const ENTRY_RANGE_MAX_PCT = 0.75;
 export const BUY_NOTIONAL_PCT = 0.05;
 export const EXIT_DRAWDOWN_PCT = 0.15;
-export const ENTRY_PULLBACK_PCT = EXIT_DRAWDOWN_PCT;

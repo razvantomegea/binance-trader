@@ -12,8 +12,7 @@ import { SymbolList } from "@/components/symbol-list";
 import { TradesTable } from "@/components/trades-table";
 import {
   BUY_NOTIONAL_PCT,
-  ENTRY_MAX_RANGE_PCT,
-  ENTRY_PULLBACK_PCT,
+  ENTRY_RANGE_MAX_PCT,
   ENTRY_RANGE_PCT,
   EXIT_DRAWDOWN_PCT,
 } from "@/constants/binance";
@@ -45,7 +44,7 @@ function formatPct(value: number): string {
 const STRATEGY_DESCRIPTION = [
   `${STRATEGY_INTERVAL} paper strategy`,
   `last close vs prior ${STRATEGY_PRIOR_CLOSES} closes`,
-  `entry: 24h range ${formatPct(ENTRY_RANGE_PCT)}-${formatPct(ENTRY_MAX_RANGE_PCT)} and within ${formatPct(ENTRY_PULLBACK_PCT)} of 24h high`,
+  `entry: current and highest close both ${formatPct(ENTRY_RANGE_PCT)}-${formatPct(ENTRY_RANGE_MAX_PCT)} above lowest 24h close`,
   `size: ${formatPct(BUY_NOTIONAL_PCT)} cash`,
   `exit: ${formatPct(EXIT_DRAWDOWN_PCT)} trailing stop (max loss per trade and while positions open)`,
 ].join(" | ");
