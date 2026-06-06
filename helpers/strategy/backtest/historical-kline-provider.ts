@@ -40,7 +40,7 @@ export function getClosedWindowAt(params: {
 }): KlineCandle[] | null {
   let idx = -1;
   for (let i = params.klinesAsc.length - 1; i >= 0; i -= 1) {
-    if (params.klinesAsc[i]!.openTime <= params.targetTime) {
+    if (params.klinesAsc[i]!.openTime < params.targetTime) {
       idx = i;
       break;
     }

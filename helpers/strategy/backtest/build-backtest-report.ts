@@ -9,21 +9,25 @@ interface BuildBacktestReportParams {
   equityCurve: EquityPoint[];
 }
 
+/** Max equity fall while at least one position is open (excludes flat periods). */
 function computeMaxDrawdownPct(equityCurve: EquityPoint[]): number {
-  if (equityCurve.length === 0) {
-    return 0;
-  }
-
-  let peak = equityCurve[0]!.equity;
+  let exposurePeak = 0;
   let maxDrawdownPct = 0;
 
   for (const point of equityCurve) {
-    if (point.equity > peak) {
-      peak = point.equity;
+    if (point.openPositionCount === 0) {
+      exposurePeak = 0;
+      continue;
     }
 
-    if (peak > 0) {
-      const drawdownPct = ((peak - point.equity) / peak) * 100;
+    if (exposurePeak === 0) {
+      exposurePeak = point.equity;
+    } else if (point.equity > exposurePeak) {
+      exposurePeak = point.equity;
+    }
+
+    if (exposurePeak > 0) {
+      const drawdownPct = ((exposurePeak - point.equity) / exposurePeak) * 100;
       if (drawdownPct > maxDrawdownPct) {
         maxDrawdownPct = drawdownPct;
       }

@@ -7,8 +7,9 @@ import {
   setLastCandleTime,
 } from "@/helpers/strategy/get-last-candle-time";
 import { getOpenPositions } from "@/helpers/strategy/get-positions";
+import { enforcePortfolioDrawdownCap } from "@/helpers/strategy/enforce-portfolio-drawdown-cap";
 import { snapshotEquity } from "@/helpers/strategy/snapshot-equity";
-import { backfillPostClose24hForInterval } from "@/helpers/trades/backfill-post-close-24h";
+import { backfillPostClose24hMetrics } from "@/helpers/trades/backfill-post-close-24h";
 import { getUsdtSymbols } from "@/utils/binance/get-usdt-symbols";
 import { isUsdtSymbol } from "@/utils/binance/is-usdt-symbol";
 import { processInBatches } from "@/utils/process-in-batches";
@@ -76,13 +77,15 @@ export async function runStrategy(): Promise<RunStrategyResult> {
     await setLastCandleTime({ interval, openTime: latestCandleOpenTime });
   }
 
+  await enforcePortfolioDrawdownCap({ interval });
+
   const { cash: finalCash, equity } = await snapshotEquity({ interval });
-  const postClose24hBackfill = await backfillPostClose24hForInterval(
-    interval,
-  ).catch((error) => {
-    console.error("Post-close 24h backfill failed:", error);
-    return { scanned: 0, updated: 0, skipped: 0 };
-  });
+  const postClose24hBackfill = await backfillPostClose24hMetrics().catch(
+    (error) => {
+      console.error("Post-close 24h backfill failed:", error);
+      return { scanned: 0, updated: 0, skipped: 0 };
+    },
+  );
 
   return {
     interval,

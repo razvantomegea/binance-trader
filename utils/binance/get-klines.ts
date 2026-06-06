@@ -42,14 +42,14 @@ function parseKline(kline: BinanceKline): KlineCandle {
 
 export async function getKlines({
   symbol,
-  interval,
+  interval: _interval,
   limit = 200,
   startTime,
   endTime,
 }: GetKlinesParams): Promise<KlineCandle[]> {
   const url = new URL(`${BINANCE_API_BASE_URL}/api/v3/klines`);
   url.searchParams.set("symbol", symbol);
-  url.searchParams.set("interval", BINANCE_KLINE_INTERVAL[interval]);
+  url.searchParams.set("interval", BINANCE_KLINE_INTERVAL);
   url.searchParams.set("limit", String(Math.min(Math.max(limit, 2), 1000)));
 
   if (startTime !== undefined) {
@@ -62,7 +62,7 @@ export async function getKlines({
   const useCache = startTime === undefined && endTime === undefined;
   const response = useCache
     ? await fetch(url, {
-        next: { revalidate: KLINE_REVALIDATE_SECONDS[interval] },
+        next: { revalidate: KLINE_REVALIDATE_SECONDS },
       })
     : await fetchWithRetry({ url });
 

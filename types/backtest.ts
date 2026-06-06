@@ -35,6 +35,7 @@ export interface EquityPoint {
   openTime: number;
   equity: number;
   cash: number;
+  openPositionCount: number;
 }
 
 export interface BacktestReport {

@@ -12,16 +12,15 @@ interface GetClosingPriceParams {
 
 export async function getClosingPrice({
   symbol,
-  interval,
+  interval: _interval,
 }: GetClosingPriceParams): Promise<string | null> {
-  const binanceInterval = BINANCE_KLINE_INTERVAL[interval];
   const url = new URL(`${BINANCE_API_BASE_URL}/api/v3/klines`);
   url.searchParams.set("symbol", symbol);
-  url.searchParams.set("interval", binanceInterval);
+  url.searchParams.set("interval", BINANCE_KLINE_INTERVAL);
   url.searchParams.set("limit", "2");
 
   const response = await fetch(url, {
-    next: { revalidate: KLINE_REVALIDATE_SECONDS[interval] },
+    next: { revalidate: KLINE_REVALIDATE_SECONDS },
   });
 
   if (!response.ok) {

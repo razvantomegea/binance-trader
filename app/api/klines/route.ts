@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 
-import { getKlinesResponse } from "@/helpers/klines/get-klines-response";
+import type { CandleInterval } from "@/types/binance";
 import { parseBoundedInt } from "@/utils/api/parse-bounded-int";
+import { getKlines } from "@/utils/binance/get-klines";
 import { isUsdtSymbol } from "@/utils/binance/is-usdt-symbol";
-import { parseSingleCandleInterval } from "@/utils/parse-candle-interval";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const symbol = searchParams.get("symbol")?.trim().toUpperCase();
-  const interval = parseSingleCandleInterval(searchParams.get("interval"));
+  const intervalParam = searchParams.get("interval");
   const limit = parseBoundedInt({
     value: searchParams.get("limit"),
     defaultValue: 200,
@@ -27,13 +27,15 @@ export async function GET(request: Request) {
     );
   }
 
-  if (!interval) {
+  if (intervalParam && intervalParam.trim().toUpperCase() !== "H1") {
     return NextResponse.json({ error: "Invalid interval" }, { status: 400 });
   }
 
+  const interval: CandleInterval = "H1";
+
   try {
-    const response = await getKlinesResponse({ symbol, interval, limit });
-    return NextResponse.json(response);
+    const candles = await getKlines({ symbol, interval, limit });
+    return NextResponse.json({ symbol, interval, candles });
   } catch (error) {
     console.error("Failed to fetch klines response", error);
 

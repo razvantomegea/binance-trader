@@ -51,12 +51,15 @@ export async function evaluateSymbol({
     ? null
     : await getLastSymbolCloseTime(symbol);
 
+  const latestClose = closed[0]!.close;
+
   const decision = evaluateDecision({
     closed,
     position: position ? toDecisionPosition(position) : undefined,
     cash,
     lastProcessedOpenTime,
     lastSellOpenTime,
+    markPrice: latestClose,
   });
 
   if (decision.action === "SKIP" || decision.candleOpenTime === null) {
@@ -77,11 +80,16 @@ export async function evaluateSymbol({
 
   if (decision.action === "BUY" || decision.action === "SELL") {
     const side = decision.action;
+    const tradePrice =
+      side === "SELL" && decision.exitPrice !== undefined
+        ? decision.exitPrice
+        : latestClose;
+
     await placeTrade({
       symbol,
       side,
       qty: decision.qty!,
-      price: closed[0]!.close,
+      price: tradePrice,
       interval,
       candleOpenTime: decision.candleOpenTime,
       reason: decision.reason!,

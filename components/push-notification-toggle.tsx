@@ -32,13 +32,6 @@ async function readErrorResponseBody(response: Response): Promise<string> {
   }
 }
 
-type PushEnvironmentDebug = {
-  permissionState?: NotificationPermission | "prompt" | "granted" | "denied";
-  isSecureContext: boolean;
-  userAgent: string;
-  isBrave: boolean;
-};
-
 function normalizeVapidPublicKey(value: string): string {
   const trimmed = value.trim();
   const withoutQuotes =
@@ -52,48 +45,6 @@ function toPushApplicationServerKey(
   value: Uint8Array,
 ): string | BufferSource | null | undefined {
   return Uint8Array.from(value);
-}
-
-async function collectPushEnvironmentDebug(
-  registration: ServiceWorkerRegistration,
-  applicationServerKey: Uint8Array,
-): Promise<PushEnvironmentDebug> {
-  let permissionState:
-    | NotificationPermission
-    | "prompt"
-    | "granted"
-    | "denied"
-    | undefined;
-  try {
-    permissionState = await registration.pushManager.permissionState({
-      userVisibleOnly: true,
-      applicationServerKey: toPushApplicationServerKey(applicationServerKey),
-    });
-  } catch {
-    permissionState = Notification.permission;
-  }
-
-  const braveCheck = (
-    navigator as Navigator & {
-      brave?: { isBrave?: () => Promise<boolean> };
-    }
-  ).brave?.isBrave;
-
-  let isBrave = false;
-  if (typeof braveCheck === "function") {
-    try {
-      isBrave = await braveCheck();
-    } catch {
-      isBrave = false;
-    }
-  }
-
-  return {
-    permissionState,
-    isSecureContext: window.isSecureContext,
-    userAgent: navigator.userAgent,
-    isBrave,
-  };
 }
 
 export function PushNotificationToggle() {
@@ -180,11 +131,6 @@ export function PushNotificationToggle() {
       step = "get-or-create-subscription";
       let subscription = await getBrowserSubscription(registration);
       if (!subscription) {
-        const envDebug = await collectPushEnvironmentDebug(
-          registration,
-          applicationServerKey,
-        );
-        console.info("[push-enable] environment", envDebug);
         subscription = await registration.pushManager.subscribe({
           userVisibleOnly: true,
           applicationServerKey:
