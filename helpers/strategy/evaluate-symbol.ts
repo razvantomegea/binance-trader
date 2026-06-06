@@ -10,6 +10,7 @@ import { placeTrade } from "@/helpers/strategy/place-trade";
 import type { OpenPosition } from "@/helpers/strategy/get-positions";
 import type { CandleInterval } from "@/types/binance";
 import { getRecentClosedKlines } from "@/utils/binance/get-klines";
+import { getUpdatedPeakPrice } from "@/utils/strategy/trailing-stop";
 import { eq } from "drizzle-orm";
 
 interface EvaluateSymbolParams {
@@ -80,10 +81,22 @@ export async function evaluateSymbol({
 
   if (decision.action === "BUY" || decision.action === "SELL") {
     const side = decision.action;
+    const latestCandle = closed[0]!;
     const tradePrice =
       side === "SELL" && decision.exitPrice !== undefined
         ? decision.exitPrice
         : latestClose;
+    const maxPriceAfterBuy =
+      side === "SELL" && decision.updatedMaxPrice !== undefined
+        ? decision.updatedMaxPrice
+        : side === "BUY"
+          ? getUpdatedPeakPrice({
+              currentMax: latestClose,
+              high: latestCandle.high,
+              close: latestClose,
+              markPrice: latestClose,
+            })
+          : undefined;
 
     await placeTrade({
       symbol,
@@ -93,6 +106,7 @@ export async function evaluateSymbol({
       interval,
       candleOpenTime: decision.candleOpenTime,
       reason: decision.reason!,
+      maxPriceAfterBuy,
     });
     return { candleOpenTime: decision.candleOpenTime, traded: true };
   }

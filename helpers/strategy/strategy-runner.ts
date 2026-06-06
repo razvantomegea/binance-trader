@@ -9,6 +9,7 @@ import {
 import { getOpenPositions } from "@/helpers/strategy/get-positions";
 import { enforcePortfolioDrawdownCap } from "@/helpers/strategy/enforce-portfolio-drawdown-cap";
 import { snapshotEquity } from "@/helpers/strategy/snapshot-equity";
+import { backfillMaxPriceAfterBuy } from "@/helpers/trades/backfill-max-price-after-buy";
 import { backfillPostClose24hMetrics } from "@/helpers/trades/backfill-post-close-24h";
 import { getUsdtSymbols } from "@/utils/binance/get-usdt-symbols";
 import { isUsdtSymbol } from "@/utils/binance/is-usdt-symbol";
@@ -21,6 +22,11 @@ export interface RunStrategyResult {
   cash: number;
   equity: number;
   postClose24hBackfill: {
+    scanned: number;
+    updated: number;
+    skipped: number;
+  };
+  maxPriceAfterBuyBackfill: {
     scanned: number;
     updated: number;
     skipped: number;
@@ -86,6 +92,12 @@ export async function runStrategy(): Promise<RunStrategyResult> {
       return { scanned: 0, updated: 0, skipped: 0 };
     },
   );
+  const maxPriceAfterBuyBackfill = await backfillMaxPriceAfterBuy().catch(
+    (error) => {
+      console.error("Max-price-after-buy backfill failed:", error);
+      return { scanned: 0, updated: 0, skipped: 0 };
+    },
+  );
 
   return {
     interval,
@@ -94,5 +106,6 @@ export async function runStrategy(): Promise<RunStrategyResult> {
     cash: finalCash,
     equity,
     postClose24hBackfill,
+    maxPriceAfterBuyBackfill,
   };
 }
