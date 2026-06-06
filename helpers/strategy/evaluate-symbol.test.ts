@@ -129,12 +129,12 @@ describe("evaluateSymbol exits", () => {
     expect(mockedPlaceTrade).not.toHaveBeenCalled();
   });
 
-  it("drawdown exit when price falls 10% from peak", async () => {
+  it("drawdown exit when price falls 25% from peak", async () => {
     const buyOpenTime = 1000 * HOUR_MS;
     const latestOpenTime = buyOpenTime + 2 * HOUR_MS;
 
     const candles = makeCandles(latestOpenTime, [
-      170,
+      150,
       200,
       ...Array(STRATEGY_LOOKBACK_CLOSES - 2).fill(100),
     ]);

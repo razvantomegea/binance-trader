@@ -1,4 +1,4 @@
-import { EXIT_DRAWDOWN_PCT } from "@/constants/binance";
+import { TRAILING_STOP_PCT } from "@/constants/binance";
 import type { SimulatedLedger } from "@/helpers/strategy/backtest/simulated-ledger";
 import type { EvaluateDecisionResult } from "@/helpers/strategy/decision-core";
 import { resolveTrailingSellPrice } from "@/utils/strategy/trailing-stop";
@@ -27,7 +27,7 @@ export function liquidateAllOpenPositions(params: {
         maxPriceAfterBuy: position.maxPriceAfterBuy,
       },
       marketPrice: mark,
-      thresholdPct: EXIT_DRAWDOWN_PCT,
+      thresholdPct: TRAILING_STOP_PCT,
     });
 
     const decision: EvaluateDecisionResult = {

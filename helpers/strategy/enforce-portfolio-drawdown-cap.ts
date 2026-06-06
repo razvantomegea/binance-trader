@@ -1,6 +1,6 @@
 import {
   BINANCE_FETCH_CONCURRENCY,
-  EXIT_DRAWDOWN_PCT,
+  TRAILING_STOP_PCT,
 } from "@/constants/binance";
 import { STRATEGY_INTERVAL } from "@/constants/strategy";
 import {
@@ -69,7 +69,7 @@ export async function enforcePortfolioDrawdownCap(params: {
           maxPriceAfterBuy: position.maxPriceAfterBuy,
         },
         marketPrice: mark,
-        thresholdPct: EXIT_DRAWDOWN_PCT,
+        thresholdPct: TRAILING_STOP_PCT,
       });
 
       try {
