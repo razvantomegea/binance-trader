@@ -1,3 +1,5 @@
+import { MAX_LOSS_PCT } from "@/constants/binance";
+
 export interface TrailingStopPosition {
   buyPrice: number;
   maxPriceAfterBuy: number | null;
@@ -27,7 +29,9 @@ export function getMaxLossFloorPrice(params: {
 export function getTrailingExitPrice(params: {
   position: TrailingStopPosition;
   thresholdPct: number;
+  maxLossPct?: number;
 }): number {
+  const maxLossPct = params.maxLossPct ?? MAX_LOSS_PCT;
   const trailingRef = getTrailingReferencePrice(params.position);
   const stopPrice = getTrailingStopPrice({
     trailingRef,
@@ -35,7 +39,7 @@ export function getTrailingExitPrice(params: {
   });
   const floorPrice = getMaxLossFloorPrice({
     buyPrice: params.position.buyPrice,
-    thresholdPct: params.thresholdPct,
+    thresholdPct: maxLossPct,
   });
   return Math.max(stopPrice, floorPrice);
 }
@@ -62,10 +66,12 @@ export function shouldTriggerTrailingStop(params: {
   position: TrailingStopPosition;
   worstPrice: number;
   thresholdPct: number;
+  maxLossPct?: number;
 }): boolean {
   const exitPrice = getTrailingExitPrice({
     position: params.position,
     thresholdPct: params.thresholdPct,
+    maxLossPct: params.maxLossPct,
   });
   return params.worstPrice <= exitPrice;
 }
@@ -74,10 +80,12 @@ export function resolveTrailingSellPrice(params: {
   position: TrailingStopPosition;
   marketPrice: number;
   thresholdPct: number;
+  maxLossPct?: number;
 }): number {
   const exitPrice = getTrailingExitPrice({
     position: params.position,
     thresholdPct: params.thresholdPct,
+    maxLossPct: params.maxLossPct,
   });
   return params.marketPrice >= exitPrice ? params.marketPrice : exitPrice;
 }

@@ -17,7 +17,7 @@ import {
   loadHistoricalKlinesBySymbol,
 } from "@/helpers/strategy/backtest/historical-kline-provider";
 import { SimulatedLedger } from "@/helpers/strategy/backtest/simulated-ledger";
-import { EXIT_DRAWDOWN_PCT } from "@/constants/binance";
+import { MAX_LOSS_PCT } from "@/constants/binance";
 import { evaluateDecision } from "@/helpers/strategy/decision-core";
 import {
   isPortfolioDrawdownBreached,
@@ -260,7 +260,7 @@ async function runBacktestSimulation(params: {
       isPortfolioDrawdownBreached({
         equity,
         exposurePeakEquity,
-        thresholdPct: EXIT_DRAWDOWN_PCT,
+        thresholdPct: MAX_LOSS_PCT,
       })
     ) {
       liquidateAllOpenPositions({

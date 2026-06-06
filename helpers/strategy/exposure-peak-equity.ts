@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 
-import { EXIT_DRAWDOWN_PCT } from "@/constants/binance";
+import { MAX_LOSS_PCT } from "@/constants/binance";
 import { getDb } from "@/db";
 import { strategyMeta } from "@/db/schema";
 import type { CandleInterval } from "@/types/binance";
@@ -56,7 +56,7 @@ export function isPortfolioDrawdownBreached(params: {
   exposurePeakEquity: number;
   thresholdPct?: number;
 }): boolean {
-  const threshold = params.thresholdPct ?? EXIT_DRAWDOWN_PCT;
+  const threshold = params.thresholdPct ?? MAX_LOSS_PCT;
   if (params.exposurePeakEquity <= 0) {
     return false;
   }

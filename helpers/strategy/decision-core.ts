@@ -2,7 +2,7 @@ import {
   BUY_NOTIONAL_PCT,
   ENTRY_RANGE_MAX_PCT,
   ENTRY_RANGE_PCT,
-  EXIT_DRAWDOWN_PCT,
+  TRAILING_STOP_PCT,
 } from "@/constants/binance";
 import {
   STRATEGY_LOOKBACK_CLOSES,
@@ -48,7 +48,7 @@ export interface EvaluateDecisionResult {
   reason?: string;
   qty?: number;
   updatedMaxPrice?: number;
-  /** Fill price for SELL; capped to trailing stop (max 15% loss vs entry/peak). */
+  /** Fill price for SELL; capped to trailing stop and max loss floor. */
   exitPrice?: number;
 }
 
@@ -144,12 +144,12 @@ export function evaluateDecision({
       shouldTriggerTrailingStop({
         position: stopPosition,
         worstPrice,
-        thresholdPct: EXIT_DRAWDOWN_PCT,
+        thresholdPct: TRAILING_STOP_PCT,
       })
     ) {
       const exitPrice = getTrailingExitPrice({
         position: stopPosition,
-        thresholdPct: EXIT_DRAWDOWN_PCT,
+        thresholdPct: TRAILING_STOP_PCT,
       });
 
       return {

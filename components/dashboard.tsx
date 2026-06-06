@@ -14,7 +14,8 @@ import {
   BUY_NOTIONAL_PCT,
   ENTRY_RANGE_MAX_PCT,
   ENTRY_RANGE_PCT,
-  EXIT_DRAWDOWN_PCT,
+  MAX_LOSS_PCT,
+  TRAILING_STOP_PCT,
 } from "@/constants/binance";
 import {
   STRATEGY_CRON_NO_RUN_AFTER_START_MS,
@@ -46,7 +47,7 @@ const STRATEGY_DESCRIPTION = [
   `last close vs prior ${STRATEGY_PRIOR_CLOSES} closes`,
   `entry: current and highest close both ${formatPct(ENTRY_RANGE_PCT)}-${formatPct(ENTRY_RANGE_MAX_PCT)} above lowest 24h close`,
   `size: ${formatPct(BUY_NOTIONAL_PCT)} cash`,
-  `exit: ${formatPct(EXIT_DRAWDOWN_PCT)} trailing stop (max loss per trade and while positions open)`,
+  `exit: ${formatPct(TRAILING_STOP_PCT)} trailing stop, ${formatPct(MAX_LOSS_PCT)} max loss per trade and account while open`,
 ].join(" | ");
 
 interface SymbolRow {
