@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { isRetryableDbError } from "@/db/with-db-retry";
+import { ensureMaxPriceAfterBuyBackfill } from "@/helpers/trades/ensure-max-price-after-buy-backfill";
 import { getTrades } from "@/helpers/trades/get-trades";
 import { parseBoundedInt } from "@/utils/api/parse-bounded-int";
 
@@ -20,6 +21,7 @@ export async function GET(request: Request) {
   });
 
   try {
+    await ensureMaxPriceAfterBuyBackfill();
     const response = await getTrades({ limit, offset });
     return NextResponse.json(response);
   } catch (error) {

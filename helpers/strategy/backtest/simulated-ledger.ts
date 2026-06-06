@@ -106,7 +106,10 @@ export class SimulatedLedger {
       }
 
       const buyPrice = position.buyPrice;
-      const maxPriceAfterBuy = position.maxPriceAfterBuy ?? position.buyPrice;
+      const maxPriceAfterBuy =
+        decision.updatedMaxPrice ??
+        position.maxPriceAfterBuy ??
+        position.buyPrice;
       const realizedPnlPct = pnlPercentFromPrices(buyPrice, price);
 
       this.cash += notional - fee;

@@ -14,6 +14,8 @@ interface PlaceTradeParams {
   interval: CandleInterval;
   candleOpenTime: number;
   reason: string;
+  /** Peak price used for trailing-stop tracking (buy candle high or exit peak). */
+  maxPriceAfterBuy?: number;
 }
 
 export async function placeTrade({
@@ -24,6 +26,7 @@ export async function placeTrade({
   interval,
   candleOpenTime,
   reason,
+  maxPriceAfterBuy: maxPriceAfterBuyParam,
 }: PlaceTradeParams): Promise<void> {
   if (!Number.isFinite(qty) || qty <= 0) {
     throw new Error(`Invalid qty: ${qty}`);
@@ -42,9 +45,11 @@ export async function placeTrade({
       : [undefined];
 
   const maxPriceAfterBuy =
-    side === "SELL"
-      ? (openPosition?.maxPriceAfterBuy ?? openPosition?.buyPrice ?? null)
-      : String(price);
+    maxPriceAfterBuyParam !== undefined
+      ? String(maxPriceAfterBuyParam)
+      : side === "SELL"
+        ? (openPosition?.maxPriceAfterBuy ?? openPosition?.buyPrice ?? null)
+        : String(price);
 
   const postClose24hFields =
     side === "SELL"
@@ -82,7 +87,10 @@ export async function placeTrade({
         symbol,
         qty: String(qty),
         buyPrice: String(price),
-        maxPriceAfterBuy: String(price),
+        maxPriceAfterBuy:
+          maxPriceAfterBuyParam !== undefined
+            ? String(maxPriceAfterBuyParam)
+            : String(price),
         buyTime: candleDate,
         buyTradeId: trade.id,
       });
