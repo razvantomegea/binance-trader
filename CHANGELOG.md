@@ -6,6 +6,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 Versions are auto-released on every merge to `main`.
 
+## [1.0.1] - 2026-06-07
+
+- Improve release workflow by ensuring tag fetching and enhancing version retrieval logic (4068d7f)
+- Enhance release workflow by enabling tag fetching during checkout (348906c)
+- Add null check for minPriceAfterClose24h in computePostClose24hExtrema tests (8f0314e)
+- Update project dependencies, enhance testing setup, and improve ESLint configuration (ff8a330)
+
 ## [1.0.0] - 2026-06-07
 
 - Refactor release workflow and enhance version validation (590c680)
