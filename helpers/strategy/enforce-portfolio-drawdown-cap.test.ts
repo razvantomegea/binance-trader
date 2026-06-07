@@ -129,7 +129,9 @@ describe("enforcePortfolioDrawdownCap", () => {
     mockedGetExposurePeakEquity.mockResolvedValue(10_000);
     mockedGetLatestClosedKline.mockResolvedValue(null);
 
-    const result = await enforcePortfolioDrawdownCap({ interval: "1h" });
+    const result = await enforcePortfolioDrawdownCap({
+      interval: STRATEGY_INTERVAL,
+    });
 
     expect(result).toEqual({ liquidated: 1 });
     expect(mockedPlaceTrade).toHaveBeenCalledWith(
