@@ -263,8 +263,7 @@ describe("runBacktest", () => {
   });
 
   it("blocks production environment", async () => {
-    const previous = process.env.NODE_ENV;
-    process.env.NODE_ENV = "production";
+    vi.stubEnv("NODE_ENV", "production");
 
     await expect(
       runBacktest({
@@ -277,7 +276,7 @@ describe("runBacktest", () => {
       }),
     ).rejects.toThrow(/localhost-only/i);
 
-    process.env.NODE_ENV = previous;
+    vi.unstubAllEnvs();
   });
 
   it("uses all trading symbols when symbols are omitted", async () => {

@@ -17,7 +17,8 @@ import {
   loadHistoricalKlinesBySymbol,
 } from "@/helpers/strategy/backtest/historical-kline-provider";
 import { SimulatedLedger } from "@/helpers/strategy/backtest/simulated-ledger";
-import { MAX_LOSS_PCT } from "@/constants/binance";
+import { DEFAULT_STRATEGY_PARAMS } from "@/constants/strategy-params";
+import type { StrategyParams } from "@/types/strategy-params";
 import { evaluateDecision } from "@/helpers/strategy/decision-core";
 import {
   isPortfolioDrawdownBreached,
@@ -29,7 +30,6 @@ import type {
   EquityPoint,
 } from "@/types/backtest";
 import type { KlineCandle } from "@/types/binance";
-import { HOUR_MS } from "@/utils/binance/candle-time";
 import { getTradingSymbols } from "@/utils/binance/get-usdt-symbols";
 import { createAsyncMutex } from "@/utils/create-async-mutex";
 import { processInBatches } from "@/utils/process-in-batches";
@@ -169,6 +169,9 @@ async function runBacktestSimulation(params: {
   initialCash: number;
   feeBps: number;
   concurrency: number;
+  strategyParams: StrategyParams;
+  modelMinProbability?: number;
+  entryProbabilityBySymbol?: Map<string, Map<number, number>>;
 }): Promise<{
   ledger: SimulatedLedger;
   equityCurve: EquityPoint[];
@@ -192,6 +195,8 @@ async function runBacktestSimulation(params: {
       markPriceCursorBySymbol,
     });
 
+    const tickLatestCandleOpenTime: number | null = null;
+
     await processInBatches({
       items: params.symbols,
       batchSize: params.concurrency,
@@ -213,6 +218,10 @@ async function runBacktestSimulation(params: {
 
         await ledgerMutex.run(() => {
           const markPrice = markPrices.get(symbol) ?? closed[0]!.close;
+          const candleOpenTime = closed[0]!.openTime;
+          const entryProbability = params.entryProbabilityBySymbol
+            ?.get(symbol)
+            ?.get(candleOpenTime);
 
           const decision = evaluateDecision({
             closed,
@@ -221,6 +230,9 @@ async function runBacktestSimulation(params: {
             lastProcessedOpenTime,
             lastSellOpenTime: ledger.lastSellOpenTime.get(symbol) ?? null,
             markPrice,
+            strategyParams: params.strategyParams,
+            entryProbability,
+            modelMinProbability: params.modelMinProbability,
           });
 
           const tradePrice =
@@ -237,7 +249,9 @@ async function runBacktestSimulation(params: {
       },
     });
 
-    lastProcessedOpenTime = openTime - HOUR_MS;
+    if (tickLatestCandleOpenTime !== null) {
+      lastProcessedOpenTime = tickLatestCandleOpenTime;
+    }
 
     const markPricesAfterTrades = buildMarkPricesForOpenPositions({
       ledger,
@@ -260,13 +274,15 @@ async function runBacktestSimulation(params: {
       isPortfolioDrawdownBreached({
         equity,
         exposurePeakEquity,
-        thresholdPct: MAX_LOSS_PCT,
+        thresholdPct: params.strategyParams.maxLossPct,
       })
     ) {
       liquidateAllOpenPositions({
         ledger,
         markPrices: markPricesAfterTrades,
         candleOpenTime: openTime,
+        trailingStopPct: params.strategyParams.trailingStopPct,
+        maxLossPct: params.strategyParams.maxLossPct,
       });
       exposurePeakEquity = null;
     }
@@ -282,6 +298,51 @@ async function runBacktestSimulation(params: {
   console.log("Phase 2 complete.");
 
   return { ledger, equityCurve };
+}
+
+export async function runBacktestWithPreloadedKlines(params: {
+  config: BacktestConfig;
+  symbols: string[];
+  klinesBySymbol: Map<string, KlineCandle[]>;
+  simulationStartTime: number;
+  simulationEndTime: number;
+}): Promise<BacktestReport> {
+  const strategyParams =
+    params.config.strategyParams ?? DEFAULT_STRATEGY_PARAMS;
+
+  const timeline = buildCheckTimeline({
+    startTime: params.simulationStartTime,
+    endTime: params.simulationEndTime,
+    checkEveryMinutes: BACKTEST_CHECK_EVERY_MINUTES,
+  });
+
+  const { ledger, equityCurve } = await runBacktestSimulation({
+    symbols: params.symbols,
+    klinesBySymbol: params.klinesBySymbol,
+    timeline,
+    initialCash: params.config.initialCash,
+    feeBps: params.config.feeBps,
+    concurrency: params.config.concurrency,
+    strategyParams,
+    modelMinProbability: params.config.modelMinProbability,
+    entryProbabilityBySymbol: params.config.entryProbabilityBySymbol,
+  });
+
+  const finalMarkPrices = new Map<string, number>();
+  for (const [symbol, position] of ledger.positions) {
+    const klinesAsc = params.klinesBySymbol.get(symbol);
+    const lastCandle = klinesAsc?.[klinesAsc.length - 1];
+    finalMarkPrices.set(symbol, lastCandle?.close ?? position.buyPrice);
+  }
+
+  return buildBacktestReport({
+    startTime: params.simulationStartTime,
+    endTime: params.simulationEndTime,
+    initialCash: params.config.initialCash,
+    finalEquity: ledger.getEquity(finalMarkPrices),
+    trades: ledger.trades,
+    equityCurve,
+  });
 }
 
 export async function runBacktest(
@@ -301,9 +362,6 @@ export async function runBacktest(
     lookbackCloses: STRATEGY_LOOKBACK_CLOSES,
   });
 
-  const simulationStartTime = evalStartTime;
-  const simulationEndTime = endTime;
-
   const klinesBySymbol = await preloadHistoricalKlines({
     symbols,
     interval: config.interval,
@@ -312,35 +370,12 @@ export async function runBacktest(
     concurrency: config.concurrency,
   });
 
-  const timeline = buildCheckTimeline({
-    startTime: simulationStartTime,
-    endTime: simulationEndTime,
-    checkEveryMinutes: BACKTEST_CHECK_EVERY_MINUTES,
-  });
-
-  const { ledger, equityCurve } = await runBacktestSimulation({
+  return runBacktestWithPreloadedKlines({
+    config,
     symbols,
     klinesBySymbol,
-    timeline,
-    initialCash: config.initialCash,
-    feeBps: config.feeBps,
-    concurrency: config.concurrency,
-  });
-
-  const finalMarkPrices = new Map<string, number>();
-  for (const [symbol, position] of ledger.positions) {
-    const klinesAsc = klinesBySymbol.get(symbol);
-    const lastCandle = klinesAsc?.[klinesAsc.length - 1];
-    finalMarkPrices.set(symbol, lastCandle?.close ?? position.buyPrice);
-  }
-
-  return buildBacktestReport({
-    startTime: simulationStartTime,
-    endTime: simulationEndTime,
-    initialCash: config.initialCash,
-    finalEquity: ledger.getEquity(finalMarkPrices),
-    trades: ledger.trades,
-    equityCurve,
+    simulationStartTime: evalStartTime,
+    simulationEndTime: endTime,
   });
 }
 

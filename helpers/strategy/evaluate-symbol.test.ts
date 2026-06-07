@@ -153,7 +153,7 @@ describe("evaluateSymbol exits", () => {
     expect(mockedPlaceTrade).toHaveBeenCalledWith(
       expect.objectContaining({
         side: "SELL",
-        reason: "exit_drawdown_25pct_vs_peak",
+        reason: "exit_trailing_0.25_vs_peak",
       }),
     );
   });
@@ -218,7 +218,7 @@ describe("evaluateSymbol exits", () => {
     expect(mockedPlaceTrade).toHaveBeenCalledWith(
       expect.objectContaining({
         side: "SELL",
-        reason: "exit_drawdown_25pct_vs_peak",
+        reason: "exit_trailing_0.25_vs_peak",
       }),
     );
   });
@@ -268,7 +268,7 @@ describe("evaluateSymbol entry", () => {
     expect(mockedPlaceTrade).toHaveBeenCalledWith(
       expect.objectContaining({
         side: "BUY",
-        reason: "entry_24h_band_40_60pct",
+        reason: "entry_band_0.4_0.6",
       }),
     );
   });
@@ -389,7 +389,7 @@ describe("evaluateSymbol entry", () => {
     expect(mockedPlaceTrade).toHaveBeenCalledWith(
       expect.objectContaining({
         side: "BUY",
-        reason: "entry_24h_band_40_60pct",
+        reason: "entry_band_0.4_0.6",
       }),
     );
   });

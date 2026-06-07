@@ -45,7 +45,9 @@ function mockPositionRow(overrides: { symbol?: string; qty?: string } = {}) {
   const from = vi.fn().mockReturnValue({ where });
   const select = vi.fn().mockReturnValue({ from });
 
-  mockedGetDb.mockReturnValue({ select } as ReturnType<typeof getDb>);
+  mockedGetDb.mockReturnValue({ select } as unknown as ReturnType<
+    typeof getDb
+  >);
   return { select, from, where, limit };
 }
 
@@ -81,7 +83,9 @@ describe("closeOpenPosition", () => {
     const where = vi.fn().mockReturnValue({ limit });
     const from = vi.fn().mockReturnValue({ where });
     const select = vi.fn().mockReturnValue({ from });
-    mockedGetDb.mockReturnValue({ select } as ReturnType<typeof getDb>);
+    mockedGetDb.mockReturnValue({ select } as unknown as ReturnType<
+      typeof getDb
+    >);
 
     await expect(
       closeOpenPosition({ symbol: "MISSINGUSDT" }),

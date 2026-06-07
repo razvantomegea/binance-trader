@@ -1,5 +1,6 @@
 import type { CandleInterval } from "@/types/binance";
 import type { TradePostClose24hMetrics } from "@/types/trade-metrics";
+import type { StrategyParams } from "@/types/strategy-params";
 
 export interface BacktestConfig {
   days: number;
@@ -10,6 +11,12 @@ export interface BacktestConfig {
   interval: CandleInterval;
   /** Test hook: fixed clock for reproducible historical ranges. */
   now?: number;
+  /** Override strategy parameters for optimization runs. */
+  strategyParams?: StrategyParams;
+  /** When set, BUY requires precomputed entryProbability >= threshold. */
+  modelMinProbability?: number;
+  /** Precomputed entry probabilities keyed by symbol then candle openTime. */
+  entryProbabilityBySymbol?: Map<string, Map<number, number>>;
 }
 
 export interface SimTrade extends TradePostClose24hMetrics {

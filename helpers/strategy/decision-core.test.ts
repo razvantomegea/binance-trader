@@ -114,7 +114,7 @@ describe("evaluateDecision exits", () => {
     });
 
     expect(result.action).toBe("SELL");
-    expect(result.reason).toBe("exit_drawdown_25pct_vs_peak");
+    expect(result.reason).toBe("exit_trailing_0.25_vs_peak");
   });
 
   it("sells at stop price when low gaps below 15% but close recovers", () => {
@@ -135,7 +135,7 @@ describe("evaluateDecision exits", () => {
 
     expect(result.action).toBe("SELL");
     expect(result.exitPrice).toBe(85);
-    expect(result.reason).toBe("exit_drawdown_25pct_vs_peak");
+    expect(result.reason).toBe("exit_trailing_0.25_vs_peak");
   });
 
   it("holds when price peaked at +5% and trailing stop not reached", () => {
@@ -179,7 +179,7 @@ describe("evaluateDecision entry", () => {
     });
 
     expect(result.action).toBe("BUY");
-    expect(result.reason).toBe("entry_24h_band_40_60pct");
+    expect(result.reason).toBe("entry_band_0.4_0.6");
   });
 
   it("does not buy when 24h range is more than 100%", () => {
@@ -275,7 +275,7 @@ describe("evaluateDecision entry", () => {
     });
 
     expect(result.action).toBe("BUY");
-    expect(result.reason).toBe("entry_24h_band_40_60pct");
+    expect(result.reason).toBe("entry_band_0.4_0.6");
   });
 });
 

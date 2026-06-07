@@ -1,4 +1,4 @@
-import { TRAILING_STOP_PCT } from "@/constants/binance";
+import { MAX_LOSS_PCT, TRAILING_STOP_PCT } from "@/constants/binance";
 import type { SimulatedLedger } from "@/helpers/strategy/backtest/simulated-ledger";
 import type { EvaluateDecisionResult } from "@/helpers/strategy/decision-core";
 import { resolveTrailingSellPrice } from "@/utils/strategy/trailing-stop";
@@ -11,8 +11,12 @@ export function liquidateAllOpenPositions(params: {
   markPrices: Map<string, number>;
   candleOpenTime: number;
   reason?: string;
+  trailingStopPct?: number;
+  maxLossPct?: number;
 }): void {
   const reason = params.reason ?? EXIT_PORTFOLIO_DRAWDOWN_REASON;
+  const trailingStopPct = params.trailingStopPct ?? TRAILING_STOP_PCT;
+  const maxLossPct = params.maxLossPct ?? MAX_LOSS_PCT;
 
   for (const symbol of [...params.ledger.positions.keys()]) {
     const position = params.ledger.positions.get(symbol);
@@ -27,7 +31,8 @@ export function liquidateAllOpenPositions(params: {
         maxPriceAfterBuy: position.maxPriceAfterBuy,
       },
       marketPrice: mark,
-      thresholdPct: TRAILING_STOP_PCT,
+      thresholdPct: trailingStopPct,
+      maxLossPct,
     });
 
     const decision: EvaluateDecisionResult = {

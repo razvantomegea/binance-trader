@@ -18,6 +18,10 @@
     "analyze:post-close": "node scripts/analyze-post-close-24h.mjs",
     "backtest:cleanup": "node scripts/cleanup-backtest-reports.mjs",
     "backtest:cache:cleanup": "node scripts/cleanup-backtest-cache.mjs",
+    "ml:dataset": "node scripts/run-ml.mjs dataset",
+    "ml:train": "node scripts/run-ml.mjs train",
+    "ml:eval": "node scripts/run-ml.mjs eval",
+    "ml:optimize": "node scripts/run-ml.mjs optimize",
     "db:push": "drizzle-kit push",
     "cron:trigger": "node scripts/trigger-strategy-cron.mjs",
     "railway:up": "pnpm run railway:up:web",
@@ -39,6 +43,7 @@
   "devDependencies": {
     "@railway/cli": "^4.62.0",
     "@tailwindcss/postcss": "^4",
+    "@tensorflow/tfjs": "^4.22.0",
     "@types/node": "^20",
     "@types/node-cron": "^3.0.11",
     "@types/react": "^19",
@@ -58,6 +63,11 @@
     "overrides": {
       "react-is": "19.2.4",
       "postcss": "^8.5.10"
-    }
+    },
+    "ignoredBuiltDependencies": [
+      "core-js",
+      "sharp",
+      "unrs-resolver"
+    ]
   }
 }
