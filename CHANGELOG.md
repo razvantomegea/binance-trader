@@ -6,6 +6,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 Versions are auto-released on every merge to `main`.
 
+## [1.0.2] - 2026-06-07
+
+- Update README.md and version retrieval logic to clarify stable tag requirements (6a941f8)
+
 ## [1.0.1] - 2026-06-07
 
 - Improve release workflow by ensuring tag fetching and enhancing version retrieval logic (4068d7f)
