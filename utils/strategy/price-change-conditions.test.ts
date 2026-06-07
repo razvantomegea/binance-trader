@@ -27,27 +27,27 @@ describe("hasGainVsAnyRef", () => {
     ).toBe(false);
   });
 
-  it("returns true at exactly 50% gain boundary", () => {
+  it("returns true at exactly 40% gain boundary", () => {
     expect(
       hasGainVsAnyRef({
-        reference: 150,
+        reference: 140,
         refs: [100],
         thresholdPct: ENTRY_RANGE_PCT,
       }),
     ).toBe(true);
   });
 
-  it("returns false just below 50% gain", () => {
+  it("returns false just below 40% gain", () => {
     expect(
       hasGainVsAnyRef({
-        reference: 149,
+        reference: 139,
         refs: [100],
         thresholdPct: ENTRY_RANGE_PCT,
       }),
     ).toBe(false);
   });
 
-  it("returns true above 50% gain", () => {
+  it("returns true above 40% gain", () => {
     expect(
       hasGainVsAnyRef({
         reference: 200,
@@ -101,37 +101,37 @@ describe("hasLossVsAnyRef", () => {
 describe("isGainWithinBand", () => {
   it("returns true when gain is within min and max", () => {
     expect(
-      isGainWithinBand({ value: 160, ref: 100, minPct: 0.5, maxPct: 0.75 }),
+      isGainWithinBand({ value: 160, ref: 100, minPct: 0.4, maxPct: 0.6 }),
     ).toBe(true);
   });
 
   it("returns true at exact min boundary", () => {
     expect(
-      isGainWithinBand({ value: 150, ref: 100, minPct: 0.5, maxPct: 0.75 }),
+      isGainWithinBand({ value: 140, ref: 100, minPct: 0.4, maxPct: 0.6 }),
     ).toBe(true);
   });
 
   it("returns true at exact max boundary", () => {
     expect(
-      isGainWithinBand({ value: 175, ref: 100, minPct: 0.5, maxPct: 0.75 }),
+      isGainWithinBand({ value: 160, ref: 100, minPct: 0.4, maxPct: 0.6 }),
     ).toBe(true);
   });
 
   it("returns false below min", () => {
     expect(
-      isGainWithinBand({ value: 149, ref: 100, minPct: 0.5, maxPct: 0.75 }),
+      isGainWithinBand({ value: 139, ref: 100, minPct: 0.4, maxPct: 0.6 }),
     ).toBe(false);
   });
 
   it("returns false above max", () => {
     expect(
-      isGainWithinBand({ value: 176, ref: 100, minPct: 0.5, maxPct: 0.75 }),
+      isGainWithinBand({ value: 161, ref: 100, minPct: 0.4, maxPct: 0.6 }),
     ).toBe(false);
   });
 
   it("returns false for non-positive ref", () => {
     expect(
-      isGainWithinBand({ value: 150, ref: 0, minPct: 0.5, maxPct: 0.75 }),
+      isGainWithinBand({ value: 140, ref: 0, minPct: 0.4, maxPct: 0.6 }),
     ).toBe(false);
   });
 });

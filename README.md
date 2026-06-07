@@ -17,13 +17,12 @@ Next.js dashboard for **paper trading** USDT pairs on Binance spot data. A sched
 The strategy evaluates once per closed hourly candle (`H1`) and uses close prices for decisions.
 
 - **Entry**:
-  - 24h range must be at least +50% (`ENTRY_RANGE_PCT = 0.5`)
-  - 24h range must not exceed +100% (`ENTRY_MAX_RANGE_PCT = 1`)
-  - Current close must be within 10% of 24h high (`ENTRY_PULLBACK_PCT = EXIT_DRAWDOWN_PCT = 0.1`)
+  - Current close and highest close in the 24h lookback must both be +40% to +60% above the lowest close (`ENTRY_RANGE_PCT = 0.4`, `ENTRY_RANGE_MAX_PCT = 0.6`)
   - Position size is 5% of available cash (`BUY_NOTIONAL_PCT = 0.05`)
 
 - **Exit**:
-  - 10% trailing stop (`EXIT_DRAWDOWN_PCT = 0.1`) measured from `max(entry price, highest close since buy)`
+  - 25% trailing stop (`TRAILING_STOP_PCT = 0.25`) measured from peak price since buy
+  - 15% max loss per trade (`MAX_LOSS_PCT = 0.15`)
 
 - **Re-entry cooldown**:
   - Symbol cooldown after sell is 24h (`SYMBOL_REENTRY_COOLDOWN_MS`)

@@ -250,7 +250,7 @@ describe("evaluateSymbol entry", () => {
     mockedGetLastClose.mockResolvedValue(null);
   });
 
-  it("buys when 24h range >= 50% and current is within 10% of 24h high", async () => {
+  it("buys when close is within 40-60% band above lowest 24h close", async () => {
     const latestOpenTime = 1000 * HOUR_MS;
 
     const candles = makeCandles(latestOpenTime, [
@@ -268,7 +268,7 @@ describe("evaluateSymbol entry", () => {
     expect(mockedPlaceTrade).toHaveBeenCalledWith(
       expect.objectContaining({
         side: "BUY",
-        reason: "entry_24h_band_50_75pct",
+        reason: "entry_24h_band_40_60pct",
       }),
     );
   });
@@ -311,11 +311,11 @@ describe("evaluateSymbol entry", () => {
     expect(mockedPlaceTrade).not.toHaveBeenCalled();
   });
 
-  it("does not buy when 24h range is less than 50%", async () => {
+  it("does not buy when 24h range is less than 40%", async () => {
     const latestOpenTime = 1000 * HOUR_MS;
 
     const candles = makeCandles(latestOpenTime, [
-      149,
+      139,
       ...Array(STRATEGY_LOOKBACK_CLOSES - 1).fill(100),
     ]);
     mockedGetKlines.mockResolvedValue(candles);
@@ -389,7 +389,7 @@ describe("evaluateSymbol entry", () => {
     expect(mockedPlaceTrade).toHaveBeenCalledWith(
       expect.objectContaining({
         side: "BUY",
-        reason: "entry_24h_band_50_75pct",
+        reason: "entry_24h_band_40_60pct",
       }),
     );
   });

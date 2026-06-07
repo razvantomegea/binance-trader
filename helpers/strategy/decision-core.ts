@@ -209,7 +209,7 @@ export function evaluateDecision({
   return {
     action: "BUY",
     candleOpenTime: latest.openTime,
-    reason: "entry_24h_band_50_75pct",
+    reason: "entry_24h_band_40_60pct",
     qty,
   };
 }

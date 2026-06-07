@@ -163,7 +163,7 @@ describe("evaluateDecision exits", () => {
 });
 
 describe("evaluateDecision entry", () => {
-  it("buys when 24h range >= 50% and current is within 10% of 24h high", () => {
+  it("buys when close is within 40-60% band above lowest 24h close", () => {
     const latestOpenTime = 1000 * HOUR_MS;
     const closed = makeCandles(latestOpenTime, [
       150,
@@ -179,7 +179,7 @@ describe("evaluateDecision entry", () => {
     });
 
     expect(result.action).toBe("BUY");
-    expect(result.reason).toBe("entry_24h_band_50_75pct");
+    expect(result.reason).toBe("entry_24h_band_40_60pct");
   });
 
   it("does not buy when 24h range is more than 100%", () => {
@@ -221,7 +221,7 @@ describe("evaluateDecision entry", () => {
     expect(result.action).toBe("HOLD");
   });
 
-  it("does not buy when current close is above 75% above lowest close", () => {
+  it("does not buy when current close is above 60% above lowest close", () => {
     const latestOpenTime = 1000 * HOUR_MS;
     const closed = makeCandles(latestOpenTime, [
       180,
@@ -239,7 +239,7 @@ describe("evaluateDecision entry", () => {
     expect(result.action).toBe("HOLD");
   });
 
-  it("does not buy when highest close is above 75% above lowest close", () => {
+  it("does not buy when highest close is above 60% above lowest close", () => {
     const latestOpenTime = 1000 * HOUR_MS;
     const closed = makeCandles(latestOpenTime, [
       160,
@@ -258,11 +258,11 @@ describe("evaluateDecision entry", () => {
     expect(result.action).toBe("HOLD");
   });
 
-  it("buys when current and highest close are both within 50-75% band", () => {
+  it("buys when current and highest close are both within 40-60% band", () => {
     const latestOpenTime = 1000 * HOUR_MS;
     const closed = makeCandles(latestOpenTime, [
+      155,
       160,
-      170,
       ...Array(STRATEGY_LOOKBACK_CLOSES - 2).fill(100),
     ]);
 
@@ -275,7 +275,7 @@ describe("evaluateDecision entry", () => {
     });
 
     expect(result.action).toBe("BUY");
-    expect(result.reason).toBe("entry_24h_band_50_75pct");
+    expect(result.reason).toBe("entry_24h_band_40_60pct");
   });
 });
 
