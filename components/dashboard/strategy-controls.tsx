@@ -1,4 +1,5 @@
 import { PushNotificationToggle } from "@/components/push-notification-toggle";
+import { DataTestId } from "@/constants/data-test-id";
 
 import type {
   CronAlert,
@@ -76,6 +77,7 @@ export function StrategyControls({
         <PushNotificationToggle />
         <button
           type="button"
+          data-testid={DataTestId.StrategyToggle}
           onClick={() => void onToggleStrategy()}
           disabled={disableStrategyButton}
           className={buttonClassName}
@@ -100,7 +102,10 @@ function StrategyStatusRow({
   statusLabel: string;
 }) {
   return (
-    <div className="mt-2 w-full text-xs text-zinc-500">
+    <div
+      className="mt-2 w-full text-xs text-zinc-500"
+      data-testid={DataTestId.StrategyStatus}
+    >
       <span className="inline-flex items-center gap-2">
         <span>Status: {statusLabel}</span>
         {strategyStatus?.running && strategyStatus.nextRunAt ? (
@@ -128,10 +133,11 @@ function CronAlertsList({ cronAlerts }: { cronAlerts: CronAlert[] }) {
     return null;
   }
   return (
-    <div className="mt-3 w-full space-y-2">
+    <div className="mt-3 w-full space-y-2" data-testid={DataTestId.CronAlerts}>
       {cronAlerts.map((alert) => (
         <p
           key={alert.id}
+          data-testid={DataTestId.CronAlert}
           className={`rounded-md border px-3 py-2 text-sm ${getCronAlertClassName(alert.severity)}`}
         >
           {alert.message}

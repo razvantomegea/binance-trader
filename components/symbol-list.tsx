@@ -4,6 +4,7 @@ import clsx from "clsx";
 import { useMemo, useState } from "react";
 
 import { MOBILE_DASHBOARD_PANEL_FIXED_HEIGHT_CLASS_NAME } from "@/constants/dashboard-layout";
+import { DataTestId, symbolRowTestId } from "@/constants/data-test-id";
 import { isUsdtSymbol } from "@/utils/binance/is-usdt-symbol";
 
 interface SymbolRow {
@@ -40,6 +41,7 @@ function SymbolListItem({
     <li key={row.symbol}>
       <button
         type="button"
+        data-testid={symbolRowTestId(row.symbol)}
         onClick={() => onSelect(row.symbol)}
         className={clsx(
           "flex w-full items-center justify-between gap-2 border-b border-zinc-100 px-3 py-2 text-left text-sm transition-colors dark:border-zinc-900",
@@ -90,7 +92,12 @@ export function SymbolList({
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto">
         {loading && symbols.length === 0 ? (
-          <p className="p-4 text-sm text-zinc-500">Loading symbols...</p>
+          <p
+            className="p-4 text-sm text-zinc-500"
+            data-testid={DataTestId.SymbolListLoading}
+          >
+            Loading symbols...
+          </p>
         ) : (
           <ul>
             {filtered.map((row) => (

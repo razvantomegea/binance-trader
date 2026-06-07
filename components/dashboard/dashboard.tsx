@@ -1,6 +1,9 @@
 "use client";
 
+import type { ReactNode } from "react";
+
 import { MOBILE_DASHBOARD_PANEL_MIN_HEIGHT_CLASS_NAME } from "@/constants/dashboard-layout";
+import { DataTestId } from "@/constants/data-test-id";
 import { EquityCurve } from "@/components/equity-curve";
 import { PortfolioSummary } from "@/components/portfolio-summary";
 import { PositionsTable } from "@/components/positions-table";
@@ -12,6 +15,17 @@ import { STRATEGY_DESCRIPTION } from "@/components/dashboard/strategy-descriptio
 import { useDashboardData } from "@/components/dashboard/use-dashboard-data";
 import { STRATEGY_INTERVAL } from "@/constants/strategy";
 import { useDashboardHeaderHeight } from "@/hooks/use-dashboard-header-height";
+
+function DashboardShell({ children }: { children: ReactNode }) {
+  return (
+    <div
+      className="flex h-screen w-full min-w-0 flex-col overflow-hidden bg-zinc-50 text-zinc-900 dark:bg-black dark:text-zinc-50"
+      data-testid={DataTestId.Dashboard}
+    >
+      {children}
+    </div>
+  );
+}
 
 export function Dashboard() {
   const headerRef = useDashboardHeaderHeight();
@@ -34,7 +48,7 @@ export function Dashboard() {
   } = useDashboardData();
 
   return (
-    <div className="flex h-screen w-full min-w-0 flex-col overflow-hidden bg-zinc-50 text-zinc-900 dark:bg-black dark:text-zinc-50">
+    <DashboardShell>
       <header
         ref={headerRef}
         className="shrink-0 border-b border-zinc-200 bg-white px-4 py-4 dark:border-zinc-800 dark:bg-zinc-950"
@@ -70,7 +84,7 @@ export function Dashboard() {
           onClosePosition={closePosition}
         />
       </main>
-    </div>
+    </DashboardShell>
   );
 }
 
@@ -92,7 +106,12 @@ function DashboardHeader({
   return (
     <div className="flex w-full flex-wrap items-center justify-between gap-4">
       <div>
-        <h1 className="text-xl font-semibold">Binance Trading Dashboard</h1>
+        <h1
+          className="text-xl font-semibold"
+          data-testid={DataTestId.DashboardTitle}
+        >
+          Binance Trading Dashboard
+        </h1>
         <p className="text-sm text-zinc-500">{STRATEGY_DESCRIPTION}</p>
       </div>
       <StrategyControls
@@ -133,7 +152,10 @@ function DashboardCharts({
         <section
           className={`flex w-full flex-col ${MOBILE_DASHBOARD_PANEL_MIN_HEIGHT_CLASS_NAME} rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950`}
         >
-          <h2 className="mb-3 shrink-0 text-sm font-medium text-zinc-500">
+          <h2
+            className="mb-3 shrink-0 text-sm font-medium text-zinc-500"
+            data-testid={DataTestId.PriceChartTitle}
+          >
             {selectedSymbol} · H1
           </h2>
           <PriceChart symbol={selectedSymbol} interval={STRATEGY_INTERVAL} />

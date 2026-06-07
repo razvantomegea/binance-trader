@@ -1,4 +1,5 @@
 import { TableFetchState } from "@/components/table-fetch-state";
+import { DataTestId } from "@/constants/data-test-id";
 import type { TradeRow } from "@/types/portfolio";
 
 interface TradesTableProps {
@@ -112,6 +113,7 @@ export function TradesTable({
     error,
     loadingText: "Loading trades...",
     emptyText: "No trades yet",
+    loadingTestId: DataTestId.TradesLoading,
   });
   if (fetchState) {
     return fetchState;

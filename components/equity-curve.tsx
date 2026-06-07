@@ -3,6 +3,7 @@
 import type { EquitySnapshotRow } from "@/types/portfolio";
 
 import { chartContainerClassName } from "@/components/chart-container";
+import { DataTestId } from "@/constants/data-test-id";
 
 import { BaseAreaChart } from "./base-area-chart";
 
@@ -18,6 +19,7 @@ export function EquityCurve({ snapshots, loading }: EquityCurveProps) {
   if (loading && snapshots.length === 0) {
     return (
       <div
+        data-testid={DataTestId.EquityCurveLoading}
         className={`flex items-center justify-center text-sm text-zinc-500 ${chartContainerClassName}`}
       >
         Loading equity curve...

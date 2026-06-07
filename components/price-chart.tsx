@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import type { CandleInterval, KlineCandle } from "@/types/binance";
 
 import { chartContainerClassName } from "@/components/chart-container";
+import { DataTestId } from "@/constants/data-test-id";
 
 import { BaseAreaChart } from "./base-area-chart";
 
@@ -36,12 +37,15 @@ function mapCandlesToChartPoints(candles: KlineCandle[]): ChartPoint[] {
 function ChartStateMessage({
   text,
   className,
+  dataTestId,
 }: {
   text: string;
   className: string;
+  dataTestId: DataTestId;
 }) {
   return (
     <div
+      data-testid={dataTestId}
       className={`flex items-center justify-center text-sm ${className} ${chartContainerClassName}`}
     >
       {text}
@@ -49,7 +53,7 @@ function ChartStateMessage({
   );
 }
 
-export function PriceChart({ symbol, interval }: PriceChartProps) {
+function usePriceChartPoints(symbol: string, interval: CandleInterval) {
   const [data, setData] = useState<ChartPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -93,26 +97,44 @@ export function PriceChart({ symbol, interval }: PriceChartProps) {
     };
   }, [symbol, interval]);
 
+  return { data, loading, error };
+}
+
+export function PriceChart({ symbol, interval }: PriceChartProps) {
+  const { data, loading, error } = usePriceChartPoints(symbol, interval);
+
   if (loading) {
     return (
-      <ChartStateMessage text="Loading chart..." className="text-zinc-500" />
+      <ChartStateMessage
+        text="Loading chart..."
+        className="text-zinc-500"
+        dataTestId={DataTestId.PriceChartLoading}
+      />
     );
   }
 
   if (error) {
-    return <ChartStateMessage text={error} className="text-red-500" />;
+    return (
+      <ChartStateMessage
+        text={error}
+        className="text-red-500"
+        dataTestId={DataTestId.PriceChartError}
+      />
+    );
   }
 
   return (
-    <BaseAreaChart
-      data={data}
-      dataKey="close"
-      color="#10b981"
-      gradientId="priceFill"
-      tooltipLabel="Close"
-      tooltipValueFormatter={formatTooltipValue}
-      yAxisDomain={["auto", "auto"]}
-      yAxisFormatter={formatYAxis}
-    />
+    <div data-testid={DataTestId.PriceChartReady}>
+      <BaseAreaChart
+        data={data}
+        dataKey="close"
+        color="#10b981"
+        gradientId="priceFill"
+        tooltipLabel="Close"
+        tooltipValueFormatter={formatTooltipValue}
+        yAxisDomain={["auto", "auto"]}
+        yAxisFormatter={formatYAxis}
+      />
+    </div>
   );
 }

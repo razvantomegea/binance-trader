@@ -78,13 +78,15 @@ function BaseAreaChartContent({
         tickFormatter={yAxisFormatter}
       />
       <Tooltip
-        formatter={(value) =>
-          renderTooltipValue(
+        formatter={(value) => {
+          const numericValue =
+            typeof value === "number" ? value : Number(value ?? 0);
+          return renderTooltipValue(
             tooltipValueFormatter,
             tooltipLabel,
-            typeof value === "number" ? value : Number(value ?? 0),
-          )
-        }
+            Number.isNaN(numericValue) ? 0 : numericValue,
+          );
+        }}
         labelFormatter={(label) => String(label)}
         contentStyle={getTooltipContentStyle(compact)}
         labelStyle={{ color: "#d4d4d8" }}

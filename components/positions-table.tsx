@@ -1,4 +1,5 @@
 import { TableFetchState } from "@/components/table-fetch-state";
+import { DataTestId } from "@/constants/data-test-id";
 import type { PositionRow } from "@/types/portfolio";
 
 interface PositionsTableProps {
@@ -122,6 +123,7 @@ export function PositionsTable({
     error,
     loadingText: "Loading positions...",
     emptyText: "No open positions",
+    loadingTestId: DataTestId.PositionsLoading,
   });
   if (fetchState) {
     return fetchState;
