@@ -5,13 +5,19 @@ export function sh(cmd) {
   return execSync(cmd, { encoding: "utf8" }).trim();
 }
 
+const STABLE_TAG_PATTERN = /^v\d+\.\d+\.\d+$/;
+
+/** Latest stable release tag (vMAJOR.MINOR.PATCH). Pre-release tags are ignored. */
 export function getLastTagVersion() {
   try {
     const out = execSync('git tag -l "v*" --sort=-version:refname', {
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"],
     }).trim();
-    const latest = out.split("\n").filter(Boolean)[0];
+    const latest = out
+      .split("\n")
+      .filter(Boolean)
+      .find((tag) => STABLE_TAG_PATTERN.test(tag));
     return latest ? latest.slice(1) : null;
   } catch {
     return null;

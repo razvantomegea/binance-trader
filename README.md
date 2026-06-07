@@ -339,7 +339,7 @@ Releases tag whatever version is in `package.json` at merge time — CI does not
 2. If `package.json` changed, commit it (`chore: bump version`) and push again.
 3. Or run `pnpm version:bump` manually before opening a PR.
 
-First release requires `package.json` version `1.0.0`. Each subsequent release must be greater than the latest `v*` tag.
+First release requires `package.json` version `1.0.0`. Each subsequent release must be greater than the latest `v*` tag. Only stable `vMAJOR.MINOR.PATCH` tags are considered; pre-release tags (e.g. `v1.2.0-rc.1`) are ignored.
 
 ### Release (push to `main` only)
 
