@@ -155,7 +155,7 @@ export function evaluateDecision({
       return {
         action: "SELL",
         candleOpenTime: latest.openTime,
-        reason: "exit_drawdown_15pct_vs_peak",
+        reason: "exit_drawdown_25pct_vs_peak",
         qty: position.qty,
         exitPrice,
         updatedMaxPrice: updatedMax,

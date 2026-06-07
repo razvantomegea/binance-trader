@@ -114,7 +114,7 @@ describe("evaluateDecision exits", () => {
     });
 
     expect(result.action).toBe("SELL");
-    expect(result.reason).toBe("exit_drawdown_15pct_vs_peak");
+    expect(result.reason).toBe("exit_drawdown_25pct_vs_peak");
   });
 
   it("sells at stop price when low gaps below 15% but close recovers", () => {
@@ -135,7 +135,7 @@ describe("evaluateDecision exits", () => {
 
     expect(result.action).toBe("SELL");
     expect(result.exitPrice).toBe(85);
-    expect(result.reason).toBe("exit_drawdown_15pct_vs_peak");
+    expect(result.reason).toBe("exit_drawdown_25pct_vs_peak");
   });
 
   it("holds when price peaked at +5% and trailing stop not reached", () => {
