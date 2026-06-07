@@ -78,8 +78,12 @@ function BaseAreaChartContent({
         tickFormatter={yAxisFormatter}
       />
       <Tooltip
-        formatter={(value: number) =>
-          renderTooltipValue(tooltipValueFormatter, tooltipLabel, value)
+        formatter={(value) =>
+          renderTooltipValue(
+            tooltipValueFormatter,
+            tooltipLabel,
+            typeof value === "number" ? value : Number(value ?? 0),
+          )
         }
         labelFormatter={(label) => String(label)}
         contentStyle={getTooltipContentStyle(compact)}

@@ -41,3 +41,7 @@ next-env.d.ts
 /backtest-results/
 /backtest-cache/
 .fallow/
+
+# playwright
+.playwright-mcp/
+.playwright/

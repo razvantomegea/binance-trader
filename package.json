@@ -36,39 +36,49 @@
   },
   "dependencies": {
     "@neondatabase/serverless": "1.0.2",
-    "clsx": "^2.1.1",
+    "clsx": "2.1.1",
     "drizzle-orm": "0.45.2",
     "next": "16.2.6",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-is": "19.2.4",
-    "recharts": "^2.15.4",
-    "web-push": "^3.6.7"
+    "recharts": "3.8.1",
+    "web-push": "3.6.7"
   },
   "devDependencies": {
-    "@railway/cli": "^4.62.0",
-    "@tailwindcss/postcss": "^4",
-    "@tensorflow/tfjs": "^4.22.0",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "@types/web-push": "^3.6.4",
-    "dotenv": "^17.2.1",
-    "drizzle-kit": "^0.31.4",
-    "eslint": "^9",
+    "@railway/cli": "5.4.2",
+    "@tailwindcss/postcss": "4.3.0",
+    "@tensorflow/tfjs": "4.22.0",
+    "@types/node": "20.19.42",
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3",
+    "@types/web-push": "3.6.4",
+    "dotenv": "17.4.2",
+    "drizzle-kit": "0.31.10",
+    "eslint": "9.39.4",
     "eslint-config-next": "16.2.6",
-    "fallow": "^2.89.0",
-    "prettier": "^3.8.3",
-    "tailwindcss": "^4",
-    "tsx": "^4.20.3",
-    "typescript": "^5",
-    "vitest": "^4.1.7"
+    "fallow": "2.89.0",
+    "prettier": "3.8.3",
+    "tailwindcss": "4.3.0",
+    "tsx": "4.22.4",
+    "typescript": "5.9.3",
+    "vitest": "4.1.8"
   },
   "pnpm": {
     "overrides": {
       "react-is": "19.2.4",
-      "postcss": "^8.5.10"
+      "postcss": "8.5.15",
+      "drizzle-kit>@esbuild-kit/esm-loader": "npm:tsx@4.22.4",
+      "@railway/cli>node-fetch": "npm:node-fetch@2.7.0"
     },
+    "allowedDeprecatedVersions": {
+      "node-domexception": "1",
+      "tar": "6"
+    },
+    "onlyBuiltDependencies": [
+      "@railway/cli",
+      "esbuild"
+    ],
     "ignoredBuiltDependencies": [
       "core-js",
       "sharp",
