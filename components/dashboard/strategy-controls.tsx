@@ -7,6 +7,8 @@ import type {
   StrategyStatus,
 } from "@/components/dashboard/types";
 
+const showStrategyToggle = process.env.NODE_ENV !== "production";
+
 function getStrategyButtonLabel({
   strategyActionPending,
   strategyStatus,
@@ -75,15 +77,17 @@ export function StrategyControls({
     <>
       <div className="flex flex-wrap items-center justify-end gap-3">
         <PushNotificationToggle />
-        <button
-          type="button"
-          data-testid={DataTestId.StrategyToggle}
-          onClick={() => void onToggleStrategy()}
-          disabled={disableStrategyButton}
-          className={buttonClassName}
-        >
-          {buttonLabel}
-        </button>
+        {showStrategyToggle ? (
+          <button
+            type="button"
+            data-testid={DataTestId.StrategyToggle}
+            onClick={() => void onToggleStrategy()}
+            disabled={disableStrategyButton}
+            className={buttonClassName}
+          >
+            {buttonLabel}
+          </button>
+        ) : null}
       </div>
       <StrategyStatusRow
         strategyStatus={strategyStatus}
