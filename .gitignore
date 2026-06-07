@@ -12,6 +12,7 @@
 
 # testing
 /coverage
+release-notes.md
 
 # next.js
 /.next/

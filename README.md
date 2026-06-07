@@ -299,8 +299,25 @@ Postgres tables (see `db/schema.ts`):
 GitHub Actions (`.github/workflows/ci.yml`) on push/PR to `main`:
 
 - `pnpm lint`
-- `pnpm test`
+- `pnpm test:coverage` (Vitest with coverage thresholds on `utils/` and `helpers/`)
+- `pnpm test:e2e` (Playwright smoke tests)
 - `pnpm fallow audit --ci`
+
+Coverage HTML reports are uploaded as CI artifacts on every run.
+
+## Releases
+
+Every merge to `main` triggers [`.github/workflows/release.yml`](.github/workflows/release.yml):
+
+1. Runs the full quality gate (lint, coverage, e2e, fallow)
+2. Bumps the patch version (`1.0.0` → `1.0.1` → …; first release is `v1.0.0`)
+3. Prepends commit messages to [`CHANGELOG.md`](CHANGELOG.md)
+4. Creates a `v*` git tag and [GitHub Release](https://github.com/razvantomegea/binance-trader/releases)
+5. Attaches a coverage summary and downloadable HTML report (`coverage-report.zip`)
+
+Bot commits (`chore(release): vX.Y.Z [skip release]`) are skipped to prevent release loops.
+
+Railway deploy (`pnpm railway:up:web` / `pnpm railway:up:cron`) is manual and independent of releases.
 
 ## Environment reference
 
