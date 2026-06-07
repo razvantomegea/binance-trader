@@ -12,6 +12,7 @@ Next.js dashboard for **paper trading** USDT pairs on Binance spot data. A sched
 - Portfolio-level drawdown cap: liquidates all open positions when equity falls 15% below peak while exposed
 - Post-close 24h metrics on SELL trades (max/min price and % move after exit)
 - Start/stop scheduler from the UI
+- Cron health alerts when external scheduling looks stale or never ran after start
 - Optional web push notifications when trades execute
 - Production scheduling via Railway cron or in-process cron for local dev
 - Historical backtest runner with kline cache and JSON reports
@@ -47,6 +48,7 @@ Default parameters are centralized in `constants/strategy-params.ts` as `DEFAULT
 - [Recharts](https://recharts.org/) for dashboard charts
 - [TensorFlow.js](https://www.tensorflow.org/js) for local ML training (dev dependency)
 - [Vitest](https://vitest.dev/) for unit tests
+- [Playwright](https://playwright.dev/) for E2E smoke tests
 - [Fallow](https://github.com/fallow-rs/fallow) for code-health audits in CI
 
 ## Project structure
@@ -70,14 +72,22 @@ app/                          Next.js App Router
     └── debug/zec-entry/      Local debug helper
 
 components/                   React UI
-├── dashboard/                Layout, strategy controls, data hooks
+├── dashboard/                Layout, strategy controls, cron alerts, data hooks
 ├── portfolio-summary.tsx
 ├── positions-table.tsx
 ├── trades-table.tsx
 ├── equity-curve.tsx
 ├── price-chart.tsx
+├── base-area-chart.tsx
+├── table-fetch-state.tsx
 ├── symbol-list.tsx
 └── push-notification-toggle.tsx
+
+e2e/                          Playwright smoke tests
+├── fixtures/                 API mocks and test-id helpers
+└── smoke/                    Dashboard happy path, loading, error states
+
+.githooks/pre-push            Auto-bump package.json before push to main
 
 helpers/                      Business logic
 ├── strategy/                 Runner, decision core, backtest, evaluate-symbol
@@ -95,13 +105,14 @@ utils/                        Pure utilities
 ├── ml/                       Features, labels, model I/O, artifact paths
 ├── trade/                    Post-close extrema
 ├── api/                      Cron auth, query parsing
+├── scheduler/                Next cron run computation
 └── notifications/            Push client helpers
 
-constants/                    Strategy, Binance, ML, cron, layout config
+constants/                    Strategy, Binance, ML, cron, layout, test-id config
 types/                        Shared TypeScript types
 db/                           Drizzle schema and client
-hooks/                        Dashboard and push UI hooks
-scripts/                      CLI: backtest, ML, cron trigger, cleanup, Railway deploy
+hooks/                        Dashboard layout and push UI hooks
+scripts/                      CLI: backtest, ML, cron trigger, cleanup, Railway deploy, release
 backtest-cache/               Local kline cache and ML artifacts (gitignored)
 backtest-results/             Backtest JSON reports (gitignored)
 public/sw.js                  Service worker for web push
@@ -160,6 +171,8 @@ public/sw.js                  Service worker for web push
 
    Open [http://localhost:3000](http://localhost:3000).
 
+`pnpm install` runs `prepare`, which points Git at `.githooks/`. The pre-push hook bumps `package.json` when you push to `main` (commit the bump, then push again).
+
 ### Scripts
 
 | Command                       | Description                                       |
@@ -171,7 +184,11 @@ public/sw.js                  Service worker for web push
 | `pnpm lint:fix`               | Run ESLint with autofix                           |
 | `pnpm format`                 | Run Prettier                                      |
 | `pnpm test`                   | Run Vitest                                        |
+| `pnpm test:coverage`          | Vitest with coverage thresholds on `utils/` and `helpers/` |
 | `pnpm test:watch`             | Vitest watch mode                                 |
+| `pnpm test:e2e`               | Playwright smoke tests (starts dev server)        |
+| `pnpm test:e2e:ui`            | Playwright UI mode                                |
+| `pnpm test:e2e:report`        | Open last Playwright HTML report                  |
 | `pnpm backtest`               | Run strategy backtest (localhost only)            |
 | `pnpm analyze:post-close`     | Analyze post-close 24h behavior                   |
 | `pnpm backtest:cleanup`       | Remove old backtest reports                       |
@@ -182,9 +199,15 @@ public/sw.js                  Service worker for web push
 | `pnpm ml:optimize`            | Random-search strategy params with ML filter      |
 | `pnpm db:push`                | Apply Drizzle schema to `DATABASE_URL`            |
 | `pnpm cron:trigger`           | Manually hit the strategy cron endpoint           |
+| `pnpm railway:up`             | Deploy web service (alias for `railway:up:web`)   |
 | `pnpm railway:up:web`         | Deploy web service via Railway CLI                |
 | `pnpm railway:up:cron`        | Deploy cron service via Railway CLI               |
+| `pnpm version:bump`           | Bump `package.json` patch ahead of latest tag     |
+| `pnpm version:check`          | Verify version is ready for release               |
 | `pnpm fallow:audit`           | Run Fallow code-health audit                      |
+| `pnpm fallow:dead-code`       | List likely dead code                             |
+| `pnpm fallow:dupes`           | List duplicate code                               |
+| `pnpm fallow:health`          | Fallow health summary                             |
 
 Backtest and ML scripts refuse to run when `NODE_ENV=production`.
 
@@ -196,7 +219,7 @@ Run a backtest and save a report under `backtest-results/`:
 pnpm backtest --days 180
 ```
 
-Klines are cached under `backtest-cache/` (or `BACKTEST_CACHE_DIR`). The simulator checks every 5 minutes and reuses the same decision core as live trading.
+Klines are cached under `backtest-cache/` (or `BACKTEST_CACHE_DIR`). The simulator steps through closed `H1` candles and reuses the same decision core as live trading.
 
 Analyze exit / trailing-stop scenarios on a specific report:
 
@@ -294,26 +317,37 @@ Postgres tables (see `db/schema.ts`):
 | `strategy_meta`      | Last candle time, exposure peak equity, scheduler state |
 | `push_subscriptions` | Web push endpoints                                      |
 
-## CI
+## CI and releases
 
-GitHub Actions (`.github/workflows/ci.yml`) on push/PR to `main`:
+[`.github/workflows/release.yml`](.github/workflows/release.yml) runs on every push and pull request to `main`.
 
+### Quality gate (all PRs and pushes)
+
+- Verify `package.json` version is ahead of the latest `v*` tag (`pnpm version:check`)
 - `pnpm lint`
 - `pnpm test:coverage` (Vitest with coverage thresholds on `utils/` and `helpers/`)
-- `pnpm test:e2e` (Playwright smoke tests)
+- `pnpm test:e2e` (Playwright smoke tests against a local dev server)
 - `pnpm fallow audit --ci`
 
-Coverage HTML reports are uploaded as CI artifacts on every run.
+Coverage HTML is uploaded as a CI artifact on every run. Failed E2E runs upload the Playwright report.
 
-## Releases
+### Versioning before merge
 
-Every merge to `main` triggers [`.github/workflows/release.yml`](.github/workflows/release.yml):
+Releases tag whatever version is in `package.json` at merge time — CI does not bump it.
 
-1. Runs the full quality gate (lint, coverage, e2e, fallow)
-2. Bumps the patch version (`1.0.0` → `1.0.1` → …; first release is `v1.0.0`)
-3. Prepends commit messages to [`CHANGELOG.md`](CHANGELOG.md)
-4. Creates a `v*` git tag and [GitHub Release](https://github.com/razvantomegea/binance-trader/releases)
-5. Attaches a coverage summary and downloadable HTML report (`coverage-report.zip`)
+1. `pnpm install` enables `.githooks/pre-push`, which runs `pnpm version:bump` when you push to `main`.
+2. If `package.json` changed, commit it (`chore: bump version`) and push again.
+3. Or run `pnpm version:bump` manually before opening a PR.
+
+First release requires `package.json` version `1.0.0`. Each subsequent release must be greater than the latest `v*` tag.
+
+### Release (push to `main` only)
+
+After the quality gate passes on a direct push to `main` (not on PRs):
+
+1. Prepends commit messages since the last tag to [`CHANGELOG.md`](CHANGELOG.md)
+2. Creates a `v*` git tag and [GitHub Release](https://github.com/razvantomegea/binance-trader/releases)
+3. Attaches a coverage summary and downloadable HTML report (`coverage-report.zip`)
 
 Bot commits (`chore(release): vX.Y.Z [skip release]`) are skipped to prevent release loops.
 
