@@ -162,29 +162,29 @@ public/sw.js                  Service worker for web push
 
 ### Scripts
 
-| Command                       | Description                                      |
-| ----------------------------- | ------------------------------------------------ |
-| `pnpm dev`                    | Next.js dev server                               |
-| `pnpm build`                  | Production build                                 |
-| `pnpm start`                  | Production server                                |
-| `pnpm lint`                   | Run ESLint                                       |
-| `pnpm lint:fix`               | Run ESLint with autofix                          |
-| `pnpm format`                 | Run Prettier                                     |
-| `pnpm test`                   | Run Vitest                                       |
-| `pnpm test:watch`             | Vitest watch mode                                |
-| `pnpm backtest`               | Run strategy backtest (localhost only)           |
-| `pnpm analyze:post-close`     | Analyze post-close 24h behavior                  |
-| `pnpm backtest:cleanup`       | Remove old backtest reports                      |
-| `pnpm backtest:cache:cleanup` | Remove backtest cache files                      |
+| Command                       | Description                                       |
+| ----------------------------- | ------------------------------------------------- |
+| `pnpm dev`                    | Next.js dev server                                |
+| `pnpm build`                  | Production build                                  |
+| `pnpm start`                  | Production server                                 |
+| `pnpm lint`                   | Run ESLint                                        |
+| `pnpm lint:fix`               | Run ESLint with autofix                           |
+| `pnpm format`                 | Run Prettier                                      |
+| `pnpm test`                   | Run Vitest                                        |
+| `pnpm test:watch`             | Vitest watch mode                                 |
+| `pnpm backtest`               | Run strategy backtest (localhost only)            |
+| `pnpm analyze:post-close`     | Analyze post-close 24h behavior                   |
+| `pnpm backtest:cleanup`       | Remove old backtest reports                       |
+| `pnpm backtest:cache:cleanup` | Remove backtest cache files                       |
 | `pnpm ml:dataset`             | Generate ML training dataset from historical data |
-| `pnpm ml:train`               | Train logistic-regression entry model            |
-| `pnpm ml:eval`                | Evaluate model + strategy thresholds             |
-| `pnpm ml:optimize`            | Random-search strategy params with ML filter       |
-| `pnpm db:push`                | Apply Drizzle schema to `DATABASE_URL`           |
-| `pnpm cron:trigger`           | Manually hit the strategy cron endpoint          |
-| `pnpm railway:up:web`         | Deploy web service via Railway CLI               |
-| `pnpm railway:up:cron`        | Deploy cron service via Railway CLI              |
-| `pnpm fallow:audit`           | Run Fallow code-health audit                     |
+| `pnpm ml:train`               | Train logistic-regression entry model             |
+| `pnpm ml:eval`                | Evaluate model + strategy thresholds              |
+| `pnpm ml:optimize`            | Random-search strategy params with ML filter      |
+| `pnpm db:push`                | Apply Drizzle schema to `DATABASE_URL`            |
+| `pnpm cron:trigger`           | Manually hit the strategy cron endpoint           |
+| `pnpm railway:up:web`         | Deploy web service via Railway CLI                |
+| `pnpm railway:up:cron`        | Deploy cron service via Railway CLI               |
+| `pnpm fallow:audit`           | Run Fallow code-health audit                      |
 
 Backtest and ML scripts refuse to run when `NODE_ENV=production`.
 
@@ -244,10 +244,10 @@ pnpm cron:trigger
 
 The repo includes two [Railway](https://railway.com) config files for a common two-service setup:
 
-| Service (example name) | Role                                       | Config file         |
-| ---------------------- | ------------------------------------------ | ------------------- |
-| Web app                | Next.js dashboard (always on)              | `railway.json`      |
-| Cron worker            | Calls the strategy API every 5 min, exits   | `railway.cron.json` |
+| Service (example name) | Role                                      | Config file         |
+| ---------------------- | ----------------------------------------- | ------------------- |
+| Web app                | Next.js dashboard (always on)             | `railway.json`      |
+| Cron worker            | Calls the strategy API every 5 min, exits | `railway.cron.json` |
 
 ### Web service
 
@@ -286,13 +286,13 @@ Alternatively set `CRON_URL` explicitly to your public app URL.
 
 Postgres tables (see `db/schema.ts`):
 
-| Table               | Purpose                                              |
-| ------------------- | ---------------------------------------------------- |
-| `trades`            | BUY/SELL history, post-close 24h metrics             |
-| `positions`         | Open paper positions                                 |
-| `equity_snapshots`  | Periodic cash + equity snapshots                     |
-| `strategy_meta`     | Last candle time, exposure peak equity, scheduler state |
-| `push_subscriptions`| Web push endpoints                                   |
+| Table                | Purpose                                                 |
+| -------------------- | ------------------------------------------------------- |
+| `trades`             | BUY/SELL history, post-close 24h metrics                |
+| `positions`          | Open paper positions                                    |
+| `equity_snapshots`   | Periodic cash + equity snapshots                        |
+| `strategy_meta`      | Last candle time, exposure peak equity, scheduler state |
+| `push_subscriptions` | Web push endpoints                                      |
 
 ## CI
 
@@ -304,18 +304,18 @@ GitHub Actions (`.github/workflows/ci.yml`) on push/PR to `main`:
 
 ## Environment reference
 
-| Variable                     | Required          | Description                                   |
-| ---------------------------- | ----------------- | --------------------------------------------- |
-| `DATABASE_URL`               | Yes               | Postgres connection string                    |
-| `CRON_SECRET`                | For external cron | Protects `/api/cron/run-strategy`             |
-| `SCHEDULER_MODE`             | Production        | Set to `external-cron` with Railway cron      |
-| `AUTO_START_STRATEGY`        | Local optional    | `true` to start in-process scheduler          |
-| `BINANCE_API_BASE_URL`       | No                | Defaults to `https://data-api.binance.vision` |
+| Variable                     | Required          | Description                                      |
+| ---------------------------- | ----------------- | ------------------------------------------------ |
+| `DATABASE_URL`               | Yes               | Postgres connection string                       |
+| `CRON_SECRET`                | For external cron | Protects `/api/cron/run-strategy`                |
+| `SCHEDULER_MODE`             | Production        | Set to `external-cron` with Railway cron         |
+| `AUTO_START_STRATEGY`        | Local optional    | `true` to start in-process scheduler             |
+| `BINANCE_API_BASE_URL`       | No                | Defaults to `https://data-api.binance.vision`    |
 | `BACKTEST_CACHE_DIR`         | No                | Kline + ML cache root (default `backtest-cache`) |
-| `WEB_PUSH_VAPID_PUBLIC_KEY`  | No                | Web push public key                           |
-| `WEB_PUSH_VAPID_PRIVATE_KEY` | No                | Web push private key                          |
-| `WEB_PUSH_SUBJECT`           | No                | `mailto:` or `https:` contact for VAPID       |
-| `CRON_URL`                   | Cron worker only  | Full URL to `run-strategy` (cron service)     |
+| `WEB_PUSH_VAPID_PUBLIC_KEY`  | No                | Web push public key                              |
+| `WEB_PUSH_VAPID_PRIVATE_KEY` | No                | Web push private key                             |
+| `WEB_PUSH_SUBJECT`           | No                | `mailto:` or `https:` contact for VAPID          |
+| `CRON_URL`                   | Cron worker only  | Full URL to `run-strategy` (cron service)        |
 
 ## License
 

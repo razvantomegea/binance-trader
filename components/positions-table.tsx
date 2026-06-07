@@ -62,7 +62,10 @@ function PositionRowItem({
   closingSymbol: string | null;
 }) {
   return (
-    <tr key={row.symbol} className="border-b border-zinc-100 dark:border-zinc-900">
+    <tr
+      key={row.symbol}
+      className="border-b border-zinc-100 dark:border-zinc-900"
+    >
       <td className="py-2 pl-4 pr-3">
         <button
           type="button"

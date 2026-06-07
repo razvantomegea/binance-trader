@@ -69,7 +69,9 @@ Use --keep=N to keep the N newest matched files.`,
   const toDelete = keep > 0 ? candidates.slice(keep) : candidates;
 
   if (toDelete.length === 0) {
-    console.log(`Keeping all ${candidates.length} matched report(s). Nothing to delete.`);
+    console.log(
+      `Keeping all ${candidates.length} matched report(s). Nothing to delete.`,
+    );
     return;
   }
 

@@ -65,7 +65,7 @@ export function fitFeatureNormalization(
   }
 
   const featureCount = rows[0]!.features.length;
-  const {featureNames} = (rows[0]!);
+  const { featureNames } = rows[0]!;
   const means = Array.from({ length: featureCount }, () => 0);
   const stds = Array.from({ length: featureCount }, () => 0);
 

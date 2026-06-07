@@ -116,7 +116,10 @@ function computeUpCandleRatio(closed: CandleSlice[]): number {
   return upCandleCount / Math.max(closed.length - 1, 1);
 }
 
-function computeCloseVsMeanClose(closed: CandleSlice[], latestClose: number): number {
+function computeCloseVsMeanClose(
+  closed: CandleSlice[],
+  latestClose: number,
+): number {
   const meanClose =
     closed.reduce((sum, candle) => sum + candle.close, 0) / closed.length;
   return safeRatio(latestClose - meanClose, meanClose);

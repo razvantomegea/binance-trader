@@ -54,7 +54,10 @@ function isPushSupported(): boolean {
 
 async function readErrorResponseBody(response: Response): Promise<string> {
   try {
-    const data = (await response.json()) as { error?: unknown; details?: unknown };
+    const data = (await response.json()) as {
+      error?: unknown;
+      details?: unknown;
+    };
     const error = typeof data.error === "string" ? data.error : null;
     const details = typeof data.details === "string" ? data.details : null;
     return [error, details].filter(Boolean).join(" | ");

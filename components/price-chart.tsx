@@ -41,7 +41,9 @@ function ChartStateMessage({
   className: string;
 }) {
   return (
-    <div className={`flex items-center justify-center text-sm ${className} ${chartContainerClassName}`}>
+    <div
+      className={`flex items-center justify-center text-sm ${className} ${chartContainerClassName}`}
+    >
       {text}
     </div>
   );
@@ -92,7 +94,9 @@ export function PriceChart({ symbol, interval }: PriceChartProps) {
   }, [symbol, interval]);
 
   if (loading) {
-    return <ChartStateMessage text="Loading chart..." className="text-zinc-500" />;
+    return (
+      <ChartStateMessage text="Loading chart..." className="text-zinc-500" />
+    );
   }
 
   if (error) {

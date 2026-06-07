@@ -113,7 +113,9 @@ function resolveSimulationRanges(days: number): {
     lookbackCloses: STRATEGY_LOOKBACK_CLOSES,
   });
   if (endTime - simulationStartTime < minimumSimulationDurationMs()) {
-    throw new Error("Backtest range too short for train/validation/test splits.");
+    throw new Error(
+      "Backtest range too short for train/validation/test splits.",
+    );
   }
   const ranges = splitSimulationRanges({
     startTime: simulationStartTime,
@@ -122,10 +124,14 @@ function resolveSimulationRanges(days: number): {
   return { fetchStartTime, endTime, ranges };
 }
 
-async function buildEvaluationContext(options: CliOptions): Promise<EvaluationContext> {
+async function buildEvaluationContext(
+  options: CliOptions,
+): Promise<EvaluationContext> {
   const modelRunId = options.modelRunId ?? (await resolveLatestModelRunId());
   const symbols = await resolveSymbols(options.symbols);
-  const { fetchStartTime, endTime, ranges } = resolveSimulationRanges(options.days);
+  const { fetchStartTime, endTime, ranges } = resolveSimulationRanges(
+    options.days,
+  );
   console.log(
     `Evaluating ML strategy: model=${modelRunId}, symbols=${symbols.length}, days=${options.days}, feeBps=${options.feeBps}`,
   );
@@ -151,7 +157,10 @@ async function evaluateBaselines(params: {
   klinesBySymbol: Awaited<ReturnType<typeof loadHistoricalKlinesBySymbol>>;
   baseConfig: ReturnType<typeof createDefaultBacktestConfig>;
   ranges: ReturnType<typeof splitSimulationRanges>;
-}): Promise<{ baselineValidation: MlOptimizationCandidate; baselineTest: MlOptimizationCandidate }> {
+}): Promise<{
+  baselineValidation: MlOptimizationCandidate;
+  baselineTest: MlOptimizationCandidate;
+}> {
   const { symbols, klinesBySymbol, baseConfig, ranges } = params;
   const baselineValidation = await evaluateStrategyCandidate({
     strategyParams: DEFAULT_STRATEGY_PARAMS,
@@ -181,8 +190,13 @@ async function evaluateThresholds(params: {
   ranges: ReturnType<typeof splitSimulationRanges>;
   entryProbabilityBySymbol: Map<string, Map<number, number>>;
 }): Promise<MlOptimizationCandidate | null> {
-  const { symbols, klinesBySymbol, baseConfig, ranges, entryProbabilityBySymbol } =
-    params;
+  const {
+    symbols,
+    klinesBySymbol,
+    baseConfig,
+    ranges,
+    entryProbabilityBySymbol,
+  } = params;
   let bestValidation: MlOptimizationCandidate | null = null;
   for (const threshold of ML_MODEL_THRESHOLDS) {
     const candidate = await evaluateStrategyCandidate({
@@ -197,7 +211,8 @@ async function evaluateThresholds(params: {
     });
     if (
       !bestValidation ||
-      candidate.metrics.riskAdjustedScore > bestValidation.metrics.riskAdjustedScore
+      candidate.metrics.riskAdjustedScore >
+        bestValidation.metrics.riskAdjustedScore
     ) {
       bestValidation = candidate;
     }

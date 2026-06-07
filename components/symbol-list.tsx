@@ -48,7 +48,9 @@ function SymbolListItem({
             : "hover:bg-zinc-50 dark:hover:bg-zinc-900/60",
         )}
       >
-        <span className="min-w-0 shrink truncate font-medium">{row.symbol}</span>
+        <span className="min-w-0 shrink truncate font-medium">
+          {row.symbol}
+        </span>
         <span className="shrink-0 text-right tabular-nums text-zinc-600 dark:text-zinc-300">
           {row.close ?? "—"}
         </span>
@@ -65,7 +67,10 @@ export function SymbolList({
 }: SymbolListProps) {
   const [query, setQuery] = useState("");
 
-  const filtered = useMemo(() => filterSymbols(symbols, query), [query, symbols]);
+  const filtered = useMemo(
+    () => filterSymbols(symbols, query),
+    [query, symbols],
+  );
 
   return (
     <div

@@ -39,9 +39,8 @@ function PnlMetric({ label, value, pct, positive }: PnlItemProps) {
       <p
         className={`font-semibold tabular-nums ${positive ? "text-emerald-600" : "text-red-600"}`}
       >
-        {signed(value, (num) => `$${formatUsd(num)}`)} ({signed(pct, (num) =>
-          num.toFixed(2),
-        )}
+        {signed(value, (num) => `$${formatUsd(num)}`)} (
+        {signed(pct, (num) => num.toFixed(2))}
         %)
       </p>
     </div>

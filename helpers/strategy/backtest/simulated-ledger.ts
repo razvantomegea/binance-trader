@@ -62,7 +62,10 @@ export class SimulatedLedger {
     const { symbol, decision, price } = params;
 
     if (decision.action === "HOLD") {
-      this.applyHoldUpdate({ symbol, updatedMaxPrice: decision.updatedMaxPrice });
+      this.applyHoldUpdate({
+        symbol,
+        updatedMaxPrice: decision.updatedMaxPrice,
+      });
       return false;
     }
 
@@ -179,7 +182,10 @@ export class SimulatedLedger {
 
     const maxPriceAfterBuy =
       params.updatedMaxPrice ?? position.maxPriceAfterBuy ?? position.buyPrice;
-    const realizedPnlPct = pnlPercentFromPrices(position.buyPrice, params.price);
+    const realizedPnlPct = pnlPercentFromPrices(
+      position.buyPrice,
+      params.price,
+    );
 
     this.cash += params.notional - params.fee;
     this.positions.delete(params.symbol);

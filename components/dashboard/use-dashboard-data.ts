@@ -161,13 +161,24 @@ function useDashboardRefresh({
 function usePollingRefresh(refresh: () => Promise<void>): void {
   useEffect(() => {
     let cancelled = false;
-    const tick = () => {
-      if (!cancelled) {
-        void refresh();
+    const tick = async () => {
+      if (cancelled) {
+        return;
+      }
+      try {
+        await refresh();
+      } catch (error) {
+        if (!cancelled) {
+          console.error("Dashboard polling refresh failed:", error);
+        }
       }
     };
-    const timer = window.setInterval(tick, POLL_MS);
-    const initial = window.setTimeout(tick, 0);
+    const timer = window.setInterval(() => {
+      void tick();
+    }, POLL_MS);
+    const initial = window.setTimeout(() => {
+      void tick();
+    }, 0);
     return () => {
       cancelled = true;
       window.clearTimeout(initial);
@@ -233,7 +244,9 @@ function useToggleStrategyAction({
     setStrategyActionError(null);
     try {
       const action = strategyStatus?.running ? "stop" : "start";
-      const response = await fetch(`/api/strategy/${action}`, { method: "POST" });
+      const response = await fetch(`/api/strategy/${action}`, {
+        method: "POST",
+      });
       if (!response.ok) {
         const body = (await response.text()) || "unknown error";
         setStrategyActionError(
@@ -302,11 +315,14 @@ export function useDashboardData(): UseDashboardDataResult {
   const position = usePositionActionState();
   const { setSelectedSymbol } = core;
 
-  const selectUsdtSymbol = useCallback((symbol: string) => {
-    if (isUsdtSymbol(symbol)) {
-      setSelectedSymbol(symbol);
-    }
-  }, [setSelectedSymbol]);
+  const selectUsdtSymbol = useCallback(
+    (symbol: string) => {
+      if (isUsdtSymbol(symbol)) {
+        setSelectedSymbol(symbol);
+      }
+    },
+    [setSelectedSymbol],
+  );
 
   const refresh = useDashboardRefresh({
     selectedSymbol: core.selectedSymbol,

@@ -15,7 +15,10 @@ interface PositionMetrics {
   positionsCostBasis: number;
 }
 
-async function loadPriceBySymbol(symbols: string[], interval: typeof STRATEGY_INTERVAL) {
+async function loadPriceBySymbol(
+  symbols: string[],
+  interval: typeof STRATEGY_INTERVAL,
+) {
   const priceBySymbol = new Map<string, number>();
   if (symbols.length === 0) {
     return priceBySymbol;
@@ -48,7 +51,8 @@ function buildPositionMetrics(params: {
 
   for (const position of params.positionsMap.values()) {
     const currentPrice = params.priceBySymbol.get(position.symbol) ?? null;
-    const marketValue = currentPrice !== null ? position.qty * currentPrice : null;
+    const marketValue =
+      currentPrice !== null ? position.qty * currentPrice : null;
     const unrealizedPnlPct =
       currentPrice !== null && position.buyPrice !== 0
         ? pnlPercentFromPrices(position.buyPrice, currentPrice)
@@ -64,7 +68,9 @@ function buildPositionMetrics(params: {
       qty: String(position.qty),
       buyPrice: String(position.buyPrice),
       maxPriceAfterBuy:
-        position.maxPriceAfterBuy != null ? String(position.maxPriceAfterBuy) : null,
+        position.maxPriceAfterBuy != null
+          ? String(position.maxPriceAfterBuy)
+          : null,
       buyTime: position.buyTime.toISOString(),
       buyTradeId: position.buyTradeId,
       currentPrice: currentPrice !== null ? String(currentPrice) : null,
@@ -102,11 +108,16 @@ export async function buildPortfolioResponse(): Promise<PortfolioResponse> {
   const positionsMap = await getOpenPositions();
   const symbols = [...positionsMap.keys()];
   const priceBySymbol = await loadPriceBySymbol(symbols, priceInterval);
-  const { positions, positionsValue, positionsCostBasis } = buildPositionMetrics({
-    positionsMap,
-    priceBySymbol,
+  const { positions, positionsValue, positionsCostBasis } =
+    buildPositionMetrics({
+      positionsMap,
+      priceBySymbol,
+    });
+  const totals = buildPortfolioTotals({
+    cash,
+    positionsValue,
+    positionsCostBasis,
   });
-  const totals = buildPortfolioTotals({ cash, positionsValue, positionsCostBasis });
 
   return {
     cash,

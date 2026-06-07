@@ -29,6 +29,7 @@ async function liquidateSymbol(params: {
     interval: params.interval,
   });
   const mark = candle?.close ?? params.position.buyPrice;
+  const candleOpenTime = candle?.openTime ?? params.position.buyTime.getTime();
   const sellPrice = resolveTrailingSellPrice({
     position: {
       buyPrice: params.position.buyPrice,
@@ -38,16 +39,24 @@ async function liquidateSymbol(params: {
     thresholdPct: TRAILING_STOP_PCT,
   });
 
-  await placeTrade({
-    symbol: params.symbol,
-    side: "SELL",
-    qty: params.position.qty,
-    price: sellPrice,
-    interval: params.interval,
-    candleOpenTime: candle?.openTime ?? Date.now(),
-    reason: EXIT_PORTFOLIO_DRAWDOWN_REASON,
-  });
-  return true;
+  try {
+    await placeTrade({
+      symbol: params.symbol,
+      side: "SELL",
+      qty: params.position.qty,
+      price: sellPrice,
+      interval: params.interval,
+      candleOpenTime,
+      reason: EXIT_PORTFOLIO_DRAWDOWN_REASON,
+    });
+    return true;
+  } catch (error) {
+    console.error(
+      `Portfolio drawdown liquidation failed for ${params.symbol}:`,
+      error,
+    );
+    return false;
+  }
 }
 
 export async function enforcePortfolioDrawdownCap(params: {
@@ -93,14 +102,9 @@ export async function enforcePortfolioDrawdownCap(params: {
         return;
       }
 
-      try {
-        liquidated += (await liquidateSymbol({ symbol, interval, position })) ? 1 : 0;
-      } catch (error) {
-        console.error(
-          `Portfolio drawdown liquidation failed for ${symbol}:`,
-          error,
-        );
-      }
+      liquidated += (await liquidateSymbol({ symbol, interval, position }))
+        ? 1
+        : 0;
     },
   });
 

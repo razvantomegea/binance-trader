@@ -103,7 +103,8 @@ export async function fetchAndReadDashboardData(): Promise<{
     fetch(`/api/equity-curve?interval=${STRATEGY_INTERVAL}&limit=200`),
     fetch("/api/strategy/status"),
   ]);
-  const [symbolsRes, portfolioRes, tradesRes, equityRes, strategyRes] = responses;
+  const [symbolsRes, portfolioRes, tradesRes, equityRes, strategyRes] =
+    responses;
   const [rows, portfolioData, tradesData, snapshotsData, strategyRead] =
     await Promise.all([
       readSymbolRows(symbolsRes),

@@ -93,7 +93,9 @@ function TradeRowItem({
       >
         {formatSignedPercent(row.realizedPnlPct)}
       </td>
-      <td className="max-w-[12rem] truncate py-2 text-zinc-500">{row.reason}</td>
+      <td className="max-w-[12rem] truncate py-2 text-zinc-500">
+        {row.reason}
+      </td>
     </tr>
   );
 }

@@ -82,7 +82,9 @@ function DashboardHeader({
   onToggleStrategy,
 }: {
   strategyStatus: Parameters<typeof StrategyControls>[0]["strategyStatus"];
-  strategyActionPending: Parameters<typeof StrategyControls>[0]["strategyActionPending"];
+  strategyActionPending: Parameters<
+    typeof StrategyControls
+  >[0]["strategyActionPending"];
   loadingPortfolio: Parameters<typeof StrategyControls>[0]["loadingPortfolio"];
   cronAlerts: Parameters<typeof StrategyControls>[0]["cronAlerts"];
   onToggleStrategy: Parameters<typeof StrategyControls>[0]["onToggleStrategy"];

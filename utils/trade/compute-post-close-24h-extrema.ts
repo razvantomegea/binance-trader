@@ -23,7 +23,10 @@ function resolveSellIndex(params: ComputePostClose24hExtremaParams): number {
   );
 }
 
-function findFutureExtrema(future: KlineCandle[]): { postMax: number; postMin: number } {
+function findFutureExtrema(future: KlineCandle[]): {
+  postMax: number;
+  postMin: number;
+} {
   let postMax = -Infinity;
   let postMin = Infinity;
   for (const candle of future) {

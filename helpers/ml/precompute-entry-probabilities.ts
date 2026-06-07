@@ -32,7 +32,9 @@ function buildNormalizedRows(params: {
     const closed = [...windowAsc].reverse();
     const { features } = buildDecisionFeatures({ closed });
     openTimes.push(params.klinesAsc[index]!.openTime);
-    normalizedRows.push(normalizeFeatures(features, params.metadata.normalization));
+    normalizedRows.push(
+      normalizeFeatures(features, params.metadata.normalization),
+    );
   }
 
   return { openTimes, normalizedRows };

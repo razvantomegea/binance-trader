@@ -200,7 +200,8 @@ async function processSymbolAtOpenTime(params: {
       position: params.ledger.getPosition(params.symbol),
       cash: params.ledger.cash,
       lastProcessedOpenTime: params.lastProcessedOpenTime,
-      lastSellOpenTime: params.ledger.lastSellOpenTime.get(params.symbol) ?? null,
+      lastSellOpenTime:
+        params.ledger.lastSellOpenTime.get(params.symbol) ?? null,
       markPrice,
       strategyParams: params.strategyParams,
       entryProbability,
@@ -266,7 +267,10 @@ async function runSimulationStep(params: {
   ledgerMutex: ReturnType<typeof createAsyncMutex>;
   markPriceCursorBySymbol: Map<string, number>;
   exposurePeakEquity: number | null;
-}): Promise<{ equityPoint: EquityPoint; nextExposurePeakEquity: number | null }> {
+}): Promise<{
+  equityPoint: EquityPoint;
+  nextExposurePeakEquity: number | null;
+}> {
   const markPrices = buildMarkPricesForOpenPositions({
     ledger: params.ledger,
     klinesBySymbol: params.klinesBySymbol,
@@ -441,4 +445,3 @@ export async function runBacktest(
     simulationEndTime: endTime,
   });
 }
-

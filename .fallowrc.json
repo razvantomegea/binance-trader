@@ -11,10 +11,7 @@
     "scripts/cleanup-backtest-reports.mjs",
     "public/sw.js"
   ],
-  "ignoreDependencies": [
-    "@railway/cli",
-    "react-is"
-  ],
+  "ignoreDependencies": ["@railway/cli", "react-is"],
   "workspaces": {
     "packages": ["."]
   },

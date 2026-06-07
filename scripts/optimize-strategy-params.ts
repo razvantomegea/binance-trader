@@ -169,7 +169,9 @@ function resolveSimulationRanges(days: number): SimulationRangeContext {
     lookbackCloses: STRATEGY_LOOKBACK_CLOSES,
   });
   if (endTime - simulationStartTime < minimumSimulationDurationMs()) {
-    throw new Error("Backtest range too short for train/validation/test splits.");
+    throw new Error(
+      "Backtest range too short for train/validation/test splits.",
+    );
   }
   const ranges = splitSimulationRanges({
     startTime: simulationStartTime,
@@ -279,7 +281,9 @@ async function evaluateBestTestCandidate(params: {
   });
   console.log("\nBest validation candidate:");
   console.log(JSON.stringify(bestValidation.strategyParams, null, 2));
-  console.log(`Validation score=${bestValidation.metrics.riskAdjustedScore.toFixed(2)}`);
+  console.log(
+    `Validation score=${bestValidation.metrics.riskAdjustedScore.toFixed(2)}`,
+  );
   console.log(
     `Test score=${bestTest.metrics.riskAdjustedScore.toFixed(2)} pnl=${bestTest.metrics.pnlPct.toFixed(2)}% dd=${bestTest.metrics.maxDrawdownPct.toFixed(2)}%`,
   );
@@ -307,10 +311,14 @@ function createBaseConfig(params: {
   });
 }
 
-async function runOptimization(options: CliOptions): Promise<MlOptimizationRun> {
+async function runOptimization(
+  options: CliOptions,
+): Promise<MlOptimizationRun> {
   const symbols = await resolveSymbols(options.symbols);
   const rng = createRandomSource(options.seed);
-  const { fetchStartTime, endTime, ranges } = resolveSimulationRanges(options.days);
+  const { fetchStartTime, endTime, ranges } = resolveSimulationRanges(
+    options.days,
+  );
   console.log(
     `Optimizing strategy params: symbols=${symbols.length}, days=${options.days}, trials=${options.trials}, feeBps=${options.feeBps}`,
   );

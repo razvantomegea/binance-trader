@@ -23,10 +23,7 @@ import type { MlDecisionRow } from "@/types/ml-strategy";
 import { HOUR_MS } from "@/utils/binance/candle-time";
 import { getMlDatasetsDir } from "@/utils/ml/ml-artifact-paths";
 import { writeJsonl } from "@/utils/ml/read-write-jsonl";
-import {
-  parseMlBaseArgs,
-  resolveSymbols,
-} from "./ml/parse-ml-cli-args";
+import { parseMlBaseArgs, resolveSymbols } from "./ml/parse-ml-cli-args";
 
 interface CliOptions {
   days: number;
@@ -83,7 +80,8 @@ function buildRows(params: {
   labelEndTime: number;
   feeBps: number;
 }): MlDecisionRow[] {
-  const { symbols, klinesBySymbol, evalStartTime, labelEndTime, feeBps } = params;
+  const { symbols, klinesBySymbol, evalStartTime, labelEndTime, feeBps } =
+    params;
   const rows: MlDecisionRow[] = [];
   for (const symbol of symbols) {
     const klinesAsc = klinesBySymbol.get(symbol);
@@ -105,7 +103,8 @@ function buildRows(params: {
 
 function printSummary(rows: MlDecisionRow[], outputPath: string): void {
   const positive = rows.filter((row) => row.label === 1).length;
-  const ratio = rows.length > 0 ? ((positive / rows.length) * 100).toFixed(2) : "0";
+  const ratio =
+    rows.length > 0 ? ((positive / rows.length) * 100).toFixed(2) : "0";
   console.log(`Dataset saved: ${outputPath}`);
   console.log(`Rows: ${rows.length}, positive labels: ${positive} (${ratio}%)`);
 }
@@ -114,9 +113,8 @@ async function main(): Promise<void> {
   assertLocalhostOnly();
   const options = parseArgs(process.argv.slice(2));
   const symbols = await resolveSymbols(options.symbols);
-  const { fetchStartTime, endTime, evalStartTime, labelEndTime } = resolveTimeRange(
-    options.days,
-  );
+  const { fetchStartTime, endTime, evalStartTime, labelEndTime } =
+    resolveTimeRange(options.days);
   console.log(
     `Generating ML dataset: symbols=${symbols.length}, days=${options.days}, sampleRange=${new Date(evalStartTime).toISOString()}..${new Date(labelEndTime).toISOString()}`,
   );

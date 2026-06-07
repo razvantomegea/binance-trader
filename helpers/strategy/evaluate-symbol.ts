@@ -35,7 +35,10 @@ function toDecisionPosition(position: OpenPosition): DecisionPositionState {
   };
 }
 
-function resolveLastSellOpenTime(position: OpenPosition | undefined, symbol: string) {
+function resolveLastSellOpenTime(
+  position: OpenPosition | undefined,
+  symbol: string,
+) {
   if (position) {
     return Promise.resolve(null);
   }

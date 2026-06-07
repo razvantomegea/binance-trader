@@ -55,7 +55,9 @@ function toBinaryLabel(params: {
   if (params.forwardReturnPct <= 0) {
     return 0;
   }
-  return params.forwardMaxDrawdownPct <= params.forwardDrawdownCapPct * 100 ? 1 : 0;
+  return params.forwardMaxDrawdownPct <= params.forwardDrawdownCapPct * 100
+    ? 1
+    : 0;
 }
 
 export function buildForwardLabel({
@@ -88,7 +90,10 @@ export function buildForwardLabel({
     return null;
   }
 
-  const { trough, finalClose } = computeForwardPathStats({ future, entryPrice });
+  const { trough, finalClose } = computeForwardPathStats({
+    future,
+    entryPrice,
+  });
 
   const roundTripFeePct = (feeBps * 2) / 100;
   const forwardReturnPct =

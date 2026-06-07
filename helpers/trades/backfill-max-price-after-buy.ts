@@ -127,7 +127,10 @@ async function processSellRow(params: {
   buysBySymbol: Map<string, BuyLookupRow[]>;
 }): Promise<"updated" | "skipped"> {
   const computedPeak = await computePeakForSell(params);
-  if (computedPeak === null || peaksMatch(params.sell.maxPriceAfterBuy, computedPeak)) {
+  if (
+    computedPeak === null ||
+    peaksMatch(params.sell.maxPriceAfterBuy, computedPeak)
+  ) {
     return "skipped";
   }
 

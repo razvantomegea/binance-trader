@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import { getDb } from "@/db";
 import { positions, trades } from "@/db/schema";
@@ -97,9 +97,12 @@ async function loadPositionSnapshot(): Promise<PositionSnapshot> {
     .select()
     .from(positions)
     .where(eq(positions.symbol, SYMBOL));
-  const buyTrades = await db.select().from(trades).where(eq(trades.symbol, SYMBOL));
-  const buyTradeRow = buyTrades.find((trade) => trade.side === "BUY");
-  const buyOpenTimeMs = pos?.buyTime.getTime() ?? buyTradeRow?.candleOpenTime.getTime() ?? null;
+  const [buyTradeRow] = await db
+    .select()
+    .from(trades)
+    .where(and(eq(trades.symbol, SYMBOL), eq(trades.side, "BUY")));
+  const buyOpenTimeMs =
+    pos?.buyTime.getTime() ?? buyTradeRow?.candleOpenTime.getTime() ?? null;
 
   return {
     buyOpenTimeMs,
@@ -142,7 +145,9 @@ async function buildAtBuyDiagnosis(
   return diagnose(window, "at_buy");
 }
 
-async function buildLiveDiagnosis(): Promise<ReturnType<typeof diagnose> | null> {
+async function buildLiveDiagnosis(): Promise<ReturnType<
+  typeof diagnose
+> | null> {
   const liveClosed = await getRecentClosedKlines({
     symbol: SYMBOL,
     interval: STRATEGY_INTERVAL,

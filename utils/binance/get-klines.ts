@@ -183,12 +183,18 @@ async function prependMissingRange(params: {
   cappedEndTime: number;
 }): Promise<KlineCandle[]> {
   const firstOpenTime = params.merged[0]?.openTime;
-  if (params.merged.length > 0 && firstOpenTime !== undefined && firstOpenTime <= params.startTime) {
+  if (
+    params.merged.length > 0 &&
+    firstOpenTime !== undefined &&
+    firstOpenTime <= params.startTime
+  ) {
     return params.merged;
   }
 
   const prependEnd =
-    firstOpenTime !== undefined ? firstOpenTime - HOUR_MS : params.cappedEndTime;
+    firstOpenTime !== undefined
+      ? firstOpenTime - HOUR_MS
+      : params.cappedEndTime;
   if (prependEnd < params.startTime) {
     return params.merged;
   }
@@ -214,11 +220,16 @@ async function appendMissingRange(params: {
   cappedEndTime: number;
 }): Promise<KlineCandle[]> {
   const lastOpenTime = params.merged[params.merged.length - 1]?.openTime;
-  if (params.merged.length > 0 && lastOpenTime !== undefined && lastOpenTime >= params.cappedEndTime) {
+  if (
+    params.merged.length > 0 &&
+    lastOpenTime !== undefined &&
+    lastOpenTime >= params.cappedEndTime
+  ) {
     return params.merged;
   }
 
-  const appendStart = lastOpenTime !== undefined ? lastOpenTime + HOUR_MS : params.startTime;
+  const appendStart =
+    lastOpenTime !== undefined ? lastOpenTime + HOUR_MS : params.startTime;
   if (appendStart > params.cappedEndTime) {
     return params.merged;
   }

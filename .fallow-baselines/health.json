@@ -228,7 +228,5 @@
     }
   },
   "runtime_coverage_findings": [],
-  "target_keys": [
-    "utils/binance/is-usdt-symbol.ts:high impact"
-  ]
+  "target_keys": ["utils/binance/is-usdt-symbol.ts:high impact"]
 }

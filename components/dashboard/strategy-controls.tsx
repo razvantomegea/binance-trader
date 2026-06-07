@@ -83,7 +83,10 @@ export function StrategyControls({
           {buttonLabel}
         </button>
       </div>
-      <StrategyStatusRow strategyStatus={strategyStatus} statusLabel={statusLabel} />
+      <StrategyStatusRow
+        strategyStatus={strategyStatus}
+        statusLabel={statusLabel}
+      />
       <CronAlertsList cronAlerts={cronAlerts} />
     </>
   );
@@ -101,13 +104,19 @@ function StrategyStatusRow({
       <span className="inline-flex items-center gap-2">
         <span>Status: {statusLabel}</span>
         {strategyStatus?.running && strategyStatus.nextRunAt ? (
-          <span>Next run: {new Date(strategyStatus.nextRunAt).toLocaleString()}</span>
+          <span>
+            Next run: {new Date(strategyStatus.nextRunAt).toLocaleString()}
+          </span>
         ) : null}
         {strategyStatus?.lastRunAt ? (
-          <span>Last run: {new Date(strategyStatus.lastRunAt).toLocaleString()}</span>
+          <span>
+            Last run: {new Date(strategyStatus.lastRunAt).toLocaleString()}
+          </span>
         ) : null}
         {strategyStatus?.lastError ? (
-          <span className="text-rose-500">Last error: {strategyStatus.lastError}</span>
+          <span className="text-rose-500">
+            Last error: {strategyStatus.lastError}
+          </span>
         ) : null}
       </span>
     </div>

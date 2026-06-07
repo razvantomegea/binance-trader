@@ -132,7 +132,8 @@ function evaluateOpenPositionDecision(params: {
     return { action: "SKIP", candleOpenTime: params.latest.openTime };
   }
 
-  const currentMax = params.position.maxPriceAfterBuy ?? params.position.buyPrice;
+  const currentMax =
+    params.position.maxPriceAfterBuy ?? params.position.buyPrice;
   const updatedMax = getUpdatedPeakPrice({
     currentMax,
     high: params.latest.high,
@@ -205,7 +206,12 @@ function evaluateEntryDecision(params: {
     return { action: "HOLD", candleOpenTime: params.latest.openTime };
   }
 
-  if (!isEntryBandCandidate({ closed: params.closed, strategyParams: params.strategyParams })) {
+  if (
+    !isEntryBandCandidate({
+      closed: params.closed,
+      strategyParams: params.strategyParams,
+    })
+  ) {
     return { action: "HOLD", candleOpenTime: params.latest.openTime };
   }
 

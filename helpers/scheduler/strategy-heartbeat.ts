@@ -123,7 +123,8 @@ async function handleCycleFailure(
   error: unknown,
 ): Promise<void> {
   state.lastCompletedHourKey = hourKey;
-  const message = error instanceof Error ? error.message : "Strategy run failed";
+  const message =
+    error instanceof Error ? error.message : "Strategy run failed";
   state.lastError = message;
   await recordSchedulerRun({ error: message });
   console.error("[heartbeat] H1 failed", error);

@@ -39,6 +39,11 @@ async function loadOpenPositionForSell(params: {
     .select()
     .from(positions)
     .where(eq(positions.symbol, params.symbol));
+  if (!openPosition) {
+    throw new Error(
+      `Cannot execute SELL: no open position for symbol ${params.symbol}`,
+    );
+  }
   return openPosition;
 }
 
@@ -52,7 +57,11 @@ function resolveMaxPriceAfterBuyValue(params: {
     return String(params.maxPriceAfterBuy);
   }
   if (params.side === "SELL") {
-    return params.openPosition?.maxPriceAfterBuy ?? params.openPosition?.buyPrice ?? null;
+    return (
+      params.openPosition?.maxPriceAfterBuy ??
+      params.openPosition?.buyPrice ??
+      null
+    );
   }
   return String(params.price);
 }
@@ -129,7 +138,15 @@ async function executeTradeWorkflow({
     candleDate,
     maxPriceAfterBuy,
   });
-  notifyTradeExecuted({ tradeId: trade.id, symbol, side, qty, price, reason, interval });
+  notifyTradeExecuted({
+    tradeId: trade.id,
+    symbol,
+    side,
+    qty,
+    price,
+    reason,
+    interval,
+  });
 }
 
 async function insertTradeRow(params: {

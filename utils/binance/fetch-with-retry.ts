@@ -84,7 +84,8 @@ async function runFetchAttempt(url: URL): Promise<Response | AttemptOutcome> {
   } catch (error) {
     return {
       retryableResponse: null,
-      error: error instanceof Error ? error : new Error("Binance request failed"),
+      error:
+        error instanceof Error ? error : new Error("Binance request failed"),
     };
   }
 }
@@ -100,7 +101,9 @@ function computeRetryDelayMs(params: {
   const boundedRetryAfterMs =
     retryAfterMs !== null && Number.isFinite(retryAfterMs) ? retryAfterMs : 0;
   const backoffMs = params.baseDelayMs * 2 ** params.attempt;
-  return Math.max(backoffMs, boundedRetryAfterMs) + randomJitter(RETRY_JITTER_MS);
+  return (
+    Math.max(backoffMs, boundedRetryAfterMs) + randomJitter(RETRY_JITTER_MS)
+  );
 }
 
 export async function fetchWithRetry({

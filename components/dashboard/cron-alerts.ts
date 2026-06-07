@@ -87,7 +87,10 @@ export function buildCronAlerts({
   return alerts;
 }
 
-function addLastRunErrorAlert(alerts: CronAlert[], lastError: string | null): void {
+function addLastRunErrorAlert(
+  alerts: CronAlert[],
+  lastError: string | null,
+): void {
   if (!lastError) {
     return;
   }
