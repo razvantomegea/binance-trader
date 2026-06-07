@@ -1,15 +1,21 @@
 #!/usr/bin/env node
 
 import { readdir, rm, stat } from "node:fs/promises";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { isAbsolute, join, resolve } from "node:path";
 
-const CACHE_DIR = join(
-  dirname(fileURLToPath(import.meta.url)),
-  "..",
-  "backtest-cache",
-  "binance-klines",
-);
+const DEFAULT_CACHE_DIR = "backtest-cache";
+
+function resolveCacheRootPath(path) {
+  return isAbsolute(path) ? path : resolve(process.cwd(), path);
+}
+
+function getBacktestCacheRoot() {
+  return resolveCacheRootPath(
+    process.env.BACKTEST_CACHE_DIR?.trim() ?? DEFAULT_CACHE_DIR,
+  );
+}
+
+const CACHE_DIR = join(getBacktestCacheRoot(), "binance-klines");
 const CACHE_PATTERN = /^[A-Z0-9_-]+-[A-Z0-9_-]+-\d{4}-\d{2}-\d{2}-\d+\.json$/i;
 
 function parseArgs(argv) {

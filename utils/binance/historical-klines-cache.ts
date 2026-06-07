@@ -2,6 +2,7 @@ import { mkdir, readdir, readFile, rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import type { CandleInterval, KlineCandle } from "@/types/binance";
+import { getBacktestCacheRoot } from "@/utils/backtest-cache-root";
 
 export interface HistoricalKlinesCachePayload {
   version: 1;
@@ -14,7 +15,7 @@ export interface HistoricalKlinesCachePayload {
 }
 
 function getCacheDirectory(): string {
-  return join(process.cwd(), "backtest-cache", "binance-klines");
+  return join(getBacktestCacheRoot(), "binance-klines");
 }
 
 function toSafeCacheToken(value: string): string {

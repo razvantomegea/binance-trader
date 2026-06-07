@@ -1,7 +1,9 @@
 import { join } from "node:path";
 
+import { getBacktestCacheRoot } from "@/utils/backtest-cache-root";
+
 export function getMlCacheRoot(): string {
-  return join(process.cwd(), "backtest-cache", "ml");
+  return join(getBacktestCacheRoot(), "ml");
 }
 
 export function getMlDatasetsDir(): string {

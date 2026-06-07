@@ -24,6 +24,14 @@ const contentSecurityPolicy = [
 ].join("; ");
 
 const nextConfig: NextConfig = {
+  turbopack: {
+    ignoreIssue: [
+      {
+        path: "**/utils/binance/historical-klines-cache.ts",
+        description: /Overly broad patterns/,
+      },
+    ],
+  },
   async headers() {
     return [
       {
