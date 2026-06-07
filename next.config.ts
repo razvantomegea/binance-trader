@@ -30,6 +30,10 @@ const nextConfig: NextConfig = {
         path: "**/utils/binance/historical-klines-cache.ts",
         description: /Overly broad patterns/,
       },
+      {
+        path: "**/utils/backtest-cache-root.ts",
+        description: /Encountered unexpected file in NFT list/,
+      },
     ],
   },
   async headers() {

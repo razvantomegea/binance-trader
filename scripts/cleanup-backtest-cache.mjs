@@ -5,14 +5,18 @@ import { isAbsolute, join, resolve } from "node:path";
 
 const DEFAULT_CACHE_DIR = "backtest-cache";
 
-function resolveCacheRootPath(path) {
-  return isAbsolute(path) ? path : resolve(process.cwd(), path);
-}
-
 function getBacktestCacheRoot() {
-  return resolveCacheRootPath(
-    process.env.BACKTEST_CACHE_DIR?.trim() ?? DEFAULT_CACHE_DIR,
-  );
+  const configured = process.env.BACKTEST_CACHE_DIR?.trim();
+
+  if (!configured || configured === DEFAULT_CACHE_DIR) {
+    return join(process.cwd(), DEFAULT_CACHE_DIR);
+  }
+
+  if (isAbsolute(configured)) {
+    return configured;
+  }
+
+  return resolve(/* turbopackIgnore: true */ process.cwd(), configured);
 }
 
 const CACHE_DIR = join(getBacktestCacheRoot(), "binance-klines");
