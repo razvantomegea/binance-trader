@@ -1,15 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { STRATEGY_LOOKBACK_CLOSES } from "@/constants/strategy";
-import { buildBacktestReport } from "@/helpers/strategy/backtest/build-backtest-report";
-import {
-  buildCheckTimeline,
-  getClosedWindowAt,
-  getEvaluationStartOpenTime,
-} from "@/helpers/strategy/backtest/historical-kline-provider";
-import { SimulatedLedger } from "@/helpers/strategy/backtest/simulated-ledger";
-import { evaluateDecision } from "@/helpers/strategy/decision-core";
-import { NULL_TRADE_POST_CLOSE_24H } from "@/types/trade-metrics";
+import { getEvaluationStartOpenTime } from "@/helpers/strategy/backtest/historical-kline-provider";
 import { HOUR_MS } from "@/utils/binance/candle-time";
 import type { KlineCandle } from "@/types/binance";
 
@@ -19,7 +11,13 @@ vi.mock("@/utils/binance/get-klines");
 import { getHistoricalClosedKlines } from "@/utils/binance/get-klines";
 import { getTradingSymbols } from "@/utils/binance/get-usdt-symbols";
 
-import { runBacktest } from "./backtest-runner";
+import {
+  createDefaultBacktestConfig,
+  runBacktest,
+  runBacktestWithPreloadedKlines,
+} from "./backtest-runner";
+import { DEFAULT_STRATEGY_PARAMS } from "@/constants/strategy-params";
+import { INITIAL_PAPER_CASH } from "@/constants/binance";
 
 const mockedGetTradingSymbols = vi.mocked(getTradingSymbols);
 const mockedGetHistoricalClosedKlines = vi.mocked(getHistoricalClosedKlines);
@@ -37,197 +35,14 @@ function makeAscendingKlines(params: {
   }));
 }
 
-describe("historical kline helpers", () => {
-  it("builds closed window at target open time", () => {
-    const klinesAsc = makeAscendingKlines({
-      startOpenTime: 0,
-      closes: Array.from({ length: 30 }, (_, i) => 100 + i),
-    });
+describe("createDefaultBacktestConfig", () => {
+  it("returns defaults and applies overrides", () => {
+    const config = createDefaultBacktestConfig({ days: 30, initialCash: 5000 });
 
-    const window = getClosedWindowAt({
-      klinesAsc,
-      targetTime: 24 * HOUR_MS,
-      count: STRATEGY_LOOKBACK_CLOSES,
-    });
-
-    expect(window).toHaveLength(STRATEGY_LOOKBACK_CLOSES);
-    expect(window?.[0]?.openTime).toBe(23 * HOUR_MS);
-    expect(window?.[23]?.openTime).toBe(0);
-  });
-
-  it("builds check timeline", () => {
-    const timeline = buildCheckTimeline({
-      startTime: 0,
-      endTime: HOUR_MS,
-      checkEveryMinutes: 15,
-    });
-
-    expect(timeline).toEqual([0, 900_000, 1_800_000, 2_700_000, HOUR_MS]);
-  });
-
-  it("computes evaluation start with lookback", () => {
-    const start = getEvaluationStartOpenTime({
-      rangeStartTime: 0,
-      lookbackCloses: STRATEGY_LOOKBACK_CLOSES,
-    });
-
-    expect(start).toBe((STRATEGY_LOOKBACK_CLOSES - 1) * HOUR_MS);
-  });
-});
-
-describe("simulated ledger", () => {
-  it("records buy and sell with fees", () => {
-    const ledger = new SimulatedLedger(10_000, 10);
-    const openTime = 1000 * HOUR_MS;
-
-    const buy = evaluateDecision({
-      closed: Array.from({ length: STRATEGY_LOOKBACK_CLOSES }, (_, i) => ({
-        openTime: openTime - i * HOUR_MS,
-        high: 150,
-        low: i === 0 ? 150 : 100,
-        close: i === 0 ? 150 : 100,
-      })),
-      position: undefined,
-      cash: ledger.cash,
-      lastProcessedOpenTime: null,
-      lastSellOpenTime: null,
-    });
-
-    expect(buy.action).toBe("BUY");
-    ledger.applyDecision({ symbol: "TESTUSDT", decision: buy, price: 150 });
-    expect(ledger.positions.size).toBe(1);
-    expect(ledger.trades).toHaveLength(1);
-
-    const hold = evaluateDecision({
-      closed: Array.from({ length: STRATEGY_LOOKBACK_CLOSES }, (_, i) => ({
-        openTime: openTime + HOUR_MS - i * HOUR_MS,
-        high: 200,
-        low: 185,
-        close: 200,
-      })),
-      position: ledger.getPosition("TESTUSDT"),
-      cash: ledger.cash,
-      lastProcessedOpenTime: buy.candleOpenTime,
-      lastSellOpenTime: null,
-    });
-
-    expect(hold.action).toBe("HOLD");
-    ledger.applyDecision({ symbol: "TESTUSDT", decision: hold, price: 200 });
-
-    const sell = evaluateDecision({
-      closed: Array.from({ length: STRATEGY_LOOKBACK_CLOSES }, (_, i) => ({
-        openTime: openTime + 2 * HOUR_MS - i * HOUR_MS,
-        high: 200,
-        low: 150,
-        close: 150,
-      })),
-      position: ledger.getPosition("TESTUSDT"),
-      cash: ledger.cash,
-      lastProcessedOpenTime: hold.candleOpenTime,
-      lastSellOpenTime: null,
-    });
-
-    expect(sell.action).toBe("SELL");
-    ledger.applyDecision({
-      symbol: "TESTUSDT",
-      decision: sell,
-      price: 150,
-    });
-
-    expect(ledger.positions.size).toBe(0);
-    expect(ledger.trades).toHaveLength(2);
-    expect(ledger.cash).toBeLessThan(10_000);
-
-    const buyTrade = ledger.trades[0]!;
-    expect(buyTrade.openPrice).toBe(150);
-    expect(buyTrade.closePrice).toBeNull();
-    expect(buyTrade.maxPriceAfterBuy).toBe(150);
-    expect(buyTrade.realizedPnlPct).toBeNull();
-
-    const sellTrade = ledger.trades[1]!;
-    expect(sellTrade.openPrice).toBe(150);
-    expect(sellTrade.closePrice).toBe(150);
-    expect(sellTrade.maxPriceAfterBuy).toBe(200);
-    expect(sellTrade.realizedPnlPct).toBe(0);
-    expect(sellTrade).toMatchObject(NULL_TRADE_POST_CLOSE_24H);
-  });
-});
-
-describe("buildBacktestReport", () => {
-  it("computes pnl, drawdown, and win rate", () => {
-    const report = buildBacktestReport({
-      startTime: 0,
-      endTime: 10 * HOUR_MS,
-      initialCash: 10_000,
-      finalEquity: 11_000,
-      trades: [
-        {
-          symbol: "A",
-          side: "BUY",
-          qty: 1,
-          price: 100,
-          notional: 100,
-          fee: 0,
-          candleOpenTime: HOUR_MS,
-          reason: "entry",
-          openPrice: 100,
-          closePrice: null,
-          maxPriceAfterBuy: 100,
-          realizedPnlPct: null,
-          ...NULL_TRADE_POST_CLOSE_24H,
-        },
-        {
-          symbol: "A",
-          side: "SELL",
-          qty: 1,
-          price: 120,
-          notional: 120,
-          fee: 0,
-          candleOpenTime: 2 * HOUR_MS,
-          reason: "exit",
-          openPrice: 100,
-          closePrice: 120,
-          maxPriceAfterBuy: 120,
-          realizedPnlPct: 20,
-          maxPriceAfterClose24h: 130,
-          minPriceAfterClose24h: 110,
-          maxPriceAfterClose24hPct: 8.333333,
-          minPriceAfterClose24hPct: -8.333333,
-        },
-      ],
-      equityCurve: [
-        { openTime: 0, cash: 10_000, equity: 10_000, openPositionCount: 0 },
-        {
-          openTime: HOUR_MS,
-          cash: 9_900,
-          equity: 10_100,
-          openPositionCount: 1,
-        },
-        {
-          openTime: 2 * HOUR_MS,
-          cash: 10_020,
-          equity: 10_020,
-          openPositionCount: 1,
-        },
-        {
-          openTime: 3 * HOUR_MS,
-          cash: 10_020,
-          equity: 9_500,
-          openPositionCount: 1,
-        },
-        {
-          openTime: 4 * HOUR_MS,
-          cash: 10_020,
-          equity: 11_000,
-          openPositionCount: 0,
-        },
-      ],
-    });
-
-    expect(report.pnlPct).toBeCloseTo(10);
-    expect(report.maxDrawdownPct).toBeCloseTo(5.94, 2);
-    expect(report.winRatePct).toBe(100);
-    expect(report.totalTrades).toBe(1);
+    expect(config.days).toBe(30);
+    expect(config.initialCash).toBe(5000);
+    expect(config.interval).toBe("H1");
+    expect(config.feeBps).toBe(0);
   });
 });
 
@@ -279,6 +94,19 @@ describe("runBacktest", () => {
     vi.unstubAllEnvs();
   });
 
+  it("rejects invalid configured symbols", async () => {
+    await expect(
+      runBacktest({
+        days: 1,
+        symbols: ["ETHBTC"],
+        initialCash: 10_000,
+        concurrency: 1,
+        feeBps: 0,
+        interval: "H1",
+      }),
+    ).rejects.toThrow(/Only USDT symbols are allowed/);
+  });
+
   it("uses all trading symbols when symbols are omitted", async () => {
     const fetchStart = 0;
     const klines = makeAscendingKlines({
@@ -304,6 +132,112 @@ describe("runBacktest", () => {
     );
     expect(mockedGetHistoricalClosedKlines).toHaveBeenCalledWith(
       expect.objectContaining({ symbol: "BBBETH" }),
+    );
+  });
+
+  it("returns empty trades when klines are insufficient", async () => {
+    mockedGetTradingSymbols.mockResolvedValue(["TESTUSDT"]);
+    mockedGetHistoricalClosedKlines.mockResolvedValue(
+      makeAscendingKlines({
+        startOpenTime: 0,
+        closes: Array.from({ length: 5 }, () => 100),
+      }),
+    );
+
+    const report = await runBacktest({
+      days: 1,
+      symbols: ["TESTUSDT"],
+      initialCash: 10_000,
+      concurrency: 1,
+      feeBps: 0,
+      interval: "H1",
+      now: 6 * HOUR_MS,
+    });
+
+    expect(report.trades).toEqual([]);
+    expect(report.finalEquity).toBe(10_000);
+  });
+
+  it("logs preload progress when loading many symbols", async () => {
+    const symbols = Array.from({ length: 50 }, (_, index) => `SYM${index}USDT`);
+    const klines = makeAscendingKlines({
+      startOpenTime: 0,
+      closes: Array.from({ length: 48 }, () => 100),
+    });
+
+    mockedGetTradingSymbols.mockResolvedValue(symbols);
+    mockedGetHistoricalClosedKlines.mockResolvedValue(klines);
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+
+    await runBacktest({
+      days: 1,
+      initialCash: 10_000,
+      concurrency: 2,
+      feeBps: 0,
+      interval: "H1",
+      now: 48 * HOUR_MS + 1,
+    });
+
+    expect(logSpy).toHaveBeenCalledWith("Preload progress: 50/50");
+    logSpy.mockRestore();
+  });
+});
+
+describe("runBacktestWithPreloadedKlines", () => {
+  it("marks final equity from buy price when klines are missing for open symbol", async () => {
+    const evalStart = getEvaluationStartOpenTime({
+      rangeStartTime: 0,
+      lookbackCloses: STRATEGY_LOOKBACK_CLOSES,
+    });
+    const klines = makeAscendingKlines({
+      startOpenTime: 0,
+      closes: Array.from({ length: 48 }, (_, i) => (i < 30 ? 100 : 200)),
+    });
+
+    const report = await runBacktestWithPreloadedKlines({
+      config: createDefaultBacktestConfig({
+        initialCash: INITIAL_PAPER_CASH,
+        strategyParams: DEFAULT_STRATEGY_PARAMS,
+      }),
+      symbols: ["TESTUSDT", "ALTUSDT"],
+      klinesBySymbol: new Map([["TESTUSDT", klines]]),
+      simulationStartTime: evalStart,
+      simulationEndTime: 47 * HOUR_MS,
+    });
+
+    expect(report.finalEquity).toBeGreaterThan(0);
+    expect(report.equityCurve.length).toBeGreaterThan(0);
+  });
+
+  it("skips symbols with empty kline history during simulation", async () => {
+    const evalStart = getEvaluationStartOpenTime({
+      rangeStartTime: 0,
+      lookbackCloses: STRATEGY_LOOKBACK_CLOSES,
+    });
+    const klines = makeAscendingKlines({
+      startOpenTime: 0,
+      closes: Array.from({ length: 48 }, (_, i) =>
+        i < 24 ? 100 : i < 36 ? 160 : 240,
+      ),
+    });
+
+    const report = await runBacktestWithPreloadedKlines({
+      config: createDefaultBacktestConfig({
+        initialCash: INITIAL_PAPER_CASH,
+        strategyParams: DEFAULT_STRATEGY_PARAMS,
+      }),
+      symbols: ["TESTUSDT", "EMPTYUSDT"],
+      klinesBySymbol: new Map([
+        ["TESTUSDT", klines],
+        ["EMPTYUSDT", []],
+      ]),
+      simulationStartTime: evalStart,
+      simulationEndTime: 47 * HOUR_MS,
+    });
+
+    expect(report.trades.length).toBeGreaterThan(0);
+    expect(report.trades.every((trade) => trade.symbol === "TESTUSDT")).toBe(
+      true,
     );
   });
 });

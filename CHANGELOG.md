@@ -98,4 +98,3 @@ Versions are auto-released on every merge to `main`.
 - Add initial configuration and API endpoints for trading dashboard (cbde7b3)
 - initial setup (91b2e61)
 - Initial commit from Create Next App (72d3bd2)
-

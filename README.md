@@ -175,39 +175,39 @@ public/sw.js                  Service worker for web push
 
 ### Scripts
 
-| Command                       | Description                                       |
-| ----------------------------- | ------------------------------------------------- |
-| `pnpm dev`                    | Next.js dev server                                |
-| `pnpm build`                  | Production build                                  |
-| `pnpm start`                  | Production server                                 |
-| `pnpm lint`                   | Run ESLint                                        |
-| `pnpm lint:fix`               | Run ESLint with autofix                           |
-| `pnpm format`                 | Run Prettier                                      |
-| `pnpm test`                   | Run Vitest                                        |
+| Command                       | Description                                                |
+| ----------------------------- | ---------------------------------------------------------- |
+| `pnpm dev`                    | Next.js dev server                                         |
+| `pnpm build`                  | Production build                                           |
+| `pnpm start`                  | Production server                                          |
+| `pnpm lint`                   | Run ESLint                                                 |
+| `pnpm lint:fix`               | Run ESLint with autofix                                    |
+| `pnpm format`                 | Run Prettier                                               |
+| `pnpm test`                   | Run Vitest                                                 |
 | `pnpm test:coverage`          | Vitest with coverage thresholds on `utils/` and `helpers/` |
-| `pnpm test:watch`             | Vitest watch mode                                 |
-| `pnpm test:e2e`               | Playwright smoke tests (starts dev server)        |
-| `pnpm test:e2e:ui`            | Playwright UI mode                                |
-| `pnpm test:e2e:report`        | Open last Playwright HTML report                  |
-| `pnpm backtest`               | Run strategy backtest (localhost only)            |
-| `pnpm analyze:post-close`     | Analyze post-close 24h behavior                   |
-| `pnpm backtest:cleanup`       | Remove old backtest reports                       |
-| `pnpm backtest:cache:cleanup` | Remove backtest cache files                       |
-| `pnpm ml:dataset`             | Generate ML training dataset from historical data |
-| `pnpm ml:train`               | Train logistic-regression entry model             |
-| `pnpm ml:eval`                | Evaluate model + strategy thresholds              |
-| `pnpm ml:optimize`            | Random-search strategy params with ML filter      |
-| `pnpm db:push`                | Apply Drizzle schema to `DATABASE_URL`            |
-| `pnpm cron:trigger`           | Manually hit the strategy cron endpoint           |
-| `pnpm railway:up`             | Deploy web service (alias for `railway:up:web`)   |
-| `pnpm railway:up:web`         | Deploy web service via Railway CLI                |
-| `pnpm railway:up:cron`        | Deploy cron service via Railway CLI               |
-| `pnpm version:bump`           | Bump `package.json` patch ahead of latest tag     |
-| `pnpm version:check`          | Verify version is ready for release               |
-| `pnpm fallow:audit`           | Run Fallow code-health audit                      |
-| `pnpm fallow:dead-code`       | List likely dead code                             |
-| `pnpm fallow:dupes`           | List duplicate code                               |
-| `pnpm fallow:health`          | Fallow health summary                             |
+| `pnpm test:watch`             | Vitest watch mode                                          |
+| `pnpm test:e2e`               | Playwright smoke tests (starts dev server)                 |
+| `pnpm test:e2e:ui`            | Playwright UI mode                                         |
+| `pnpm test:e2e:report`        | Open last Playwright HTML report                           |
+| `pnpm backtest`               | Run strategy backtest (localhost only)                     |
+| `pnpm analyze:post-close`     | Analyze post-close 24h behavior                            |
+| `pnpm backtest:cleanup`       | Remove old backtest reports                                |
+| `pnpm backtest:cache:cleanup` | Remove backtest cache files                                |
+| `pnpm ml:dataset`             | Generate ML training dataset from historical data          |
+| `pnpm ml:train`               | Train logistic-regression entry model                      |
+| `pnpm ml:eval`                | Evaluate model + strategy thresholds                       |
+| `pnpm ml:optimize`            | Random-search strategy params with ML filter               |
+| `pnpm db:push`                | Apply Drizzle schema to `DATABASE_URL`                     |
+| `pnpm cron:trigger`           | Manually hit the strategy cron endpoint                    |
+| `pnpm railway:up`             | Deploy web service (alias for `railway:up:web`)            |
+| `pnpm railway:up:web`         | Deploy web service via Railway CLI                         |
+| `pnpm railway:up:cron`        | Deploy cron service via Railway CLI                        |
+| `pnpm version:bump`           | Bump `package.json` patch ahead of latest tag              |
+| `pnpm version:check`          | Verify version is ready for release                        |
+| `pnpm fallow:audit`           | Run Fallow code-health audit                               |
+| `pnpm fallow:dead-code`       | List likely dead code                                      |
+| `pnpm fallow:dupes`           | List duplicate code                                        |
+| `pnpm fallow:health`          | Fallow health summary                                      |
 
 Backtest and ML scripts refuse to run when `NODE_ENV=production`.
 

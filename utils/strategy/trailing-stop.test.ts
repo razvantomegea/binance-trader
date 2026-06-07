@@ -90,5 +90,22 @@ describe("trailing-stop", () => {
 
   it("worst price is min of low and mark", () => {
     expect(getWorstObservedPrice({ low: 80, markPrice: 95 })).toBe(80);
+    expect(getWorstObservedPrice({ low: 80 })).toBe(80);
+  });
+
+  it("uses buy price when maxPriceAfterBuy is null", () => {
+    expect(
+      getTrailingReferencePrice({ buyPrice: 100, maxPriceAfterBuy: null }),
+    ).toBe(100);
+  });
+
+  it("uses close as mark when markPrice is omitted", () => {
+    expect(
+      getUpdatedPeakPrice({
+        currentMax: 100,
+        high: 105,
+        close: 110,
+      }),
+    ).toBe(110);
   });
 });

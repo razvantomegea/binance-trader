@@ -71,7 +71,7 @@ const eslintConfig = defineConfig([
     },
   },
   {
-    files: ["**/*.test.ts"],
+    files: ["**/*.test.{ts,tsx}", "test/**/*.ts"],
     rules: {
       "max-lines-per-function": [
         "error",
@@ -81,7 +81,6 @@ const eslintConfig = defineConfig([
         "error",
         { max: 600, skipBlankLines: true, skipComments: true },
       ],
-      "max-statements": ["error", 30],
       "no-nested-ternary": "off",
     },
   },

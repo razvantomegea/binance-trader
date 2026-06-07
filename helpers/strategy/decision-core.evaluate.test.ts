@@ -298,3 +298,65 @@ describe("evaluateDecision skip", () => {
     expect(result.action).toBe("SKIP");
   });
 });
+
+describe("evaluateDecision modelMinProbability gate", () => {
+  function entryReadyCandles(latestOpenTime = 1000 * HOUR_MS): CandleSlice[] {
+    return makeCandles(latestOpenTime, [
+      150,
+      ...Array(STRATEGY_LOOKBACK_CLOSES - 1).fill(100),
+    ]);
+  }
+
+  it("buys without model gate when modelMinProbability is unset", () => {
+    const result = evaluateDecision({
+      closed: entryReadyCandles(),
+      position: undefined,
+      cash: 10_000,
+      lastProcessedOpenTime: null,
+      lastSellOpenTime: null,
+    });
+
+    expect(result.action).toBe("BUY");
+  });
+
+  it("buys when entryProbability meets modelMinProbability", () => {
+    const result = evaluateDecision({
+      closed: entryReadyCandles(),
+      position: undefined,
+      cash: 10_000,
+      lastProcessedOpenTime: null,
+      lastSellOpenTime: null,
+      entryProbability: 0.7,
+      modelMinProbability: 0.5,
+    });
+
+    expect(result.action).toBe("BUY");
+  });
+
+  it("holds when entryProbability is below modelMinProbability", () => {
+    const result = evaluateDecision({
+      closed: entryReadyCandles(),
+      position: undefined,
+      cash: 10_000,
+      lastProcessedOpenTime: null,
+      lastSellOpenTime: null,
+      entryProbability: 0.4,
+      modelMinProbability: 0.5,
+    });
+
+    expect(result.action).toBe("HOLD");
+  });
+
+  it("holds when entryProbability is missing and modelMinProbability is set", () => {
+    const result = evaluateDecision({
+      closed: entryReadyCandles(),
+      position: undefined,
+      cash: 10_000,
+      lastProcessedOpenTime: null,
+      lastSellOpenTime: null,
+      modelMinProbability: 0.1,
+    });
+
+    expect(result.action).toBe("HOLD");
+  });
+});

@@ -42,6 +42,27 @@ describe("computePostClose24hExtrema", () => {
     expect(metrics.minPriceAfterClose24h).toBeNull();
   });
 
+  it("returns null metrics for invalid sell close price", () => {
+    const metrics = computePostClose24hExtrema({
+      klinesAsc,
+      sellCandleOpenTime: sellOpenTime,
+      sellClosePrice: 0,
+    });
+
+    expect(metrics.maxPriceAfterClose24h).toBeNull();
+    expect(metrics.minPriceAfterClose24h).toBeNull();
+  });
+
+  it("returns null metrics when sell candle is missing", () => {
+    const metrics = computePostClose24hExtrema({
+      klinesAsc,
+      sellCandleOpenTime: 99 * HOUR_MS,
+      sellClosePrice: 100,
+    });
+
+    expect(metrics.maxPriceAfterClose24h).toBeNull();
+  });
+
   it("uses partial window when fewer than 24 future candles exist", () => {
     const metrics = computePostClose24hExtrema({
       klinesAsc,
