@@ -5,6 +5,7 @@ import {
 import type { KlineCandle } from "@/types/binance";
 import type { MlHorizonHours, MlLabelMeta } from "@/types/ml-strategy";
 import { HOUR_MS } from "@/utils/binance/candle-time";
+import { safePct } from "@/utils/ml/safe-number";
 
 export interface BuildForwardLabelParams {
   klinesAsc: KlineCandle[];
@@ -18,13 +19,6 @@ export interface BuildForwardLabelParams {
 export interface BuildForwardLabelResult {
   label: 0 | 1;
   labelMeta: MlLabelMeta;
-}
-
-function safePct(numerator: number, denominator: number): number {
-  if (!Number.isFinite(denominator) || denominator <= 0) {
-    return 0;
-  }
-  return (numerator / denominator) * 100;
 }
 
 export function buildForwardLabel({

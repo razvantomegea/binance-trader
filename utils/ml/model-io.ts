@@ -80,20 +80,41 @@ export async function loadModelFromDir(dir: string): Promise<tf.LayersModel> {
     await readFile(modelJsonPath, "utf8"),
   ) as SavedModelJson;
 
-  const weightSpecs = modelJson.weightsManifest[0]?.weights ?? [];
-  const weightsBuffer = await readFile(weightsPath);
+  const weightSpecs =
+    modelJson.weightsManifest?.flatMap((entry) => entry.weights ?? []) ?? [];
+  const baseArtifacts = {
+    modelTopology: modelJson.modelTopology,
+    format: modelJson.format,
+    generatedBy: modelJson.generatedBy,
+    convertedBy: modelJson.convertedBy,
+  };
+
+  if (weightSpecs.length === 0) {
+    return tf.loadLayersModel(tf.io.fromMemory(baseArtifacts));
+  }
+
+  let weightsBuffer: Buffer;
+  try {
+    weightsBuffer = await readFile(weightsPath);
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      "code" in error &&
+      (error as NodeJS.ErrnoException).code === "ENOENT"
+    ) {
+      return tf.loadLayersModel(tf.io.fromMemory(baseArtifacts));
+    }
+    throw error;
+  }
 
   return tf.loadLayersModel(
     tf.io.fromMemory({
-      modelTopology: modelJson.modelTopology,
+      ...baseArtifacts,
       weightSpecs,
       weightData: weightsBuffer.buffer.slice(
         weightsBuffer.byteOffset,
         weightsBuffer.byteOffset + weightsBuffer.byteLength,
       ),
-      format: modelJson.format,
-      generatedBy: modelJson.generatedBy,
-      convertedBy: modelJson.convertedBy,
     }),
   );
 }

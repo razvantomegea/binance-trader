@@ -6,6 +6,7 @@ import {
 import { DEFAULT_STRATEGY_PARAMS } from "@/constants/strategy-params";
 import type { StrategyParams } from "@/types/strategy-params";
 import { isGainWithinBand } from "@/utils/strategy/price-change-conditions";
+import { safeRatio } from "@/utils/ml/safe-number";
 
 export const ML_FEATURE_NAMES = [
   "closeGainVsLowClose",
@@ -34,19 +35,12 @@ export interface BuildDecisionFeaturesResult {
   features: number[];
 }
 
-function safePct(numerator: number, denominator: number): number {
-  if (!Number.isFinite(denominator) || denominator <= 0) {
-    return 0;
-  }
-  return numerator / denominator;
-}
-
 function computeCloseReturns(closedAsc: CandleSlice[]): number[] {
   const returns: number[] = [];
   for (let i = 1; i < closedAsc.length; i += 1) {
     const prev = closedAsc[i - 1]!.close;
     const current = closedAsc[i]!.close;
-    returns.push(safePct(current - prev, prev));
+    returns.push(safeRatio(current - prev, prev));
   }
   return returns;
 }
@@ -69,7 +63,7 @@ function computeLookbackMaxDrawdownPct(closedAsc: CandleSlice[]): number {
     if (candle.close > peak) {
       peak = candle.close;
     }
-    const drawdown = safePct(peak - candle.close, peak);
+    const drawdown = safeRatio(peak - candle.close, peak);
     if (drawdown > maxDrawdown) {
       maxDrawdown = drawdown;
     }
@@ -94,8 +88,8 @@ export function buildDecisionFeatures({
   const { highClose, lowClose } = getCloseHighLow(closed);
   const { high24h, low24h } = get24hHighLow(closed);
 
-  const closeGainVsLowClose = safePct(latest.close - lowClose, lowClose);
-  const highCloseGainVsLowClose = safePct(highClose - lowClose, lowClose);
+  const closeGainVsLowClose = safeRatio(latest.close - lowClose, lowClose);
+  const highCloseGainVsLowClose = safeRatio(highClose - lowClose, lowClose);
 
   const closeInEntryBand = isGainWithinBand({
     value: latest.close,
@@ -121,7 +115,7 @@ export function buildDecisionFeatures({
 
   const avgCandleRangePct =
     closed.reduce(
-      (sum, candle) => sum + safePct(candle.high - candle.low, candle.close),
+      (sum, candle) => sum + safeRatio(candle.high - candle.low, candle.close),
       0,
     ) / closed.length;
 
@@ -144,7 +138,7 @@ export function buildDecisionFeatures({
   const hourOfDayNorm = new Date(latest.openTime).getUTCHours() / 23;
   const meanClose =
     closed.reduce((sum, candle) => sum + candle.close, 0) / closed.length;
-  const closeVsMeanClose = safePct(latest.close - meanClose, meanClose);
+  const closeVsMeanClose = safeRatio(latest.close - meanClose, meanClose);
 
   return {
     featureNames: [...ML_FEATURE_NAMES],

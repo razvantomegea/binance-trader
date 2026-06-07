@@ -44,6 +44,7 @@ import {
 } from "@/utils/ml/ml-artifact-paths";
 import { ensureTfCpuBackend } from "@/utils/ml/model-io";
 import { getTradingSymbols } from "@/utils/binance/get-usdt-symbols";
+import { parseCliNumber } from "./ml-cli-args";
 
 interface CliOptions {
   days: number;
@@ -70,7 +71,12 @@ function parseArgs(argv: string[]): CliOptions {
     const next = argv[i + 1];
 
     if (arg === "--days" && next) {
-      options.days = Number(next);
+      options.days = parseCliNumber({
+        flag: "--days",
+        value: next,
+        integer: true,
+        min: 1,
+      });
       i += 1;
     } else if (arg === "--symbols" && next) {
       options.symbols = next
@@ -79,25 +85,49 @@ function parseArgs(argv: string[]): CliOptions {
         .filter(Boolean);
       i += 1;
     } else if (arg === "--concurrency" && next) {
-      options.concurrency = Number(next);
+      options.concurrency = parseCliNumber({
+        flag: "--concurrency",
+        value: next,
+        integer: true,
+        min: 1,
+      });
       i += 1;
     } else if (arg === "--trials" && next) {
-      options.trials = Number(next);
+      options.trials = parseCliNumber({
+        flag: "--trials",
+        value: next,
+        integer: true,
+        min: 0,
+      });
       i += 1;
     } else if (arg === "--run-id" && next) {
       options.runId = next;
       i += 1;
     } else if (arg === "--seed" && next) {
-      options.seed = Number(next);
+      options.seed = parseCliNumber({
+        flag: "--seed",
+        value: next,
+        integer: true,
+        min: 0,
+      });
       i += 1;
     } else if (arg === "--model-run-id" && next) {
       options.modelRunId = next;
       i += 1;
     } else if (arg === "--model-min-prob" && next) {
-      options.modelMinProb = Number(next);
+      options.modelMinProb = parseCliNumber({
+        flag: "--model-min-prob",
+        value: next,
+        min: 0,
+        max: 1,
+      });
       i += 1;
     } else if (arg === "--fee-bps" && next) {
-      options.feeBps = Number(next);
+      options.feeBps = parseCliNumber({
+        flag: "--fee-bps",
+        value: next,
+        min: 0,
+      });
       i += 1;
     }
   }

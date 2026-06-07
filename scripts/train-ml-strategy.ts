@@ -10,6 +10,7 @@ import { getMlDatasetsDir } from "@/utils/ml/ml-artifact-paths";
 import { readJsonl } from "@/utils/ml/read-write-jsonl";
 import { ensureTfCpuBackend } from "@/utils/ml/model-io";
 import { ML_DEFAULT_EPOCHS } from "@/constants/ml-strategy";
+import { parseCliNumber } from "./ml-cli-args";
 
 interface CliOptions {
   dataset?: string;
@@ -31,7 +32,12 @@ function parseArgs(argv: string[]): CliOptions {
       options.runId = next;
       i += 1;
     } else if (arg === "--epochs" && next) {
-      options.epochs = Number(next);
+      options.epochs = parseCliNumber({
+        flag: "--epochs",
+        value: next,
+        integer: true,
+        min: 1,
+      });
       i += 1;
     }
   }
