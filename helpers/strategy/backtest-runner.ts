@@ -9,6 +9,7 @@ import {
 import { assertLocalhostOnly } from "@/helpers/strategy/backtest/assert-localhost-only";
 import { buildBacktestReport } from "@/helpers/strategy/backtest/build-backtest-report";
 import { liquidateAllOpenPositions } from "@/helpers/strategy/backtest/liquidate-open-positions";
+import { normalizeAndValidateUsdtSymbols } from "@/helpers/strategy/backtest/normalize-usdt-symbols";
 import {
   buildCheckTimeline,
   getClosedWindowAt,
@@ -37,40 +38,6 @@ import { processInBatches } from "@/utils/process-in-batches";
 const DEFAULT_FEE_BPS = 0;
 const PRELOAD_LOG_EVERY = 50;
 export const BACKTEST_CHECK_EVERY_MINUTES = 5;
-
-function normalizeAndValidateUsdtSymbols(symbols: string[]): string[] {
-  const normalized = symbols
-    .map((symbol) => symbol.trim().toUpperCase())
-    .filter(Boolean);
-
-  if (symbols.length > 0 && normalized.length === 0) {
-    throw new Error(
-      "config.symbols must include at least one non-empty USDT symbol.",
-    );
-  }
-
-  if (normalized.includes("USDT")) {
-    throw new Error(
-      'Invalid symbol "USDT" in config.symbols. Use market pairs like BTCUSDT.',
-    );
-  }
-
-  const invalid = normalized.filter((symbol) => !symbol.endsWith("USDT"));
-  if (invalid.length > 0) {
-    throw new Error(
-      `Only USDT symbols are allowed. Invalid: ${invalid.join(", ")}`,
-    );
-  }
-
-  const deduped = [...new Set(normalized)].sort();
-  if (deduped.length === 0) {
-    throw new Error(
-      "runBacktest requires at least one valid USDT symbol after normalization.",
-    );
-  }
-
-  return deduped;
-}
 
 export function createDefaultBacktestConfig(
   overrides: Partial<BacktestConfig> = {},
@@ -255,7 +222,7 @@ function applyDrawdownLiquidationIfNeeded(params: {
   return nextPeak;
 }
 
-async function runSimulationStep(params: {
+type RunSimulationStepParams = {
   openTime: number;
   symbols: string[];
   concurrency: number;
@@ -267,17 +234,12 @@ async function runSimulationStep(params: {
   ledgerMutex: ReturnType<typeof createAsyncMutex>;
   markPriceCursorBySymbol: Map<string, number>;
   exposurePeakEquity: number | null;
-}): Promise<{
-  equityPoint: EquityPoint;
-  nextExposurePeakEquity: number | null;
-}> {
-  const markPrices = buildMarkPricesForOpenPositions({
-    ledger: params.ledger,
-    klinesBySymbol: params.klinesBySymbol,
-    openTime: params.openTime,
-    markPriceCursorBySymbol: params.markPriceCursorBySymbol,
-  });
+};
 
+async function processSymbolsAtOpenTime(
+  params: RunSimulationStepParams,
+  markPrices: Map<string, number>,
+): Promise<void> {
   await processInBatches({
     items: params.symbols,
     batchSize: params.concurrency,
@@ -295,6 +257,20 @@ async function runSimulationStep(params: {
         markPrices,
       }),
   });
+}
+
+async function runSimulationStep(params: RunSimulationStepParams): Promise<{
+  equityPoint: EquityPoint;
+  nextExposurePeakEquity: number | null;
+}> {
+  const markPrices = buildMarkPricesForOpenPositions({
+    ledger: params.ledger,
+    klinesBySymbol: params.klinesBySymbol,
+    openTime: params.openTime,
+    markPriceCursorBySymbol: params.markPriceCursorBySymbol,
+  });
+
+  await processSymbolsAtOpenTime(params, markPrices);
 
   const markPricesAfterTrades = buildMarkPricesForOpenPositions({
     ledger: params.ledger,

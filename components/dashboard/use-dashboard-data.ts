@@ -309,6 +309,36 @@ function useCronNotifications(cronAlerts: CronAlert[]): void {
   }, [cronAlerts]);
 }
 
+function composeDashboardDataResult(params: {
+  core: DashboardCoreState;
+  strategy: StrategyActionState;
+  position: PositionActionState;
+  cronAlerts: CronAlert[];
+  selectUsdtSymbol: (symbol: string) => void;
+  refresh: () => Promise<void>;
+  closePosition: (symbol: string) => Promise<void>;
+  toggleStrategy: () => Promise<void>;
+}): UseDashboardDataResult {
+  return {
+    selectedSymbol: params.core.selectedSymbol,
+    symbolRows: params.core.symbolRows,
+    portfolio: params.core.portfolio,
+    trades: params.core.trades,
+    snapshots: params.core.snapshots,
+    loadingSymbols: params.core.loadingSymbols,
+    loadingPortfolio: params.core.loadingPortfolio,
+    strategyStatus: params.strategy.strategyStatus,
+    strategyActionPending: params.strategy.strategyActionPending,
+    cronAlerts: params.cronAlerts,
+    closingSymbol: params.position.closingSymbol,
+    closePositionError: params.position.closePositionError,
+    selectUsdtSymbol: params.selectUsdtSymbol,
+    refresh: params.refresh,
+    closePosition: params.closePosition,
+    toggleStrategy: params.toggleStrategy,
+  };
+}
+
 export function useDashboardData(): UseDashboardDataResult {
   const core = useDashboardCoreState();
   const strategy = useStrategyActionState();
@@ -357,22 +387,14 @@ export function useDashboardData(): UseDashboardDataResult {
   });
   useCronNotifications(cronAlerts);
 
-  return {
-    selectedSymbol: core.selectedSymbol,
-    symbolRows: core.symbolRows,
-    portfolio: core.portfolio,
-    trades: core.trades,
-    snapshots: core.snapshots,
-    loadingSymbols: core.loadingSymbols,
-    loadingPortfolio: core.loadingPortfolio,
-    strategyStatus: strategy.strategyStatus,
-    strategyActionPending: strategy.strategyActionPending,
+  return composeDashboardDataResult({
+    core,
+    strategy,
+    position,
     cronAlerts,
-    closingSymbol: position.closingSymbol,
-    closePositionError: position.closePositionError,
     selectUsdtSymbol,
     refresh,
     closePosition,
     toggleStrategy,
-  };
+  });
 }

@@ -311,31 +311,43 @@ function createBaseConfig(params: {
   });
 }
 
+async function loadOptimizationInputs(params: {
+  options: CliOptions;
+  symbols: string[];
+}) {
+  const { fetchStartTime, endTime, ranges } = resolveSimulationRanges(
+    params.options.days,
+  );
+  console.log(
+    `Optimizing strategy params: symbols=${params.symbols.length}, days=${params.options.days}, trials=${params.options.trials}, feeBps=${params.options.feeBps}`,
+  );
+  const klinesBySymbol = await loadHistoricalKlinesBySymbol({
+    symbols: params.symbols,
+    interval: STRATEGY_INTERVAL,
+    startTime: fetchStartTime,
+    endTime,
+    concurrency: params.options.concurrency,
+  });
+  const entryProbabilityBySymbol = await loadOptionalEntryProbabilities({
+    modelRunId: params.options.modelRunId,
+    symbols: params.symbols,
+    klinesBySymbol,
+    modelMinProb: params.options.modelMinProb,
+  });
+  const baseConfig = createBaseConfig({
+    options: params.options,
+    symbols: params.symbols,
+  });
+  return { ranges, klinesBySymbol, entryProbabilityBySymbol, baseConfig };
+}
+
 async function runOptimization(
   options: CliOptions,
 ): Promise<MlOptimizationRun> {
   const symbols = await resolveSymbols(options.symbols);
   const rng = createRandomSource(options.seed);
-  const { fetchStartTime, endTime, ranges } = resolveSimulationRanges(
-    options.days,
-  );
-  console.log(
-    `Optimizing strategy params: symbols=${symbols.length}, days=${options.days}, trials=${options.trials}, feeBps=${options.feeBps}`,
-  );
-  const klinesBySymbol = await loadHistoricalKlinesBySymbol({
-    symbols,
-    interval: STRATEGY_INTERVAL,
-    startTime: fetchStartTime,
-    endTime,
-    concurrency: options.concurrency,
-  });
-  const entryProbabilityBySymbol = await loadOptionalEntryProbabilities({
-    modelRunId: options.modelRunId,
-    symbols,
-    klinesBySymbol,
-    modelMinProb: options.modelMinProb,
-  });
-  const baseConfig = createBaseConfig({ options, symbols });
+  const { ranges, klinesBySymbol, entryProbabilityBySymbol, baseConfig } =
+    await loadOptimizationInputs({ options, symbols });
   const candidates = uniqueCandidates([
     DEFAULT_STRATEGY_PARAMS,
     ...Array.from({ length: options.trials }, () =>
