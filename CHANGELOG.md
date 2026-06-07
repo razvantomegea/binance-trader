@@ -6,6 +6,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 Versions are auto-released on every merge to `main`.
 
+## [1.0.3] - 2026-06-07
+
+- Implement conditional rendering for strategy toggle button based on environment (573501d)
+
 ## [1.0.2] - 2026-06-07
 
 - Update README.md and version retrieval logic to clarify stable tag requirements (6a941f8)
