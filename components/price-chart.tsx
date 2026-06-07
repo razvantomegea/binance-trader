@@ -20,6 +20,32 @@ interface ChartPoint {
 
 const formatTooltipValue = (value: number) => value.toFixed(6);
 const formatYAxis = (value: number) => value.toFixed(4);
+const CHART_LIMIT = 200;
+
+function buildChartUrl(symbol: string, interval: CandleInterval): string {
+  return `/api/klines?symbol=${encodeURIComponent(symbol)}&interval=${interval}&limit=${CHART_LIMIT}`;
+}
+
+function mapCandlesToChartPoints(candles: KlineCandle[]): ChartPoint[] {
+  return candles.map((candle) => ({
+    time: new Date(candle.openTime).toLocaleString(),
+    close: candle.close,
+  }));
+}
+
+function ChartStateMessage({
+  text,
+  className,
+}: {
+  text: string;
+  className: string;
+}) {
+  return (
+    <div className={`flex items-center justify-center text-sm ${className} ${chartContainerClassName}`}>
+      {text}
+    </div>
+  );
+}
 
 export function PriceChart({ symbol, interval }: PriceChartProps) {
   const [data, setData] = useState<ChartPoint[]>([]);
@@ -34,9 +60,7 @@ export function PriceChart({ symbol, interval }: PriceChartProps) {
       setError(null);
 
       try {
-        const response = await fetch(
-          `/api/klines?symbol=${encodeURIComponent(symbol)}&interval=${interval}&limit=200`,
-        );
+        const response = await fetch(buildChartUrl(symbol, interval));
 
         if (!response.ok) {
           throw new Error("Failed to load chart data");
@@ -47,12 +71,7 @@ export function PriceChart({ symbol, interval }: PriceChartProps) {
           return;
         }
 
-        setData(
-          json.candles.map((candle) => ({
-            time: new Date(candle.openTime).toLocaleString(),
-            close: candle.close,
-          })),
-        );
+        setData(mapCandlesToChartPoints(json.candles));
       } catch {
         if (!cancelled) {
           setError("Chart unavailable");
@@ -73,23 +92,11 @@ export function PriceChart({ symbol, interval }: PriceChartProps) {
   }, [symbol, interval]);
 
   if (loading) {
-    return (
-      <div
-        className={`flex items-center justify-center text-sm text-zinc-500 ${chartContainerClassName}`}
-      >
-        Loading chart...
-      </div>
-    );
+    return <ChartStateMessage text="Loading chart..." className="text-zinc-500" />;
   }
 
   if (error) {
-    return (
-      <div
-        className={`flex items-center justify-center text-sm text-red-500 ${chartContainerClassName}`}
-      >
-        {error}
-      </div>
-    );
+    return <ChartStateMessage text={error} className="text-red-500" />;
   }
 
   return (

@@ -12,14 +12,14 @@ export function getTrailingReferencePrice(
   return Math.max(position.buyPrice, peak);
 }
 
-export function getTrailingStopPrice(params: {
+function getTrailingStopPrice(params: {
   trailingRef: number;
   thresholdPct: number;
 }): number {
   return params.trailingRef * (1 - params.thresholdPct);
 }
 
-export function getMaxLossFloorPrice(params: {
+function getMaxLossFloorPrice(params: {
   buyPrice: number;
   thresholdPct: number;
 }): number {

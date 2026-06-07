@@ -3,6 +3,7 @@
 import { readdir, rm, stat } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { parseCleanupCliArgs, selectByMaxAge } from "./cleanup-cli-shared.mjs";
 
 const REPORT_DIR = join(
   dirname(fileURLToPath(import.meta.url)),
@@ -10,38 +11,6 @@ const REPORT_DIR = join(
   "backtest-results",
 );
 const REPORT_PATTERN = /^backtest-\d+\.json$/;
-
-function parseArgs(argv) {
-  let dryRun = false;
-  let keep = 0;
-
-  for (const arg of argv) {
-    if (arg === "--dry-run") {
-      dryRun = true;
-      continue;
-    }
-
-    if (arg.startsWith("--keep=")) {
-      keep = Number(arg.slice("--keep=".length));
-      continue;
-    }
-
-    if (arg === "--help" || arg === "-h") {
-      console.log(`Usage: pnpm backtest:cleanup [--dry-run] [--keep=N]
-
-Deletes backtest report JSON files from backtest-results/.
-Default: remove all reports. Use --keep=N to keep the N newest files.`);
-      process.exit(0);
-    }
-  }
-
-  if (!Number.isInteger(keep) || keep < 0) {
-    console.error("--keep must be a non-negative integer");
-    process.exit(1);
-  }
-
-  return { dryRun, keep };
-}
 
 async function listReports() {
   let entries;
@@ -75,7 +44,15 @@ async function listReports() {
 }
 
 async function main() {
-  const { dryRun, keep } = parseArgs(process.argv.slice(2));
+  const { dryRun, keep, maxAgeDays } = parseCleanupCliArgs(
+    process.argv.slice(2),
+    `Usage: pnpm backtest:cleanup [--dry-run] [--keep=N] [--max-age-days=N]
+
+Deletes backtest report JSON files from backtest-results/.
+Default: remove all reports.
+Use --max-age-days=N to delete only files older than N days.
+Use --keep=N to keep the N newest matched files.`,
+  );
   const reports = await listReports();
 
   if (reports.length === 0) {
@@ -83,10 +60,16 @@ async function main() {
     return;
   }
 
-  const toDelete = keep > 0 ? reports.slice(keep) : reports;
+  const candidates = selectByMaxAge(reports, maxAgeDays);
+  if (candidates.length === 0) {
+    console.log("No report files matched cleanup criteria.");
+    return;
+  }
+
+  const toDelete = keep > 0 ? candidates.slice(keep) : candidates;
 
   if (toDelete.length === 0) {
-    console.log(`Keeping all ${reports.length} report(s). Nothing to delete.`);
+    console.log(`Keeping all ${candidates.length} matched report(s). Nothing to delete.`);
     return;
   }
 
@@ -98,7 +81,7 @@ async function main() {
     }
   }
 
-  const kept = reports.length - toDelete.length;
+  const kept = candidates.length - toDelete.length;
   console.log(
     dryRun
       ? `Dry run complete. ${toDelete.length} file(s) would be deleted${kept > 0 ? `, ${kept} kept` : ""}.`

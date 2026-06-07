@@ -14,6 +14,29 @@ interface ComputePostClose24hExtremaParams {
   sellCandleIndex?: number;
 }
 
+function resolveSellIndex(params: ComputePostClose24hExtremaParams): number {
+  if (params.sellCandleIndex !== undefined) {
+    return params.sellCandleIndex;
+  }
+  return params.klinesAsc.findIndex(
+    (candle) => candle.openTime === params.sellCandleOpenTime,
+  );
+}
+
+function findFutureExtrema(future: KlineCandle[]): { postMax: number; postMin: number } {
+  let postMax = -Infinity;
+  let postMin = Infinity;
+  for (const candle of future) {
+    if (candle.high > postMax) {
+      postMax = candle.high;
+    }
+    if (candle.low < postMin) {
+      postMin = candle.low;
+    }
+  }
+  return { postMax, postMin };
+}
+
 export function computePostClose24hExtrema({
   klinesAsc,
   sellCandleOpenTime,
@@ -24,9 +47,12 @@ export function computePostClose24hExtrema({
     return { ...NULL_TRADE_POST_CLOSE_24H };
   }
 
-  const idx =
-    sellCandleIndex ??
-    klinesAsc.findIndex((candle) => candle.openTime === sellCandleOpenTime);
+  const idx = resolveSellIndex({
+    klinesAsc,
+    sellCandleOpenTime,
+    sellClosePrice,
+    sellCandleIndex,
+  });
 
   if (idx < 0) {
     return { ...NULL_TRADE_POST_CLOSE_24H };
@@ -38,17 +64,7 @@ export function computePostClose24hExtrema({
     return { ...NULL_TRADE_POST_CLOSE_24H };
   }
 
-  let postMax = -Infinity;
-  let postMin = Infinity;
-
-  for (const candle of future) {
-    if (candle.high > postMax) {
-      postMax = candle.high;
-    }
-    if (candle.low < postMin) {
-      postMin = candle.low;
-    }
-  }
+  const { postMax, postMin } = findFutureExtrema(future);
 
   if (!Number.isFinite(postMax) || !Number.isFinite(postMin)) {
     return { ...NULL_TRADE_POST_CLOSE_24H };

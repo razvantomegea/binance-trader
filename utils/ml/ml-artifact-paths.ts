@@ -2,7 +2,7 @@ import { join } from "node:path";
 
 import { getBacktestCacheRoot } from "@/utils/backtest-cache-root";
 
-export function getMlCacheRoot(): string {
+function getMlCacheRoot(): string {
   return join(getBacktestCacheRoot(), "ml");
 }
 

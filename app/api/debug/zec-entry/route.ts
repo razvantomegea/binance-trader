@@ -23,6 +23,21 @@ import type { CandleSlice } from "@/helpers/strategy/decision-core";
 
 const SYMBOL = "ZECUSDT";
 
+interface PositionSnapshot {
+  buyOpenTimeMs: number | null;
+  dbPosition: {
+    buyPrice: string;
+    qty: string;
+    maxPriceAfterBuy: string | null;
+    buyTime: string;
+  } | null;
+  buyTrade: {
+    price: string;
+    reason: string;
+    candleOpenTime: string;
+  } | null;
+}
+
 function diagnose(closed: CandleSlice[], label: string) {
   const latest = closed[0]!;
   const { high24h, low24h, highOpenTime, lowOpenTime } = get24hHighLow(closed);
@@ -76,52 +91,18 @@ function diagnose(closed: CandleSlice[], label: string) {
   };
 }
 
-export async function GET() {
+async function loadPositionSnapshot(): Promise<PositionSnapshot> {
   const db = getDb();
   const [pos] = await db
     .select()
     .from(positions)
     .where(eq(positions.symbol, SYMBOL));
-  const buyTrades = await db
-    .select()
-    .from(trades)
-    .where(eq(trades.symbol, SYMBOL));
+  const buyTrades = await db.select().from(trades).where(eq(trades.symbol, SYMBOL));
+  const buyTradeRow = buyTrades.find((trade) => trade.side === "BUY");
+  const buyOpenTimeMs = pos?.buyTime.getTime() ?? buyTradeRow?.candleOpenTime.getTime() ?? null;
 
-  const buyTradeRow = buyTrades.find((t) => t.side === "BUY");
-  const buyOpenTimeMs = pos
-    ? pos.buyTime.getTime()
-    : buyTradeRow
-      ? buyTradeRow.candleOpenTime.getTime()
-      : null;
-
-  // Reconstruct the window as it was at buy time.
-  let atBuy: ReturnType<typeof diagnose> | null = null;
-  if (buyOpenTimeMs !== null) {
-    const histAsc = await getHistoricalClosedKlines({
-      symbol: SYMBOL,
-      interval: STRATEGY_INTERVAL,
-      startTime: buyOpenTimeMs - (STRATEGY_LOOKBACK_CLOSES + 2) * HOUR_MS,
-      endTime: buyOpenTimeMs,
-    });
-    const upToBuy = histAsc.filter((c) => c.openTime <= buyOpenTimeMs);
-    const window = upToBuy.slice(-STRATEGY_LOOKBACK_CLOSES).reverse();
-    if (window.length === STRATEGY_LOOKBACK_CLOSES) {
-      atBuy = diagnose(window, "at_buy");
-    }
-  }
-
-  // Live current window for comparison.
-  const liveClosed = await getRecentClosedKlines({
-    symbol: SYMBOL,
-    interval: STRATEGY_INTERVAL,
-    count: STRATEGY_LOOKBACK_CLOSES,
-  });
-  const live =
-    liveClosed.length === STRATEGY_LOOKBACK_CLOSES
-      ? diagnose(liveClosed, "live_now")
-      : null;
-
-  const payload = {
+  return {
+    buyOpenTimeMs,
     dbPosition: pos
       ? {
           buyPrice: pos.buyPrice,
@@ -137,11 +118,43 @@ export async function GET() {
           candleOpenTime: buyTradeRow.candleOpenTime.toISOString(),
         }
       : null,
-    atBuy,
-    live,
   };
+}
 
-  // #region agent log
+async function buildAtBuyDiagnosis(
+  buyOpenTimeMs: number | null,
+): Promise<ReturnType<typeof diagnose> | null> {
+  if (buyOpenTimeMs === null) {
+    return null;
+  }
+
+  const histAsc = await getHistoricalClosedKlines({
+    symbol: SYMBOL,
+    interval: STRATEGY_INTERVAL,
+    startTime: buyOpenTimeMs - (STRATEGY_LOOKBACK_CLOSES + 2) * HOUR_MS,
+    endTime: buyOpenTimeMs,
+  });
+  const upToBuy = histAsc.filter((candle) => candle.openTime <= buyOpenTimeMs);
+  const window = upToBuy.slice(-STRATEGY_LOOKBACK_CLOSES).reverse();
+  if (window.length !== STRATEGY_LOOKBACK_CLOSES) {
+    return null;
+  }
+  return diagnose(window, "at_buy");
+}
+
+async function buildLiveDiagnosis(): Promise<ReturnType<typeof diagnose> | null> {
+  const liveClosed = await getRecentClosedKlines({
+    symbol: SYMBOL,
+    interval: STRATEGY_INTERVAL,
+    count: STRATEGY_LOOKBACK_CLOSES,
+  });
+  if (liveClosed.length !== STRATEGY_LOOKBACK_CLOSES) {
+    return null;
+  }
+  return diagnose(liveClosed, "live_now");
+}
+
+function sendDebugPayload(payload: unknown): void {
   fetch("http://127.0.0.1:7441/ingest/ab258800-65a4-4178-a40e-0e355625dde2", {
     method: "POST",
     headers: {
@@ -157,7 +170,21 @@ export async function GET() {
       timestamp: Date.now(),
     }),
   }).catch(() => {});
-  // #endregion
+}
+
+export async function GET() {
+  const snapshot = await loadPositionSnapshot();
+  const atBuy = await buildAtBuyDiagnosis(snapshot.buyOpenTimeMs);
+  const live = await buildLiveDiagnosis();
+
+  const payload = {
+    dbPosition: snapshot.dbPosition,
+    buyTrade: snapshot.buyTrade,
+    atBuy,
+    live,
+  };
+
+  sendDebugPayload(payload);
 
   return NextResponse.json(payload);
 }

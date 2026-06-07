@@ -2,7 +2,7 @@ import { ML_DRAWDOWN_PENALTY } from "@/constants/ml-strategy";
 import type { BacktestReport } from "@/types/backtest";
 import type { MlRiskAdjustedMetrics } from "@/types/ml-strategy";
 
-export function computeRiskAdjustedScore(params: {
+function computeRiskAdjustedScore(params: {
   pnlPct: number;
   maxDrawdownPct: number;
   drawdownPenalty?: number;

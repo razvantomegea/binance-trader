@@ -5,6 +5,13 @@ interface PortfolioSummaryProps {
   loading: boolean;
 }
 
+interface PnlItemProps {
+  label: string;
+  value: number;
+  pct: number;
+  positive: boolean;
+}
+
 function formatUsd(value: number): string {
   return value.toLocaleString(undefined, {
     minimumFractionDigits: 2,
@@ -14,6 +21,31 @@ function formatUsd(value: number): string {
 
 function signed(value: number, formatter: (input: number) => string): string {
   return `${value >= 0 ? "+" : "-"}${formatter(Math.abs(value))}`;
+}
+
+function SummaryMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-zinc-500">{label}</p>
+      <p className="font-semibold tabular-nums">{value}</p>
+    </div>
+  );
+}
+
+function PnlMetric({ label, value, pct, positive }: PnlItemProps) {
+  return (
+    <div>
+      <p className="text-zinc-500">{label}</p>
+      <p
+        className={`font-semibold tabular-nums ${positive ? "text-emerald-600" : "text-red-600"}`}
+      >
+        {signed(value, (num) => `$${formatUsd(num)}`)} ({signed(pct, (num) =>
+          num.toFixed(2),
+        )}
+        %)
+      </p>
+    </div>
+  );
 }
 
 export function PortfolioSummary({
@@ -34,36 +66,20 @@ export function PortfolioSummary({
 
   return (
     <div className="flex flex-wrap gap-6 text-sm">
-      <div>
-        <p className="text-zinc-500">Cash</p>
-        <p className="font-semibold tabular-nums">
-          ${formatUsd(portfolio.cash)}
-        </p>
-      </div>
-      <div>
-        <p className="text-zinc-500">Equity</p>
-        <p className="font-semibold tabular-nums">
-          ${formatUsd(portfolio.equity)}
-        </p>
-      </div>
-      <div>
-        <p className="text-zinc-500">Realized (closed)</p>
-        <p
-          className={`font-semibold tabular-nums ${realizedPositive ? "text-emerald-600" : "text-red-600"}`}
-        >
-          {signed(portfolio.realizedPnl, (value) => `$${formatUsd(value)}`)} (
-          {signed(portfolio.realizedPnlPct, (value) => value.toFixed(2))}%)
-        </p>
-      </div>
-      <div>
-        <p className="text-zinc-500">Unrealized (open)</p>
-        <p
-          className={`font-semibold tabular-nums ${unrealizedPositive ? "text-emerald-600" : "text-red-600"}`}
-        >
-          {signed(portfolio.unrealizedPnl, (value) => `$${formatUsd(value)}`)} (
-          {signed(portfolio.unrealizedPnlPct, (value) => value.toFixed(2))}%)
-        </p>
-      </div>
+      <SummaryMetric label="Cash" value={`$${formatUsd(portfolio.cash)}`} />
+      <SummaryMetric label="Equity" value={`$${formatUsd(portfolio.equity)}`} />
+      <PnlMetric
+        label="Realized (closed)"
+        value={portfolio.realizedPnl}
+        pct={portfolio.realizedPnlPct}
+        positive={realizedPositive}
+      />
+      <PnlMetric
+        label="Unrealized (open)"
+        value={portfolio.unrealizedPnl}
+        pct={portfolio.unrealizedPnlPct}
+        positive={unrealizedPositive}
+      />
       <div>
         <p className="text-zinc-500">Total P&amp;L</p>
         <p

@@ -17,7 +17,9 @@ export function isGainWithinBand({
   minPct,
   maxPct,
 }: GainWithinBandParams): boolean {
-  if (ref <= 0) return false;
+  if (ref <= 0) {
+    return false;
+  }
   const gain = (value - ref) / ref;
   return gain >= minPct && gain <= maxPct;
 }

@@ -175,6 +175,101 @@ async function fetchKlinesRange(params: {
   return fetched;
 }
 
+async function prependMissingRange(params: {
+  merged: KlineCandle[];
+  symbol: string;
+  interval: CandleInterval;
+  startTime: number;
+  cappedEndTime: number;
+}): Promise<KlineCandle[]> {
+  const firstOpenTime = params.merged[0]?.openTime;
+  if (params.merged.length > 0 && firstOpenTime !== undefined && firstOpenTime <= params.startTime) {
+    return params.merged;
+  }
+
+  const prependEnd =
+    firstOpenTime !== undefined ? firstOpenTime - HOUR_MS : params.cappedEndTime;
+  if (prependEnd < params.startTime) {
+    return params.merged;
+  }
+
+  const prepended = await fetchKlinesRange({
+    symbol: params.symbol,
+    interval: params.interval,
+    startTime: params.startTime,
+    endTime: prependEnd,
+  });
+  return filterKlinesInRange({
+    klines: mergeAscendingKlines(prepended, params.merged),
+    startTime: params.startTime,
+    endTime: params.cappedEndTime,
+  });
+}
+
+async function appendMissingRange(params: {
+  merged: KlineCandle[];
+  symbol: string;
+  interval: CandleInterval;
+  startTime: number;
+  cappedEndTime: number;
+}): Promise<KlineCandle[]> {
+  const lastOpenTime = params.merged[params.merged.length - 1]?.openTime;
+  if (params.merged.length > 0 && lastOpenTime !== undefined && lastOpenTime >= params.cappedEndTime) {
+    return params.merged;
+  }
+
+  const appendStart = lastOpenTime !== undefined ? lastOpenTime + HOUR_MS : params.startTime;
+  if (appendStart > params.cappedEndTime) {
+    return params.merged;
+  }
+
+  const appended = await fetchKlinesRange({
+    symbol: params.symbol,
+    interval: params.interval,
+    startTime: appendStart,
+    endTime: params.cappedEndTime,
+  });
+  return filterKlinesInRange({
+    klines: mergeAscendingKlines(params.merged, appended),
+    startTime: params.startTime,
+    endTime: params.cappedEndTime,
+  });
+}
+
+async function hydrateHistoricalRange(params: {
+  symbol: string;
+  interval: CandleInterval;
+  startTime: number;
+  cappedEndTime: number;
+}): Promise<KlineCandle[]> {
+  const reusable = await findReusableHistoricalKlinesCache({
+    symbol: params.symbol,
+    interval: params.interval,
+    startTime: params.startTime,
+    endTime: params.cappedEndTime,
+  });
+
+  const fromCache = filterKlinesInRange({
+    klines: reusable?.klines ?? [],
+    startTime: params.startTime,
+    endTime: params.cappedEndTime,
+  });
+  const withPrepended = await prependMissingRange({
+    merged: fromCache,
+    symbol: params.symbol,
+    interval: params.interval,
+    startTime: params.startTime,
+    cappedEndTime: params.cappedEndTime,
+  });
+  return appendMissingRange({
+    merged: withPrepended,
+    symbol: params.symbol,
+    interval: params.interval,
+    startTime: params.startTime,
+    cappedEndTime: params.cappedEndTime,
+  });
+}
+
 /** Closed candles ascending by openTime (excludes currently forming candle). */
 export async function getHistoricalClosedKlines({
   symbol,
@@ -192,62 +287,12 @@ export async function getHistoricalClosedKlines({
     return [];
   }
 
-  const reusable = await findReusableHistoricalKlinesCache({
+  const merged = await hydrateHistoricalRange({
     symbol,
     interval,
     startTime,
-    endTime: cappedEndTime,
+    cappedEndTime,
   });
-
-  let merged = filterKlinesInRange({
-    klines: reusable?.klines ?? [],
-    startTime,
-    endTime: cappedEndTime,
-  });
-
-  const firstOpenTime = merged[0]?.openTime;
-  if (
-    merged.length === 0 ||
-    (firstOpenTime !== undefined && firstOpenTime > startTime)
-  ) {
-    const prependEnd =
-      firstOpenTime !== undefined ? firstOpenTime - HOUR_MS : cappedEndTime;
-    if (prependEnd >= startTime) {
-      const prepended = await fetchKlinesRange({
-        symbol,
-        interval,
-        startTime,
-        endTime: prependEnd,
-      });
-      merged = filterKlinesInRange({
-        klines: mergeAscendingKlines(prepended, merged),
-        startTime,
-        endTime: cappedEndTime,
-      });
-    }
-  }
-
-  const lastOpenTime = merged[merged.length - 1]?.openTime;
-  if (
-    merged.length === 0 ||
-    (lastOpenTime !== undefined && lastOpenTime < cappedEndTime)
-  ) {
-    const appendStart =
-      lastOpenTime !== undefined ? lastOpenTime + HOUR_MS : startTime;
-    if (appendStart <= cappedEndTime) {
-      const appended = await fetchKlinesRange({
-        symbol,
-        interval,
-        startTime: appendStart,
-        endTime: cappedEndTime,
-      });
-      merged = filterKlinesInRange({
-        klines: mergeAscendingKlines(merged, appended),
-        startTime,
-        endTime: cappedEndTime,
-      });
-    }
-  }
 
   if (merged.length > 0) {
     await writeHistoricalKlinesCache({

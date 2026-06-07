@@ -10,7 +10,7 @@ import { getMlDatasetsDir } from "@/utils/ml/ml-artifact-paths";
 import { readJsonl } from "@/utils/ml/read-write-jsonl";
 import { ensureTfCpuBackend } from "@/utils/ml/model-io";
 import { ML_DEFAULT_EPOCHS } from "@/constants/ml-strategy";
-import { parseCliNumber } from "./ml-cli-args";
+import { parseCliNumber } from "./ml/parse-ml-cli-args";
 
 interface CliOptions {
   dataset?: string;

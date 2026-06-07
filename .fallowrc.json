@@ -1,0 +1,32 @@
+{
+  "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
+  "entry": [
+    "scripts/run-ml.mjs",
+    "scripts/generate-ml-backtest-dataset.ts",
+    "scripts/train-ml-strategy.ts",
+    "scripts/evaluate-ml-strategy.ts",
+    "scripts/optimize-strategy-params.ts",
+    "scripts/run-backtest-runner.ts",
+    "scripts/cleanup-backtest-cache.mjs",
+    "scripts/cleanup-backtest-reports.mjs",
+    "public/sw.js"
+  ],
+  "ignoreDependencies": [
+    "@railway/cli",
+    "react-is"
+  ],
+  "workspaces": {
+    "packages": ["."]
+  },
+  "duplicates": {
+    "minOccurrences": 3
+  },
+  "audit": {
+    "gate": "new-only",
+    "healthBaseline": ".fallow-baselines/health.json",
+    "deadCodeBaseline": ".fallow-baselines/dead-code.json"
+  },
+  "rules": {
+    "unused-dependencies": "warn"
+  }
+}

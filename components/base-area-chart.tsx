@@ -26,6 +26,78 @@ interface BaseAreaChartProps {
 
 const COMPACT_BREAKPOINT = 640;
 
+function renderTooltipValue(
+  valueFormatter: (value: number) => string,
+  label: string,
+  value: number,
+) {
+  return [valueFormatter(value), label];
+}
+
+function getTooltipContentStyle(compact: boolean) {
+  return {
+    backgroundColor: "#09090b",
+    border: "1px solid #27272a",
+    borderRadius: "0.5rem",
+    fontSize: compact ? 12 : 14,
+  };
+}
+
+function BaseAreaChartContent({
+  data,
+  dataKey,
+  color,
+  gradientId,
+  tooltipLabel,
+  tooltipValueFormatter,
+  yAxisDomain,
+  yAxisFormatter,
+  compact,
+  width,
+  height,
+}: BaseAreaChartProps & { compact: boolean; width: number; height: number }) {
+  return (
+    <AreaChart
+      width={width}
+      height={height}
+      data={data}
+      margin={{ top: 4, right: compact ? 4 : 8, left: 0, bottom: 0 }}
+    >
+      <defs>
+        <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="5%" stopColor={color} stopOpacity={0.35} />
+          <stop offset="95%" stopColor={color} stopOpacity={0} />
+        </linearGradient>
+      </defs>
+      <CartesianGrid strokeDasharray="3 3" stroke="#27272a" opacity={0.3} />
+      <XAxis dataKey="time" hide />
+      <YAxis
+        domain={yAxisDomain}
+        tick={{ fontSize: compact ? 10 : 11 }}
+        width={compact ? 52 : 70}
+        tickFormatter={yAxisFormatter}
+      />
+      <Tooltip
+        formatter={(value: number) =>
+          renderTooltipValue(tooltipValueFormatter, tooltipLabel, value)
+        }
+        labelFormatter={(label) => String(label)}
+        contentStyle={getTooltipContentStyle(compact)}
+        labelStyle={{ color: "#d4d4d8" }}
+        itemStyle={{ color: "#fafafa" }}
+      />
+      <Area
+        type="monotone"
+        dataKey={dataKey}
+        stroke={color}
+        fill={`url(#${gradientId})`}
+        strokeWidth={compact ? 1.5 : 2}
+        dot={false}
+      />
+    </AreaChart>
+  );
+}
+
 export function BaseAreaChart({
   data,
   dataKey,
@@ -43,50 +115,19 @@ export function BaseAreaChart({
   return (
     <div ref={ref} className={chartContainerClassName}>
       {ready ? (
-        <AreaChart
+        <BaseAreaChartContent
+          data={data}
+          dataKey={dataKey}
+          color={color}
+          gradientId={gradientId}
+          tooltipLabel={tooltipLabel}
+          tooltipValueFormatter={tooltipValueFormatter}
+          yAxisDomain={yAxisDomain}
+          yAxisFormatter={yAxisFormatter}
+          compact={compact}
           width={width}
           height={height}
-          data={data}
-          margin={{ top: 4, right: compact ? 4 : 8, left: 0, bottom: 0 }}
-        >
-          <defs>
-            <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor={color} stopOpacity={0.35} />
-              <stop offset="95%" stopColor={color} stopOpacity={0} />
-            </linearGradient>
-          </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="#27272a" opacity={0.3} />
-          <XAxis dataKey="time" hide />
-          <YAxis
-            domain={yAxisDomain}
-            tick={{ fontSize: compact ? 10 : 11 }}
-            width={compact ? 52 : 70}
-            tickFormatter={yAxisFormatter}
-          />
-          <Tooltip
-            formatter={(value: number) => [
-              tooltipValueFormatter(value),
-              tooltipLabel,
-            ]}
-            labelFormatter={(label) => String(label)}
-            contentStyle={{
-              backgroundColor: "#09090b",
-              border: "1px solid #27272a",
-              borderRadius: "0.5rem",
-              fontSize: compact ? 12 : 14,
-            }}
-            labelStyle={{ color: "#d4d4d8" }}
-            itemStyle={{ color: "#fafafa" }}
-          />
-          <Area
-            type="monotone"
-            dataKey={dataKey}
-            stroke={color}
-            fill={`url(#${gradientId})`}
-            strokeWidth={compact ? 1.5 : 2}
-            dot={false}
-          />
-        </AreaChart>
+        />
       ) : null}
     </div>
   );

@@ -162,6 +162,160 @@ function buildMarkPricesForOpenPositions(params: {
   return markPrices;
 }
 
+async function processSymbolAtOpenTime(params: {
+  symbol: string;
+  openTime: number;
+  klinesBySymbol: Map<string, KlineCandle[]>;
+  strategyParams: StrategyParams;
+  modelMinProbability?: number;
+  entryProbabilityBySymbol?: Map<string, Map<number, number>>;
+  ledger: SimulatedLedger;
+  ledgerMutex: ReturnType<typeof createAsyncMutex>;
+  lastProcessedOpenTime: number | null;
+  markPrices: Map<string, number>;
+}): Promise<void> {
+  const klinesAsc = params.klinesBySymbol.get(params.symbol);
+  if (!klinesAsc || klinesAsc.length === 0) {
+    return;
+  }
+
+  const closed = getClosedWindowAt({
+    klinesAsc,
+    targetTime: params.openTime,
+    count: STRATEGY_LOOKBACK_CLOSES,
+  });
+  if (!closed) {
+    return;
+  }
+
+  await params.ledgerMutex.run(() => {
+    const markPrice = params.markPrices.get(params.symbol) ?? closed[0]!.close;
+    const candleOpenTime = closed[0]!.openTime;
+    const entryProbability = params.entryProbabilityBySymbol
+      ?.get(params.symbol)
+      ?.get(candleOpenTime);
+
+    const decision = evaluateDecision({
+      closed,
+      position: params.ledger.getPosition(params.symbol),
+      cash: params.ledger.cash,
+      lastProcessedOpenTime: params.lastProcessedOpenTime,
+      lastSellOpenTime: params.ledger.lastSellOpenTime.get(params.symbol) ?? null,
+      markPrice,
+      strategyParams: params.strategyParams,
+      entryProbability,
+      modelMinProbability: params.modelMinProbability,
+    });
+
+    const tradePrice =
+      decision.action === "SELL" && decision.exitPrice !== undefined
+        ? decision.exitPrice
+        : closed[0]!.close;
+    params.ledger.applyDecision({
+      symbol: params.symbol,
+      decision,
+      price: tradePrice,
+    });
+  });
+}
+
+function applyDrawdownLiquidationIfNeeded(params: {
+  ledger: SimulatedLedger;
+  markPricesAfterTrades: Map<string, number>;
+  openTime: number;
+  strategyParams: StrategyParams;
+  exposurePeakEquity: number | null;
+}): number | null {
+  const equity = params.ledger.getEquity(params.markPricesAfterTrades);
+  const openPositionCount = params.ledger.positions.size;
+  let nextPeak = nextExposurePeakEquity({
+    currentPeak: params.exposurePeakEquity,
+    equity,
+    hasOpenPositions: openPositionCount > 0,
+  });
+
+  if (
+    nextPeak !== null &&
+    isPortfolioDrawdownBreached({
+      equity,
+      exposurePeakEquity: nextPeak,
+      thresholdPct: params.strategyParams.maxLossPct,
+    })
+  ) {
+    liquidateAllOpenPositions({
+      ledger: params.ledger,
+      markPrices: params.markPricesAfterTrades,
+      candleOpenTime: params.openTime,
+      trailingStopPct: params.strategyParams.trailingStopPct,
+      maxLossPct: params.strategyParams.maxLossPct,
+    });
+    nextPeak = null;
+  }
+  return nextPeak;
+}
+
+async function runSimulationStep(params: {
+  openTime: number;
+  symbols: string[];
+  concurrency: number;
+  klinesBySymbol: Map<string, KlineCandle[]>;
+  strategyParams: StrategyParams;
+  modelMinProbability?: number;
+  entryProbabilityBySymbol?: Map<string, Map<number, number>>;
+  ledger: SimulatedLedger;
+  ledgerMutex: ReturnType<typeof createAsyncMutex>;
+  markPriceCursorBySymbol: Map<string, number>;
+  exposurePeakEquity: number | null;
+}): Promise<{ equityPoint: EquityPoint; nextExposurePeakEquity: number | null }> {
+  const markPrices = buildMarkPricesForOpenPositions({
+    ledger: params.ledger,
+    klinesBySymbol: params.klinesBySymbol,
+    openTime: params.openTime,
+    markPriceCursorBySymbol: params.markPriceCursorBySymbol,
+  });
+
+  await processInBatches({
+    items: params.symbols,
+    batchSize: params.concurrency,
+    processItem: (symbol) =>
+      processSymbolAtOpenTime({
+        symbol,
+        openTime: params.openTime,
+        klinesBySymbol: params.klinesBySymbol,
+        strategyParams: params.strategyParams,
+        modelMinProbability: params.modelMinProbability,
+        entryProbabilityBySymbol: params.entryProbabilityBySymbol,
+        ledger: params.ledger,
+        ledgerMutex: params.ledgerMutex,
+        lastProcessedOpenTime: null,
+        markPrices,
+      }),
+  });
+
+  const markPricesAfterTrades = buildMarkPricesForOpenPositions({
+    ledger: params.ledger,
+    klinesBySymbol: params.klinesBySymbol,
+    openTime: params.openTime,
+    markPriceCursorBySymbol: params.markPriceCursorBySymbol,
+  });
+  const nextExposurePeakEquity = applyDrawdownLiquidationIfNeeded({
+    ledger: params.ledger,
+    markPricesAfterTrades,
+    openTime: params.openTime,
+    strategyParams: params.strategyParams,
+    exposurePeakEquity: params.exposurePeakEquity,
+  });
+  return {
+    nextExposurePeakEquity,
+    equityPoint: {
+      openTime: params.openTime,
+      cash: params.ledger.cash,
+      equity: params.ledger.getEquity(markPricesAfterTrades),
+      openPositionCount: params.ledger.positions.size,
+    },
+  };
+}
+
 async function runBacktestSimulation(params: {
   symbols: string[];
   klinesBySymbol: Map<string, KlineCandle[]>;
@@ -184,115 +338,24 @@ async function runBacktestSimulation(params: {
   const ledgerMutex = createAsyncMutex();
   const equityCurve: EquityPoint[] = [];
   const markPriceCursorBySymbol = new Map<string, number>();
-  let lastProcessedOpenTime: number | null = null;
   let exposurePeakEquity: number | null = null;
 
   for (const openTime of params.timeline) {
-    const markPrices = buildMarkPricesForOpenPositions({
-      ledger,
+    const step = await runSimulationStep({
+      openTime,
+      symbols: params.symbols,
+      concurrency: params.concurrency,
       klinesBySymbol: params.klinesBySymbol,
-      openTime,
-      markPriceCursorBySymbol,
-    });
-
-    const tickLatestCandleOpenTime: number | null = null;
-
-    await processInBatches({
-      items: params.symbols,
-      batchSize: params.concurrency,
-      processItem: async (symbol) => {
-        const klinesAsc = params.klinesBySymbol.get(symbol);
-        if (!klinesAsc || klinesAsc.length === 0) {
-          return;
-        }
-
-        const closed = getClosedWindowAt({
-          klinesAsc,
-          targetTime: openTime,
-          count: STRATEGY_LOOKBACK_CLOSES,
-        });
-
-        if (!closed) {
-          return;
-        }
-
-        await ledgerMutex.run(() => {
-          const markPrice = markPrices.get(symbol) ?? closed[0]!.close;
-          const candleOpenTime = closed[0]!.openTime;
-          const entryProbability = params.entryProbabilityBySymbol
-            ?.get(symbol)
-            ?.get(candleOpenTime);
-
-          const decision = evaluateDecision({
-            closed,
-            position: ledger.getPosition(symbol),
-            cash: ledger.cash,
-            lastProcessedOpenTime,
-            lastSellOpenTime: ledger.lastSellOpenTime.get(symbol) ?? null,
-            markPrice,
-            strategyParams: params.strategyParams,
-            entryProbability,
-            modelMinProbability: params.modelMinProbability,
-          });
-
-          const tradePrice =
-            decision.action === "SELL" && decision.exitPrice !== undefined
-              ? decision.exitPrice
-              : closed[0]!.close;
-
-          ledger.applyDecision({
-            symbol,
-            decision,
-            price: tradePrice,
-          });
-        });
-      },
-    });
-
-    if (tickLatestCandleOpenTime !== null) {
-      lastProcessedOpenTime = tickLatestCandleOpenTime;
-    }
-
-    const markPricesAfterTrades = buildMarkPricesForOpenPositions({
+      strategyParams: params.strategyParams,
+      modelMinProbability: params.modelMinProbability,
+      entryProbabilityBySymbol: params.entryProbabilityBySymbol,
       ledger,
-      klinesBySymbol: params.klinesBySymbol,
-      openTime,
+      ledgerMutex,
       markPriceCursorBySymbol,
+      exposurePeakEquity,
     });
-
-    const equity = ledger.getEquity(markPricesAfterTrades);
-    const openPositionCount = ledger.positions.size;
-
-    exposurePeakEquity = nextExposurePeakEquity({
-      currentPeak: exposurePeakEquity,
-      equity,
-      hasOpenPositions: openPositionCount > 0,
-    });
-
-    if (
-      exposurePeakEquity !== null &&
-      isPortfolioDrawdownBreached({
-        equity,
-        exposurePeakEquity,
-        thresholdPct: params.strategyParams.maxLossPct,
-      })
-    ) {
-      liquidateAllOpenPositions({
-        ledger,
-        markPrices: markPricesAfterTrades,
-        candleOpenTime: openTime,
-        trailingStopPct: params.strategyParams.trailingStopPct,
-        maxLossPct: params.strategyParams.maxLossPct,
-      });
-      exposurePeakEquity = null;
-    }
-
-    equityCurve.push({
-      openTime,
-      cash: ledger.cash,
-      equity: ledger.getEquity(markPricesAfterTrades),
-      openPositionCount: ledger.positions.size,
-    });
+    exposurePeakEquity = step.nextExposurePeakEquity;
+    equityCurve.push(step.equityPoint);
   }
 
   console.log("Phase 2 complete.");
@@ -379,6 +442,3 @@ export async function runBacktest(
   });
 }
 
-export function getBacktestDurationHours(days: number): number {
-  return days * 24;
-}

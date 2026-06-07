@@ -5,8 +5,6 @@ import { getLastClosedCandleOpenTime } from "@/utils/binance/candle-time";
 import { getHistoricalClosedKlines } from "@/utils/binance/get-klines";
 import { processInBatches } from "@/utils/process-in-batches";
 
-export { getLastClosedCandleOpenTime };
-
 export function getHistoricalRange(params: { days: number; now?: number }): {
   startTime: number;
   endTime: number;

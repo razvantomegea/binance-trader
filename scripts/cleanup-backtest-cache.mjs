@@ -2,6 +2,7 @@
 
 import { readdir, rm, stat } from "node:fs/promises";
 import { isAbsolute, join, resolve } from "node:path";
+import { parseCleanupCliArgs, selectByMaxAge } from "./cleanup-cli-shared.mjs";
 
 const DEFAULT_CACHE_DIR = "backtest-cache";
 
@@ -21,51 +22,6 @@ function getBacktestCacheRoot() {
 
 const CACHE_DIR = join(getBacktestCacheRoot(), "binance-klines");
 const CACHE_PATTERN = /^[A-Z0-9_-]+-[A-Z0-9_-]+-\d{4}-\d{2}-\d{2}-\d+\.json$/i;
-
-function parseArgs(argv) {
-  let dryRun = false;
-  let keep = 0;
-  let maxAgeDays = null;
-
-  for (const arg of argv) {
-    if (arg === "--dry-run") {
-      dryRun = true;
-      continue;
-    }
-
-    if (arg.startsWith("--keep=")) {
-      keep = Number(arg.slice("--keep=".length));
-      continue;
-    }
-
-    if (arg.startsWith("--max-age-days=")) {
-      maxAgeDays = Number(arg.slice("--max-age-days=".length));
-      continue;
-    }
-
-    if (arg === "--help" || arg === "-h") {
-      console.log(`Usage: pnpm backtest:cache:cleanup [--dry-run] [--keep=N] [--max-age-days=N]
-
-Deletes local Binance cache files from backtest-cache/binance-klines/.
-Default: remove all cache files.
-Use --max-age-days=N to delete only files older than N days.
-Use --keep=N to keep the N newest files among deletion candidates.`);
-      process.exit(0);
-    }
-  }
-
-  if (!Number.isInteger(keep) || keep < 0) {
-    console.error("--keep must be a non-negative integer");
-    process.exit(1);
-  }
-
-  if (maxAgeDays !== null && (!Number.isFinite(maxAgeDays) || maxAgeDays < 0)) {
-    console.error("--max-age-days must be a non-negative number");
-    process.exit(1);
-  }
-
-  return { dryRun, keep, maxAgeDays };
-}
 
 async function listCacheFiles() {
   let entries;
@@ -97,18 +53,16 @@ async function listCacheFiles() {
   return files.sort((a, b) => b.mtimeMs - a.mtimeMs);
 }
 
-function selectDeletionCandidates(files, maxAgeDays) {
-  if (maxAgeDays === null) {
-    return files;
-  }
-
-  const maxAgeMs = maxAgeDays * 24 * 60 * 60 * 1000;
-  const cutoff = Date.now() - maxAgeMs;
-  return files.filter((file) => file.mtimeMs < cutoff);
-}
-
 async function main() {
-  const { dryRun, keep, maxAgeDays } = parseArgs(process.argv.slice(2));
+  const { dryRun, keep, maxAgeDays } = parseCleanupCliArgs(
+    process.argv.slice(2),
+    `Usage: pnpm backtest:cache:cleanup [--dry-run] [--keep=N] [--max-age-days=N]
+
+Deletes local Binance cache files from backtest-cache/binance-klines/.
+Default: remove all cache files.
+Use --max-age-days=N to delete only files older than N days.
+Use --keep=N to keep the N newest files among deletion candidates.`,
+  );
   const cacheFiles = await listCacheFiles();
 
   if (cacheFiles.length === 0) {
@@ -116,7 +70,7 @@ async function main() {
     return;
   }
 
-  const candidates = selectDeletionCandidates(cacheFiles, maxAgeDays);
+  const candidates = selectByMaxAge(cacheFiles, maxAgeDays);
   if (candidates.length === 0) {
     console.log("No cache files matched cleanup criteria.");
     return;

@@ -12,7 +12,7 @@ export interface NotifyTradeExecutedParams {
   interval: string;
 }
 
-export function buildTradeExecutedPayload({
+function buildTradeExecutedPayload({
   tradeId,
   symbol,
   side,

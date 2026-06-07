@@ -47,15 +47,7 @@ function computeWinRatePct(trades: SimTrade[]): {
     return { winRatePct: 0, winningTrades: 0, totalTrades: 0 };
   }
 
-  const openBuys = new Map<string, SimTrade[]>();
-
-  for (const trade of trades) {
-    if (trade.side === "BUY") {
-      const queue = openBuys.get(trade.symbol) ?? [];
-      queue.push(trade);
-      openBuys.set(trade.symbol, queue);
-    }
-  }
+  const openBuys = buildOpenBuyQueues(trades);
 
   let winningTrades = 0;
   let matchedSells = 0;
@@ -80,6 +72,19 @@ function computeWinRatePct(trades: SimTrade[]): {
     winningTrades,
     totalTrades: sells.length,
   };
+}
+
+function buildOpenBuyQueues(trades: SimTrade[]): Map<string, SimTrade[]> {
+  const openBuys = new Map<string, SimTrade[]>();
+  for (const trade of trades) {
+    if (trade.side !== "BUY") {
+      continue;
+    }
+    const queue = openBuys.get(trade.symbol) ?? [];
+    queue.push(trade);
+    openBuys.set(trade.symbol, queue);
+  }
+  return openBuys;
 }
 
 export function buildBacktestReport(

@@ -11,8 +11,6 @@ export interface BinanceExchangeInfoResponse {
 
 export type CandleInterval = "H1";
 
-export type BinanceKlineInterval = "1h";
-
 export interface KlineCandle {
   openTime: number;
   open: number;

@@ -3,14 +3,12 @@ import { backfillMaxPriceAfterBuy } from "@/helpers/trades/backfill-max-price-af
 let backfillPromise: Promise<void> | null = null;
 
 export async function ensureMaxPriceAfterBuyBackfill(): Promise<void> {
-  if (!backfillPromise) {
-    backfillPromise = backfillMaxPriceAfterBuy()
-      .then(() => undefined)
-      .catch((error) => {
-        backfillPromise = null;
-        console.error("Max-price-after-buy backfill failed:", error);
-      });
-  }
+  backfillPromise ??= backfillMaxPriceAfterBuy()
+    .then(() => undefined)
+    .catch((error) => {
+      backfillPromise = null;
+      console.error("Max-price-after-buy backfill failed:", error);
+    });
 
   await backfillPromise;
 }

@@ -5,7 +5,7 @@ export function hasValidCronSecret(request: Request): boolean {
     ? authorizationHeader.slice("Bearer ".length).trim()
     : undefined;
   const headerToken = request.headers.get("x-cron-secret")?.trim();
-  const token = bearerToken || headerToken;
+  const token = bearerToken ?? headerToken;
 
   return Boolean(secret && token === secret);
 }

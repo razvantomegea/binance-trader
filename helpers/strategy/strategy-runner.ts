@@ -7,6 +7,7 @@ import {
   setLastCandleTime,
 } from "@/helpers/strategy/get-last-candle-time";
 import { getOpenPositions } from "@/helpers/strategy/get-positions";
+import type { OpenPosition } from "@/helpers/strategy/get-positions";
 import { enforcePortfolioDrawdownCap } from "@/helpers/strategy/enforce-portfolio-drawdown-cap";
 import { snapshotEquity } from "@/helpers/strategy/snapshot-equity";
 import { backfillMaxPriceAfterBuy } from "@/helpers/trades/backfill-max-price-after-buy";
@@ -31,6 +32,42 @@ export interface RunStrategyResult {
     updated: number;
     skipped: number;
   };
+}
+
+function updateLatestCandleTime(
+  current: number | null,
+  next: number | null,
+): number | null {
+  if (next === null) {
+    return current;
+  }
+  if (current === null || next > current) {
+    return next;
+  }
+  return current;
+}
+
+async function refreshPortfolioState(params: {
+  positions: Map<string, OpenPosition>;
+}) {
+  const refreshed = await getOpenPositions();
+  params.positions.clear();
+  for (const [key, value] of refreshed) {
+    params.positions.set(key, value);
+  }
+}
+
+async function backfillWithFallback<T>(
+  run: () => Promise<T>,
+  fallback: T,
+  errorPrefix: string,
+): Promise<T> {
+  try {
+    return await run();
+  } catch (error) {
+    console.error(errorPrefix, error);
+    return fallback;
+  }
 }
 
 export async function runStrategy(): Promise<RunStrategyResult> {
@@ -58,23 +95,15 @@ export async function runStrategy(): Promise<RunStrategyResult> {
         lastProcessedOpenTime: lastProcessed,
       });
 
-      if (result.candleOpenTime !== null) {
-        if (
-          latestCandleOpenTime === null ||
-          result.candleOpenTime > latestCandleOpenTime
-        ) {
-          latestCandleOpenTime = result.candleOpenTime;
-        }
-      }
+      latestCandleOpenTime = updateLatestCandleTime(
+        latestCandleOpenTime,
+        result.candleOpenTime,
+      );
 
       if (result.traded) {
         tradesExecuted += 1;
         cash = await getCash();
-        const refreshed = await getOpenPositions();
-        positions.clear();
-        for (const [key, value] of refreshed) {
-          positions.set(key, value);
-        }
+        await refreshPortfolioState({ positions });
       }
     },
   });
@@ -86,17 +115,15 @@ export async function runStrategy(): Promise<RunStrategyResult> {
   await enforcePortfolioDrawdownCap({ interval });
 
   const { cash: finalCash, equity } = await snapshotEquity({ interval });
-  const postClose24hBackfill = await backfillPostClose24hMetrics().catch(
-    (error) => {
-      console.error("Post-close 24h backfill failed:", error);
-      return { scanned: 0, updated: 0, skipped: 0 };
-    },
+  const postClose24hBackfill = await backfillWithFallback(
+    () => backfillPostClose24hMetrics(),
+    { scanned: 0, updated: 0, skipped: 0 },
+    "Post-close 24h backfill failed:",
   );
-  const maxPriceAfterBuyBackfill = await backfillMaxPriceAfterBuy().catch(
-    (error) => {
-      console.error("Max-price-after-buy backfill failed:", error);
-      return { scanned: 0, updated: 0, skipped: 0 };
-    },
+  const maxPriceAfterBuyBackfill = await backfillWithFallback(
+    () => backfillMaxPriceAfterBuy(),
+    { scanned: 0, updated: 0, skipped: 0 },
+    "Max-price-after-buy backfill failed:",
   );
 
   return {

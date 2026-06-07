@@ -9,6 +9,12 @@ import type { MlOptimizationCandidate } from "@/types/ml-strategy";
 import type { StrategyParams } from "@/types/strategy-params";
 import { metricsFromBacktestReport } from "@/utils/ml/compute-risk-adjusted-score";
 
+function normalizeModelMinProbability(
+  value: number | null | undefined,
+): number | undefined {
+  return value ?? undefined;
+}
+
 export interface EvaluateStrategyCandidateParams {
   strategyParams: StrategyParams;
   split: "train" | "validation" | "test";
@@ -27,11 +33,9 @@ export async function evaluateStrategyCandidate(
     config: {
       ...params.baseConfig,
       strategyParams: params.strategyParams,
-      modelMinProbability:
-        params.modelMinProbability === null ||
-        params.modelMinProbability === undefined
-          ? undefined
-          : params.modelMinProbability,
+      modelMinProbability: normalizeModelMinProbability(
+        params.modelMinProbability,
+      ),
       entryProbabilityBySymbol: params.entryProbabilityBySymbol,
     },
     symbols: params.symbols,

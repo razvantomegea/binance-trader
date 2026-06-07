@@ -36,6 +36,13 @@ export function isServerlessScheduler(): boolean {
   return process.env.SCHEDULER_MODE === "external-cron";
 }
 
+function normalizeMetaString(value: string | null): string | null {
+  if (value === "") {
+    return null;
+  }
+  return value ?? null;
+}
+
 export async function getSchedulerRunning(): Promise<boolean> {
   const value = await getMetaValue(RUNNING_KEY);
   if (value === null) {
@@ -94,7 +101,7 @@ export async function getSchedulerPersistedStatus(): Promise<{
     running,
     startedAtMs: Number.isFinite(startedAtMs) ? startedAtMs : null,
     lastRunAtMs: Number.isFinite(lastRunAtMs) ? lastRunAtMs : null,
-    lastError: lastErrorRaw || null,
+    lastError: normalizeMetaString(lastErrorRaw),
     lastResult,
   };
 }

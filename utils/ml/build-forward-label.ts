@@ -21,6 +21,43 @@ export interface BuildForwardLabelResult {
   labelMeta: MlLabelMeta;
 }
 
+function isValidForwardLabelInput(params: BuildForwardLabelParams): boolean {
+  return (
+    params.entryCandleIndex >= 0 &&
+    params.entryCandleIndex < params.klinesAsc.length &&
+    Number.isFinite(params.entryPrice) &&
+    params.entryPrice > 0
+  );
+}
+
+function computeForwardPathStats(params: {
+  future: KlineCandle[];
+  entryPrice: number;
+}): { trough: number; finalClose: number } {
+  let trough = params.entryPrice;
+  let finalClose = params.entryPrice;
+
+  for (const candle of params.future) {
+    if (candle.low < trough) {
+      trough = candle.low;
+    }
+    finalClose = candle.close;
+  }
+
+  return { trough, finalClose };
+}
+
+function toBinaryLabel(params: {
+  forwardReturnPct: number;
+  forwardMaxDrawdownPct: number;
+  forwardDrawdownCapPct: number;
+}): 0 | 1 {
+  if (params.forwardReturnPct <= 0) {
+    return 0;
+  }
+  return params.forwardMaxDrawdownPct <= params.forwardDrawdownCapPct * 100 ? 1 : 0;
+}
+
 export function buildForwardLabel({
   klinesAsc,
   entryCandleIndex,
@@ -30,10 +67,14 @@ export function buildForwardLabel({
   feeBps = 0,
 }: BuildForwardLabelParams): BuildForwardLabelResult | null {
   if (
-    entryCandleIndex < 0 ||
-    entryCandleIndex >= klinesAsc.length ||
-    !Number.isFinite(entryPrice) ||
-    entryPrice <= 0
+    !isValidForwardLabelInput({
+      klinesAsc,
+      entryCandleIndex,
+      entryPrice,
+      horizonHours,
+      forwardDrawdownCapPct,
+      feeBps,
+    })
   ) {
     return null;
   }
@@ -47,29 +88,18 @@ export function buildForwardLabel({
     return null;
   }
 
-  let peak = entryPrice;
-  let trough = entryPrice;
-  let finalClose = entryPrice;
-
-  for (const candle of future) {
-    if (candle.high > peak) {
-      peak = candle.high;
-    }
-    if (candle.low < trough) {
-      trough = candle.low;
-    }
-    finalClose = candle.close;
-  }
+  const { trough, finalClose } = computeForwardPathStats({ future, entryPrice });
 
   const roundTripFeePct = (feeBps * 2) / 100;
   const forwardReturnPct =
     safePct(finalClose - entryPrice, entryPrice) - roundTripFeePct;
   const forwardMaxDrawdownPct = safePct(entryPrice - trough, entryPrice);
 
-  const label: 0 | 1 =
-    forwardReturnPct > 0 && forwardMaxDrawdownPct <= forwardDrawdownCapPct * 100
-      ? 1
-      : 0;
+  const label = toBinaryLabel({
+    forwardReturnPct,
+    forwardMaxDrawdownPct,
+    forwardDrawdownCapPct,
+  });
 
   return {
     label,

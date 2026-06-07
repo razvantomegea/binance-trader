@@ -79,6 +79,42 @@ function toNormalizedTensor(
   };
 }
 
+function buildValidationTensors(params: {
+  validationRows: MlDecisionRow[];
+  normalization: ReturnType<typeof fitFeatureNormalization>;
+}) {
+  if (params.validationRows.length === 0) {
+    return null;
+  }
+  return toNormalizedTensor(params.validationRows, params.normalization);
+}
+
+async function persistModelArtifacts(params: {
+  runId: string;
+  model: tf.Sequential;
+  metadata: MlModelMetadata;
+}): Promise<string> {
+  const modelDir = getMlModelDir(params.runId);
+  await mkdir(modelDir, { recursive: true });
+  await saveModelToDir(params.model, modelDir);
+  await writeFile(
+    getMlModelMetadataPath(params.runId),
+    JSON.stringify(params.metadata, null, 2),
+    "utf8",
+  );
+  return modelDir;
+}
+
+function disposeTrainTensors(params: {
+  train: { xs: tf.Tensor2D; ys: tf.Tensor2D };
+  validation: { xs: tf.Tensor2D; ys: tf.Tensor2D } | null;
+}) {
+  params.train.xs.dispose();
+  params.train.ys.dispose();
+  params.validation?.xs.dispose();
+  params.validation?.ys.dispose();
+}
+
 export async function trainLogisticModel(
   params: TrainLogisticModelParams,
 ): Promise<TrainLogisticModelResult> {
@@ -99,10 +135,10 @@ export async function trainLogisticModel(
   const classWeight = computeClassWeight(train);
 
   const trainTensors = toNormalizedTensor(train, normalization);
-  const validationTensors =
-    validation.length > 0
-      ? toNormalizedTensor(validation, normalization)
-      : null;
+  const validationTensors = buildValidationTensors({
+    validationRows: validation,
+    normalization,
+  });
 
   await model.fit(trainTensors.xs, trainTensors.ys, {
     epochs,
@@ -113,10 +149,6 @@ export async function trainLogisticModel(
       : undefined,
     verbose: 0,
   });
-
-  const modelDir = getMlModelDir(params.runId);
-  await mkdir(modelDir, { recursive: true });
-  await saveModelToDir(model, modelDir);
 
   const metadata: MlModelMetadata = {
     runId: params.runId,
@@ -129,16 +161,12 @@ export async function trainLogisticModel(
     validationRowCount: validation.length,
   };
 
-  await writeFile(
-    getMlModelMetadataPath(params.runId),
-    JSON.stringify(metadata, null, 2),
-    "utf8",
-  );
-
-  trainTensors.xs.dispose();
-  trainTensors.ys.dispose();
-  validationTensors?.xs.dispose();
-  validationTensors?.ys.dispose();
+  const modelDir = await persistModelArtifacts({
+    runId: params.runId,
+    model,
+    metadata,
+  });
+  disposeTrainTensors({ train: trainTensors, validation: validationTensors });
   model.dispose();
 
   return { metadata, modelDir };
@@ -154,21 +182,4 @@ export async function loadTrainedModel(params: {
   const metadata = JSON.parse(metadataRaw) as MlModelMetadata;
   const model = await loadModelFromDir(getMlModelDir(params.runId));
   return { model, metadata };
-}
-
-export async function predictProbability(params: {
-  model: tf.LayersModel;
-  metadata: MlModelMetadata;
-  features: number[];
-}): Promise<number> {
-  const normalized = normalizeFeatures(
-    params.features,
-    params.metadata.normalization,
-  );
-  const input = tf.tensor2d([normalized]);
-  const output = params.model.predict(input) as tf.Tensor;
-  const value = (await output.data())[0] ?? 0;
-  input.dispose();
-  output.dispose();
-  return value;
 }

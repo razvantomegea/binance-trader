@@ -8,7 +8,7 @@ import type { StrategyParams } from "@/types/strategy-params";
 import { isGainWithinBand } from "@/utils/strategy/price-change-conditions";
 import { safeRatio } from "@/utils/ml/safe-number";
 
-export const ML_FEATURE_NAMES = [
+const ML_FEATURE_NAMES = [
   "closeGainVsLowClose",
   "highCloseGainVsLowClose",
   "closeInEntryBand",
@@ -72,6 +72,56 @@ function computeLookbackMaxDrawdownPct(closedAsc: CandleSlice[]): number {
   return maxDrawdown;
 }
 
+function computeEntryBandFeatures(params: {
+  latestClose: number;
+  highClose: number;
+  lowClose: number;
+  strategyParams: StrategyParams;
+}) {
+  const closeInEntryBand = isGainWithinBand({
+    value: params.latestClose,
+    ref: params.lowClose,
+    minPct: params.strategyParams.entryRangePct,
+    maxPct: params.strategyParams.entryRangeMaxPct,
+  })
+    ? 1
+    : 0;
+  const highCloseInEntryBand = isGainWithinBand({
+    value: params.highClose,
+    ref: params.lowClose,
+    minPct: params.strategyParams.entryRangePct,
+    maxPct: params.strategyParams.entryRangeMaxPct,
+  })
+    ? 1
+    : 0;
+  return { closeInEntryBand, highCloseInEntryBand };
+}
+
+function computeAverageRangePct(closed: CandleSlice[]): number {
+  return (
+    closed.reduce(
+      (sum, candle) => sum + safeRatio(candle.high - candle.low, candle.close),
+      0,
+    ) / closed.length
+  );
+}
+
+function computeUpCandleRatio(closed: CandleSlice[]): number {
+  const upCandleCount = closed.filter((candle, index) => {
+    if (index === closed.length - 1) {
+      return false;
+    }
+    return candle.close > closed[index + 1]!.close;
+  }).length;
+  return upCandleCount / Math.max(closed.length - 1, 1);
+}
+
+function computeCloseVsMeanClose(closed: CandleSlice[], latestClose: number): number {
+  const meanClose =
+    closed.reduce((sum, candle) => sum + candle.close, 0) / closed.length;
+  return safeRatio(latestClose - meanClose, meanClose);
+}
+
 export function buildDecisionFeatures({
   closed,
   strategyParams = DEFAULT_STRATEGY_PARAMS,
@@ -91,33 +141,18 @@ export function buildDecisionFeatures({
   const closeGainVsLowClose = safeRatio(latest.close - lowClose, lowClose);
   const highCloseGainVsLowClose = safeRatio(highClose - lowClose, lowClose);
 
-  const closeInEntryBand = isGainWithinBand({
-    value: latest.close,
-    ref: lowClose,
-    minPct: strategyParams.entryRangePct,
-    maxPct: strategyParams.entryRangeMaxPct,
-  })
-    ? 1
-    : 0;
-
-  const highCloseInEntryBand = isGainWithinBand({
-    value: highClose,
-    ref: lowClose,
-    minPct: strategyParams.entryRangePct,
-    maxPct: strategyParams.entryRangeMaxPct,
-  })
-    ? 1
-    : 0;
+  const { closeInEntryBand, highCloseInEntryBand } = computeEntryBandFeatures({
+    latestClose: latest.close,
+    highClose,
+    lowClose,
+    strategyParams,
+  });
 
   const range24h = high24h - low24h;
   const closePositionIn24hRange =
     range24h > 0 ? (latest.close - low24h) / range24h : 0.5;
 
-  const avgCandleRangePct =
-    closed.reduce(
-      (sum, candle) => sum + safeRatio(candle.high - candle.low, candle.close),
-      0,
-    ) / closed.length;
+  const avgCandleRangePct = computeAverageRangePct(closed);
 
   const closeReturns = computeCloseReturns(closedAsc);
   const closeReturnVolatility = computeStd(closeReturns);
@@ -127,18 +162,10 @@ export function buildDecisionFeatures({
 
   const lookbackMaxDrawdownPct = computeLookbackMaxDrawdownPct(closedAsc);
 
-  const upCandleRatio =
-    closed.filter((candle, index) => {
-      if (index === closed.length - 1) {
-        return false;
-      }
-      return candle.close > closed[index + 1]!.close;
-    }).length / Math.max(closed.length - 1, 1);
+  const upCandleRatio = computeUpCandleRatio(closed);
 
   const hourOfDayNorm = new Date(latest.openTime).getUTCHours() / 23;
-  const meanClose =
-    closed.reduce((sum, candle) => sum + candle.close, 0) / closed.length;
-  const closeVsMeanClose = safeRatio(latest.close - meanClose, meanClose);
+  const closeVsMeanClose = computeCloseVsMeanClose(closed, latest.close);
 
   return {
     featureNames: [...ML_FEATURE_NAMES],

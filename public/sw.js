@@ -40,7 +40,9 @@ self.addEventListener("notificationclick", (event) => {
           } catch {
             sameOrigin = false;
           }
-          if (sameOrigin && "focus" in client) return client.focus();
+          if (sameOrigin && "focus" in client) {
+            return client.focus();
+          }
         }
         if (self.clients.openWindow) {
           return self.clients.openWindow(targetUrl);

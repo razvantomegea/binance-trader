@@ -43,8 +43,11 @@ import {
   getMlRunsDir,
 } from "@/utils/ml/ml-artifact-paths";
 import { ensureTfCpuBackend } from "@/utils/ml/model-io";
-import { getTradingSymbols } from "@/utils/binance/get-usdt-symbols";
-import { parseCliNumber } from "./ml-cli-args";
+import {
+  parseCliNumber,
+  parseMlBaseArgs,
+  resolveSymbols,
+} from "./ml/parse-ml-cli-args";
 
 interface CliOptions {
   days: number;
@@ -58,88 +61,70 @@ interface CliOptions {
   feeBps: number;
 }
 
-function parseArgs(argv: string[]): CliOptions {
-  const options: CliOptions = {
-    days: 180,
-    concurrency: BINANCE_FETCH_CONCURRENCY,
-    trials: ML_OPTIMIZER_RANDOM_TRIALS,
-    feeBps: ML_DEFAULT_FEE_BPS,
-  };
-
-  for (let i = 0; i < argv.length; i += 1) {
-    const arg = argv[i];
-    const next = argv[i + 1];
-
-    if (arg === "--days" && next) {
-      options.days = parseCliNumber({
-        flag: "--days",
-        value: next,
-        integer: true,
-        min: 1,
-      });
-      i += 1;
-    } else if (arg === "--symbols" && next) {
-      options.symbols = next
-        .split(/[,\s]+/)
-        .map((s) => s.trim().toUpperCase())
-        .filter(Boolean);
-      i += 1;
-    } else if (arg === "--concurrency" && next) {
-      options.concurrency = parseCliNumber({
-        flag: "--concurrency",
-        value: next,
-        integer: true,
-        min: 1,
-      });
-      i += 1;
-    } else if (arg === "--trials" && next) {
+function applyExtraArg(
+  options: CliOptions,
+  arg: string,
+  next: string | undefined,
+): boolean {
+  if (!next) {
+    return false;
+  }
+  switch (arg) {
+    case "--trials":
       options.trials = parseCliNumber({
         flag: "--trials",
         value: next,
         integer: true,
         min: 0,
       });
-      i += 1;
-    } else if (arg === "--run-id" && next) {
+      return true;
+    case "--run-id":
       options.runId = next;
-      i += 1;
-    } else if (arg === "--seed" && next) {
+      return true;
+    case "--seed":
       options.seed = parseCliNumber({
         flag: "--seed",
         value: next,
         integer: true,
         min: 0,
       });
-      i += 1;
-    } else if (arg === "--model-run-id" && next) {
+      return true;
+    case "--model-run-id":
       options.modelRunId = next;
-      i += 1;
-    } else if (arg === "--model-min-prob" && next) {
+      return true;
+    case "--model-min-prob":
       options.modelMinProb = parseCliNumber({
         flag: "--model-min-prob",
         value: next,
         min: 0,
         max: 1,
       });
-      i += 1;
-    } else if (arg === "--fee-bps" && next) {
-      options.feeBps = parseCliNumber({
-        flag: "--fee-bps",
-        value: next,
-        min: 0,
-      });
+      return true;
+    default:
+      return false;
+  }
+}
+
+function parseArgs(argv: string[]): CliOptions {
+  const baseOptions = parseMlBaseArgs(argv, {
+    days: 180,
+    concurrency: BINANCE_FETCH_CONCURRENCY,
+    feeBps: ML_DEFAULT_FEE_BPS,
+  });
+  const options: CliOptions = {
+    ...baseOptions,
+    trials: ML_OPTIMIZER_RANDOM_TRIALS,
+  };
+
+  for (let i = 0; i < argv.length; i += 1) {
+    const arg = argv[i];
+    const next = argv[i + 1];
+    if (applyExtraArg(options, arg, next)) {
       i += 1;
     }
   }
 
   return options;
-}
-
-async function resolveSymbols(symbols?: string[]): Promise<string[]> {
-  if (symbols && symbols.length > 0) {
-    return [...new Set(symbols)].sort();
-  }
-  return [...(await getTradingSymbols())].sort();
 }
 
 function uniqueCandidates(candidates: StrategyParams[]): StrategyParams[] {
@@ -158,98 +143,91 @@ function uniqueCandidates(candidates: StrategyParams[]): StrategyParams[] {
   return unique;
 }
 
-async function main(): Promise<void> {
-  assertLocalhostOnly();
-  const options = parseArgs(process.argv.slice(2));
-
+function assertModelGateArgs(options: CliOptions): void {
   if (options.modelMinProb !== undefined && !options.modelRunId) {
     throw new Error("--model-min-prob requires --model-run-id");
   }
   if (options.modelRunId && options.modelMinProb === undefined) {
     throw new Error("--model-run-id requires --model-min-prob");
   }
+}
 
-  const runId = options.runId ?? `optimize-${Date.now()}`;
-  const symbols = await resolveSymbols(options.symbols);
-  const rng =
-    options.seed !== undefined ? createMulberry32(options.seed) : Math.random;
+function createRandomSource(seed?: number): () => number {
+  return seed !== undefined ? createMulberry32(seed) : Math.random;
+}
 
-  const { startTime: fetchStartTime, endTime } = getHistoricalRange({
-    days: options.days,
-  });
+interface SimulationRangeContext {
+  fetchStartTime: number;
+  endTime: number;
+  ranges: ReturnType<typeof splitSimulationRanges>;
+}
 
+function resolveSimulationRanges(days: number): SimulationRangeContext {
+  const { startTime: fetchStartTime, endTime } = getHistoricalRange({ days });
   const simulationStartTime = getEvaluationStartOpenTime({
     rangeStartTime: fetchStartTime,
     lookbackCloses: STRATEGY_LOOKBACK_CLOSES,
   });
-
   if (endTime - simulationStartTime < minimumSimulationDurationMs()) {
-    throw new Error(
-      "Backtest range too short for train/validation/test splits.",
-    );
+    throw new Error("Backtest range too short for train/validation/test splits.");
   }
-
   const ranges = splitSimulationRanges({
     startTime: simulationStartTime,
     endTime,
   });
+  return { fetchStartTime, endTime, ranges };
+}
 
-  console.log(
-    `Optimizing strategy params: symbols=${symbols.length}, days=${options.days}, trials=${options.trials}, feeBps=${options.feeBps}`,
-  );
-
-  const klinesBySymbol = await loadHistoricalKlinesBySymbol({
-    symbols,
-    interval: STRATEGY_INTERVAL,
-    startTime: fetchStartTime,
-    endTime,
-    concurrency: options.concurrency,
-  });
-
-  let entryProbabilityBySymbol: Map<string, Map<number, number>> | undefined;
-  if (options.modelRunId) {
-    await ensureTfCpuBackend();
-    const { model, metadata } = await loadTrainedModel({
-      runId: options.modelRunId,
-    });
-    console.log(
-      `Precomputing entry probabilities from model ${options.modelRunId}...`,
-    );
-    entryProbabilityBySymbol = await precomputeEntryProbabilities({
-      symbols,
-      klinesBySymbol,
-      model,
-      metadata,
-    });
-    model.dispose();
-    console.log(
-      `Model gate enabled: minProb=${options.modelMinProb ?? "none (baseline only)"}`,
-    );
+async function loadOptionalEntryProbabilities(params: {
+  modelRunId?: string;
+  symbols: string[];
+  klinesBySymbol: Awaited<ReturnType<typeof loadHistoricalKlinesBySymbol>>;
+  modelMinProb?: number;
+}): Promise<Map<string, Map<number, number>> | undefined> {
+  const { modelRunId, symbols, klinesBySymbol, modelMinProb } = params;
+  if (!modelRunId) {
+    return undefined;
   }
-
-  const baseConfig = createDefaultBacktestConfig({
-    days: options.days,
-    initialCash: INITIAL_PAPER_CASH,
-    concurrency: options.concurrency,
-    feeBps: options.feeBps,
+  await ensureTfCpuBackend();
+  const { model, metadata } = await loadTrainedModel({ runId: modelRunId });
+  console.log(`Precomputing entry probabilities from model ${modelRunId}...`);
+  const probabilities = await precomputeEntryProbabilities({
     symbols,
+    klinesBySymbol,
+    model,
+    metadata,
   });
+  model.dispose();
+  console.log(
+    `Model gate enabled: minProb=${modelMinProb ?? "none (baseline only)"}`,
+  );
+  return probabilities;
+}
 
-  const candidates = uniqueCandidates([
-    DEFAULT_STRATEGY_PARAMS,
-    ...Array.from({ length: options.trials }, () =>
-      sampleRandomStrategyParams(rng),
-    ),
-  ]);
-
+async function evaluateCandidates(params: {
+  candidates: StrategyParams[];
+  ranges: ReturnType<typeof splitSimulationRanges>;
+  symbols: string[];
+  klinesBySymbol: Awaited<ReturnType<typeof loadHistoricalKlinesBySymbol>>;
+  baseConfig: ReturnType<typeof createDefaultBacktestConfig>;
+  modelMinProb?: number;
+  entryProbabilityBySymbol?: Map<string, Map<number, number>>;
+}): Promise<MlOptimizationCandidate[]> {
+  const {
+    candidates,
+    ranges,
+    symbols,
+    klinesBySymbol,
+    baseConfig,
+    modelMinProb,
+    entryProbabilityBySymbol,
+  } = params;
   const validationResults: MlOptimizationCandidate[] = [];
-
   for (let i = 0; i < candidates.length; i += 1) {
     const strategyParams = candidates[i]!;
     console.log(
       `Trial ${i + 1}/${candidates.length}: entry=${strategyParams.entryRangePct}-${strategyParams.entryRangeMaxPct}, trail=${strategyParams.trailingStopPct}, maxLoss=${strategyParams.maxLossPct}`,
     );
-
     const validation = await evaluateStrategyCandidate({
       strategyParams,
       split: "validation",
@@ -257,56 +235,142 @@ async function main(): Promise<void> {
       symbols,
       klinesBySymbol,
       baseConfig,
-      modelMinProbability: options.modelMinProb ?? null,
+      modelMinProbability: modelMinProb ?? null,
       entryProbabilityBySymbol,
     });
-
     validationResults.push(validation);
     console.log(
       `  validation riskAdj=${validation.metrics.riskAdjustedScore.toFixed(2)} pnl=${validation.metrics.pnlPct.toFixed(2)}% dd=${validation.metrics.maxDrawdownPct.toFixed(2)}%`,
     );
   }
+  return validationResults;
+}
 
+async function evaluateBestTestCandidate(params: {
+  bestValidation: MlOptimizationCandidate | null;
+  ranges: ReturnType<typeof splitSimulationRanges>;
+  symbols: string[];
+  klinesBySymbol: Awaited<ReturnType<typeof loadHistoricalKlinesBySymbol>>;
+  baseConfig: ReturnType<typeof createDefaultBacktestConfig>;
+  modelMinProb?: number;
+  entryProbabilityBySymbol?: Map<string, Map<number, number>>;
+}): Promise<MlOptimizationCandidate | null> {
+  const {
+    bestValidation,
+    ranges,
+    symbols,
+    klinesBySymbol,
+    baseConfig,
+    modelMinProb,
+    entryProbabilityBySymbol,
+  } = params;
+  if (!bestValidation) {
+    return null;
+  }
+  const bestTest = await evaluateStrategyCandidate({
+    strategyParams: bestValidation.strategyParams,
+    split: "test",
+    range: ranges.test,
+    symbols,
+    klinesBySymbol,
+    baseConfig,
+    modelMinProbability: modelMinProb ?? null,
+    entryProbabilityBySymbol,
+  });
+  console.log("\nBest validation candidate:");
+  console.log(JSON.stringify(bestValidation.strategyParams, null, 2));
+  console.log(`Validation score=${bestValidation.metrics.riskAdjustedScore.toFixed(2)}`);
+  console.log(
+    `Test score=${bestTest.metrics.riskAdjustedScore.toFixed(2)} pnl=${bestTest.metrics.pnlPct.toFixed(2)}% dd=${bestTest.metrics.maxDrawdownPct.toFixed(2)}%`,
+  );
+  return bestTest;
+}
+
+async function saveOptimizationRun(run: MlOptimizationRun): Promise<string> {
+  const outputPath = getMlOptimizationRunPath(run.runId);
+  await mkdir(getMlRunsDir(), { recursive: true });
+  await writeFile(outputPath, JSON.stringify(run, null, 2), "utf8");
+  return outputPath;
+}
+
+function createBaseConfig(params: {
+  options: CliOptions;
+  symbols: string[];
+}): ReturnType<typeof createDefaultBacktestConfig> {
+  const { options, symbols } = params;
+  return createDefaultBacktestConfig({
+    days: options.days,
+    initialCash: INITIAL_PAPER_CASH,
+    concurrency: options.concurrency,
+    feeBps: options.feeBps,
+    symbols,
+  });
+}
+
+async function runOptimization(options: CliOptions): Promise<MlOptimizationRun> {
+  const symbols = await resolveSymbols(options.symbols);
+  const rng = createRandomSource(options.seed);
+  const { fetchStartTime, endTime, ranges } = resolveSimulationRanges(options.days);
+  console.log(
+    `Optimizing strategy params: symbols=${symbols.length}, days=${options.days}, trials=${options.trials}, feeBps=${options.feeBps}`,
+  );
+  const klinesBySymbol = await loadHistoricalKlinesBySymbol({
+    symbols,
+    interval: STRATEGY_INTERVAL,
+    startTime: fetchStartTime,
+    endTime,
+    concurrency: options.concurrency,
+  });
+  const entryProbabilityBySymbol = await loadOptionalEntryProbabilities({
+    modelRunId: options.modelRunId,
+    symbols,
+    klinesBySymbol,
+    modelMinProb: options.modelMinProb,
+  });
+  const baseConfig = createBaseConfig({ options, symbols });
+  const candidates = uniqueCandidates([
+    DEFAULT_STRATEGY_PARAMS,
+    ...Array.from({ length: options.trials }, () =>
+      sampleRandomStrategyParams(rng),
+    ),
+  ]);
+  const validationResults = await evaluateCandidates({
+    candidates,
+    ranges,
+    symbols,
+    klinesBySymbol,
+    baseConfig,
+    modelMinProb: options.modelMinProb,
+    entryProbabilityBySymbol,
+  });
   validationResults.sort(
     (a, b) => b.metrics.riskAdjustedScore - a.metrics.riskAdjustedScore,
   );
-
   const bestValidation = validationResults[0] ?? null;
-  let bestTest: MlOptimizationCandidate | null = null;
-
-  if (bestValidation) {
-    bestTest = await evaluateStrategyCandidate({
-      strategyParams: bestValidation.strategyParams,
-      split: "test",
-      range: ranges.test,
-      symbols,
-      klinesBySymbol,
-      baseConfig,
-      modelMinProbability: options.modelMinProb ?? null,
-      entryProbabilityBySymbol,
-    });
-
-    console.log("\nBest validation candidate:");
-    console.log(JSON.stringify(bestValidation.strategyParams, null, 2));
-    console.log(
-      `Validation score=${bestValidation.metrics.riskAdjustedScore.toFixed(2)}`,
-    );
-    console.log(
-      `Test score=${bestTest.metrics.riskAdjustedScore.toFixed(2)} pnl=${bestTest.metrics.pnlPct.toFixed(2)}% dd=${bestTest.metrics.maxDrawdownPct.toFixed(2)}%`,
-    );
-  }
-
-  const run: MlOptimizationRun = {
-    runId,
+  const bestTest = await evaluateBestTestCandidate({
+    bestValidation,
+    ranges,
+    symbols,
+    klinesBySymbol,
+    baseConfig,
+    modelMinProb: options.modelMinProb,
+    entryProbabilityBySymbol,
+  });
+  return {
+    runId: options.runId ?? `optimize-${Date.now()}`,
     createdAtIso: new Date().toISOString(),
     candidates: validationResults,
     bestValidation,
     bestTest,
   };
+}
 
-  const outputPath = getMlOptimizationRunPath(runId);
-  await mkdir(getMlRunsDir(), { recursive: true });
-  await writeFile(outputPath, JSON.stringify(run, null, 2), "utf8");
+async function main(): Promise<void> {
+  assertLocalhostOnly();
+  const options = parseArgs(process.argv.slice(2));
+  assertModelGateArgs(options);
+  const run = await runOptimization(options);
+  const outputPath = await saveOptimizationRun(run);
   console.log(`Optimization run saved: ${outputPath}`);
 }
 

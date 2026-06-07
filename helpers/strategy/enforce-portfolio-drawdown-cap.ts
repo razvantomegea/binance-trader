@@ -17,6 +17,38 @@ import type { CandleInterval } from "@/types/binance";
 import { getLatestClosedKline } from "@/utils/binance/get-klines";
 import { resolveTrailingSellPrice } from "@/utils/strategy/trailing-stop";
 import { processInBatches } from "@/utils/process-in-batches";
+import type { OpenPosition } from "@/helpers/strategy/get-positions";
+
+async function liquidateSymbol(params: {
+  symbol: string;
+  interval: CandleInterval;
+  position: OpenPosition;
+}): Promise<boolean> {
+  const candle = await getLatestClosedKline({
+    symbol: params.symbol,
+    interval: params.interval,
+  });
+  const mark = candle?.close ?? params.position.buyPrice;
+  const sellPrice = resolveTrailingSellPrice({
+    position: {
+      buyPrice: params.position.buyPrice,
+      maxPriceAfterBuy: params.position.maxPriceAfterBuy,
+    },
+    marketPrice: mark,
+    thresholdPct: TRAILING_STOP_PCT,
+  });
+
+  await placeTrade({
+    symbol: params.symbol,
+    side: "SELL",
+    qty: params.position.qty,
+    price: sellPrice,
+    interval: params.interval,
+    candleOpenTime: candle?.openTime ?? Date.now(),
+    reason: EXIT_PORTFOLIO_DRAWDOWN_REASON,
+  });
+  return true;
+}
 
 export async function enforcePortfolioDrawdownCap(params: {
   interval?: CandleInterval;
@@ -61,28 +93,8 @@ export async function enforcePortfolioDrawdownCap(params: {
         return;
       }
 
-      const candle = await getLatestClosedKline({ symbol, interval });
-      const mark = candle?.close ?? position.buyPrice;
-      const sellPrice = resolveTrailingSellPrice({
-        position: {
-          buyPrice: position.buyPrice,
-          maxPriceAfterBuy: position.maxPriceAfterBuy,
-        },
-        marketPrice: mark,
-        thresholdPct: TRAILING_STOP_PCT,
-      });
-
       try {
-        await placeTrade({
-          symbol,
-          side: "SELL",
-          qty: position.qty,
-          price: sellPrice,
-          interval,
-          candleOpenTime: candle?.openTime ?? Date.now(),
-          reason: EXIT_PORTFOLIO_DRAWDOWN_REASON,
-        });
-        liquidated += 1;
+        liquidated += (await liquidateSymbol({ symbol, interval, position })) ? 1 : 0;
       } catch (error) {
         console.error(
           `Portfolio drawdown liquidation failed for ${symbol}:`,

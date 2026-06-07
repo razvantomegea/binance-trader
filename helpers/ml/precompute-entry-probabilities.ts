@@ -13,6 +13,50 @@ export interface PrecomputeEntryProbabilitiesParams {
   metadata: MlModelMetadata;
 }
 
+function buildNormalizedRows(params: {
+  klinesAsc: KlineCandle[];
+  metadata: MlModelMetadata;
+}): { openTimes: number[]; normalizedRows: number[][] } {
+  const openTimes: number[] = [];
+  const normalizedRows: number[][] = [];
+
+  for (
+    let index = STRATEGY_LOOKBACK_CLOSES - 1;
+    index < params.klinesAsc.length;
+    index += 1
+  ) {
+    const windowAsc = params.klinesAsc.slice(
+      index - STRATEGY_LOOKBACK_CLOSES + 1,
+      index + 1,
+    );
+    const closed = [...windowAsc].reverse();
+    const { features } = buildDecisionFeatures({ closed });
+    openTimes.push(params.klinesAsc[index]!.openTime);
+    normalizedRows.push(normalizeFeatures(features, params.metadata.normalization));
+  }
+
+  return { openTimes, normalizedRows };
+}
+
+async function predictByOpenTime(params: {
+  model: tf.LayersModel;
+  openTimes: number[];
+  normalizedRows: number[][];
+}): Promise<Map<number, number>> {
+  const input = tf.tensor2d(params.normalizedRows);
+  const output = params.model.predict(input) as tf.Tensor;
+  const probabilities = await output.data();
+  const byOpenTime = new Map<number, number>();
+
+  for (let index = 0; index < params.openTimes.length; index += 1) {
+    byOpenTime.set(params.openTimes[index]!, probabilities[index] ?? 0);
+  }
+
+  input.dispose();
+  output.dispose();
+  return byOpenTime;
+}
+
 export async function precomputeEntryProbabilities(
   params: PrecomputeEntryProbabilitiesParams,
 ): Promise<Map<string, Map<number, number>>> {
@@ -24,39 +68,21 @@ export async function precomputeEntryProbabilities(
       continue;
     }
 
-    const openTimes: number[] = [];
-    const normalizedRows: number[][] = [];
-
-    for (let j = STRATEGY_LOOKBACK_CLOSES - 1; j < klinesAsc.length; j += 1) {
-      const windowAsc = klinesAsc.slice(
-        j - STRATEGY_LOOKBACK_CLOSES + 1,
-        j + 1,
-      );
-      const closed = [...windowAsc].reverse();
-      const { features } = buildDecisionFeatures({ closed });
-
-      openTimes.push(klinesAsc[j]!.openTime);
-      normalizedRows.push(
-        normalizeFeatures(features, params.metadata.normalization),
-      );
-    }
+    const { openTimes, normalizedRows } = buildNormalizedRows({
+      klinesAsc,
+      metadata: params.metadata,
+    });
 
     if (normalizedRows.length === 0) {
       continue;
     }
 
-    const input = tf.tensor2d(normalizedRows);
-    const output = params.model.predict(input) as tf.Tensor;
-    const probabilities = await output.data();
-
-    const byOpenTime = new Map<number, number>();
-    for (let i = 0; i < openTimes.length; i += 1) {
-      byOpenTime.set(openTimes[i]!, probabilities[i] ?? 0);
-    }
-
+    const byOpenTime = await predictByOpenTime({
+      model: params.model,
+      openTimes,
+      normalizedRows,
+    });
     result.set(symbol, byOpenTime);
-    input.dispose();
-    output.dispose();
   }
 
   return result;

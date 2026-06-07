@@ -89,7 +89,7 @@ function isHistoricalKlinesCachePayload(
   );
 }
 
-export async function readHistoricalKlinesCache(params: {
+async function readHistoricalKlinesCache(params: {
   symbol: string;
   interval: CandleInterval;
   startTime: number;
@@ -100,7 +100,7 @@ export async function readHistoricalKlinesCache(params: {
     interval: params.interval,
   });
 
-  if (!payload || payload.startTime !== params.startTime) {
+  if (payload?.startTime !== params.startTime) {
     return null;
   }
 
@@ -134,7 +134,7 @@ async function readCachePayloadFromFile(
   }
 }
 
-export async function listHistoricalKlinesCacheCandidates(params: {
+async function listHistoricalKlinesCacheCandidates(params: {
   symbol: string;
   interval: CandleInterval;
 }): Promise<HistoricalKlinesCachePayload[]> {

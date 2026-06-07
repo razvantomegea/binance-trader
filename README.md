@@ -7,32 +7,105 @@ Next.js dashboard for **paper trading** USDT pairs on Binance spot data. A sched
 ## Features
 
 - Portfolio summary, open positions, trade history, and equity curve
+- Symbol list with price chart (Recharts) and manual position close from the UI
 - Automated strategy (hourly interval) with configurable rules in `constants/binance.ts`
+- Portfolio-level drawdown cap: liquidates all open positions when equity falls 15% below peak while exposed
+- Post-close 24h metrics on SELL trades (max/min price and % move after exit)
 - Start/stop scheduler from the UI
 - Optional web push notifications when trades execute
 - Production scheduling via Railway cron or in-process cron for local dev
+- Historical backtest runner with kline cache and JSON reports
+- Local ML pipeline: dataset generation, logistic-regression training (TensorFlow.js), evaluation, and strategy-parameter optimization
 
 ## Strategy
 
-The strategy evaluates once per closed hourly candle (`H1`) and uses close prices for decisions.
+The strategy evaluates once per closed hourly candle (`H1`) and uses close prices for decisions. Core logic lives in `helpers/strategy/decision-core.ts`.
 
 - **Entry**:
   - Current close and highest close in the 24h lookback must both be +40% to +60% above the lowest close (`ENTRY_RANGE_PCT = 0.4`, `ENTRY_RANGE_MAX_PCT = 0.6`)
   - Position size is 5% of available cash (`BUY_NOTIONAL_PCT = 0.05`)
+  - Optional ML gate: when a trained model is wired in, BUY requires `entryProbability >= modelMinProbability`
 
 - **Exit**:
   - 25% trailing stop (`TRAILING_STOP_PCT = 0.25`) measured from peak price since buy
   - 15% max loss per trade (`MAX_LOSS_PCT = 0.15`)
 
+- **Portfolio drawdown cap**:
+  - While any position is open, tracks peak equity (`exposure_peak_equity` in `strategy_meta`)
+  - If equity drops 15% below that peak, all open positions are liquidated
+
 - **Re-entry cooldown**:
   - Symbol cooldown after sell is 24h (`SYMBOL_REENTRY_COOLDOWN_MS`)
 
+Default parameters are centralized in `constants/strategy-params.ts` as `DEFAULT_STRATEGY_PARAMS`.
+
 ## Stack
 
-- [Next.js](https://nextjs.org/) 16 (App Router)
+- [Next.js](https://nextjs.org/) 16 (App Router), React 19, Tailwind CSS 4
 - [Drizzle ORM](https://orm.drizzle.team/) + Postgres (e.g. [Neon](https://neon.tech/))
 - Binance public market data (`data-api.binance.vision` by default)
+- [Recharts](https://recharts.org/) for dashboard charts
+- [TensorFlow.js](https://www.tensorflow.org/js) for local ML training (dev dependency)
 - [Vitest](https://vitest.dev/) for unit tests
+- [Fallow](https://github.com/fallow-rs/fallow) for code-health audits in CI
+
+## Project structure
+
+```
+app/                          Next.js App Router
+├── page.tsx                  Dashboard entry
+├── layout.tsx
+├── globals.css
+└── api/                      REST endpoints
+    ├── portfolio/            Cash, equity, positions summary
+    ├── trades/               Trade history
+    ├── equity-curve/         Equity snapshots
+    ├── klines/               Candle data for charts
+    ├── closing-prices/       Batch closing prices
+    ├── usdt-symbols/         Tradable USDT pairs
+    ├── positions/close/      Manual position close
+    ├── strategy/             start | stop | status
+    ├── cron/run-strategy/    External cron trigger (protected)
+    ├── push/                 Web push subscribe/unsubscribe/VAPID key
+    └── debug/zec-entry/      Local debug helper
+
+components/                   React UI
+├── dashboard/                Layout, strategy controls, data hooks
+├── portfolio-summary.tsx
+├── positions-table.tsx
+├── trades-table.tsx
+├── equity-curve.tsx
+├── price-chart.tsx
+├── symbol-list.tsx
+└── push-notification-toggle.tsx
+
+helpers/                      Business logic
+├── strategy/                 Runner, decision core, backtest, evaluate-symbol
+├── scheduler/                In-process cron heartbeat
+├── portfolio/                Portfolio API response builder
+├── trades/                   Trade queries and metric backfills
+├── equity-curve/             Snapshot queries
+├── closing-prices/
+├── notifications/            Web push delivery
+└── ml/                       Dataset, training, evaluation, optimization
+
+utils/                        Pure utilities
+├── binance/                  Klines, symbols, caching, retries
+├── strategy/                 Trailing stop, price conditions
+├── ml/                       Features, labels, model I/O, artifact paths
+├── trade/                    Post-close extrema
+├── api/                      Cron auth, query parsing
+└── notifications/            Push client helpers
+
+constants/                    Strategy, Binance, ML, cron, layout config
+types/                        Shared TypeScript types
+db/                           Drizzle schema and client
+hooks/                        Dashboard and push UI hooks
+scripts/                      CLI: backtest, ML, cron trigger, cleanup, Railway deploy
+backtest-cache/               Local kline cache and ML artifacts (gitignored)
+backtest-results/             Backtest JSON reports (gitignored)
+public/sw.js                  Service worker for web push
+```
 
 ## Prerequisites
 
@@ -64,6 +137,9 @@ The strategy evaluates once per closed hourly candle (`H1`) and uses close price
    # Optional — override Binance data API base URL
    # BINANCE_API_BASE_URL=https://data-api.binance.vision
 
+   # Optional — backtest / ML cache directory (default: ./backtest-cache)
+   # BACKTEST_CACHE_DIR=backtest-cache
+
    # Optional — web push (generate keys: npx web-push generate-vapid-keys)
    # WEB_PUSH_VAPID_PUBLIC_KEY=
    # WEB_PUSH_VAPID_PRIVATE_KEY=
@@ -86,34 +162,67 @@ The strategy evaluates once per closed hourly candle (`H1`) and uses close price
 
 ### Scripts
 
-| Command                       | Description                             |
-| ----------------------------- | --------------------------------------- |
-| `pnpm dev`                    | Next.js dev server                      |
-| `pnpm build`                  | Production build                        |
-| `pnpm start`                  | Production server                       |
-| `pnpm lint`                   | Run ESLint                              |
-| `pnpm lint:fix`               | Run ESLint with autofix                 |
-| `pnpm test`                   | Run Vitest                              |
-| `pnpm backtest`               | Run strategy backtest                   |
-| `pnpm analyze:post-close`     | Analyze post-close 24h behavior         |
-| `pnpm backtest:cleanup`       | Remove old backtest reports             |
-| `pnpm backtest:cache:cleanup` | Remove backtest cache files             |
-| `pnpm db:push`                | Apply Drizzle schema to `DATABASE_URL`  |
-| `pnpm cron:trigger`           | Manually hit the strategy cron endpoint |
+| Command                       | Description                                      |
+| ----------------------------- | ------------------------------------------------ |
+| `pnpm dev`                    | Next.js dev server                               |
+| `pnpm build`                  | Production build                                 |
+| `pnpm start`                  | Production server                                |
+| `pnpm lint`                   | Run ESLint                                       |
+| `pnpm lint:fix`               | Run ESLint with autofix                          |
+| `pnpm format`                 | Run Prettier                                     |
+| `pnpm test`                   | Run Vitest                                       |
+| `pnpm test:watch`             | Vitest watch mode                                |
+| `pnpm backtest`               | Run strategy backtest (localhost only)           |
+| `pnpm analyze:post-close`     | Analyze post-close 24h behavior                  |
+| `pnpm backtest:cleanup`       | Remove old backtest reports                      |
+| `pnpm backtest:cache:cleanup` | Remove backtest cache files                      |
+| `pnpm ml:dataset`             | Generate ML training dataset from historical data |
+| `pnpm ml:train`               | Train logistic-regression entry model            |
+| `pnpm ml:eval`                | Evaluate model + strategy thresholds             |
+| `pnpm ml:optimize`            | Random-search strategy params with ML filter       |
+| `pnpm db:push`                | Apply Drizzle schema to `DATABASE_URL`           |
+| `pnpm cron:trigger`           | Manually hit the strategy cron endpoint          |
+| `pnpm railway:up:web`         | Deploy web service via Railway CLI               |
+| `pnpm railway:up:cron`        | Deploy cron service via Railway CLI              |
+| `pnpm fallow:audit`           | Run Fallow code-health audit                     |
 
-### Backtest analysis
+Backtest and ML scripts refuse to run when `NODE_ENV=production`.
 
-Run a backtest and save a report:
+### Backtest
+
+Run a backtest and save a report under `backtest-results/`:
 
 ```bash
 pnpm backtest --days 180
 ```
 
-Then analyze exit / trailing-stop scenarios on a specific report:
+Klines are cached under `backtest-cache/` (or `BACKTEST_CACHE_DIR`). The simulator checks every 5 minutes and reuses the same decision core as live trading.
+
+Analyze exit / trailing-stop scenarios on a specific report:
 
 ```bash
 python scripts/analyze-backtest-exits.py backtest-results/backtest-<timestamp>.json
 ```
+
+### ML pipeline (local)
+
+ML artifacts are stored under `backtest-cache/ml/` (datasets, models, optimization runs).
+
+```bash
+# 1. Build labeled dataset from historical klines
+pnpm ml:dataset --days 180
+
+# 2. Train a logistic-regression model (uses latest dataset by default)
+pnpm ml:train
+
+# 3. Evaluate model thresholds against backtest splits
+pnpm ml:eval --model-run-id <runId> --days 180
+
+# 4. Random-search strategy params with optional ML probability gate
+pnpm ml:optimize --model-run-id <runId> --days 180
+```
+
+Labels use a 24h forward horizon with a 15% max drawdown cap. Features include entry-band signals, range position, volatility, and time-of-day. See `constants/ml-strategy.ts` and `utils/ml/build-decision-features.ts`.
 
 ### Manual cron trigger (local)
 
@@ -138,7 +247,7 @@ The repo includes two [Railway](https://railway.com) config files for a common t
 | Service (example name) | Role                                       | Config file         |
 | ---------------------- | ------------------------------------------ | ------------------- |
 | Web app                | Next.js dashboard (always on)              | `railway.json`      |
-| Cron worker            | Calls the strategy API every 15 min, exits | `railway.cron.json` |
+| Cron worker            | Calls the strategy API every 5 min, exits   | `railway.cron.json` |
 
 ### Web service
 
@@ -170,8 +279,28 @@ Alternatively set `CRON_URL` explicitly to your public app URL.
 
 | Mode       | Env                                            | Behavior                                                                   |
 | ---------- | ---------------------------------------------- | -------------------------------------------------------------------------- |
-| In-process | `AUTO_START_STRATEGY=true`                     | `node-cron` runs inside the Next.js server (handy locally)                 |
+| In-process | `AUTO_START_STRATEGY=true`                     | Heartbeat timer runs inside the Next.js server via `instrumentation.ts`    |
 | External   | `SCHEDULER_MODE=external-cron` + `CRON_SECRET` | Strategy runs only when `/api/cron/run-strategy` is called with the secret |
+
+## Database schema
+
+Postgres tables (see `db/schema.ts`):
+
+| Table               | Purpose                                              |
+| ------------------- | ---------------------------------------------------- |
+| `trades`            | BUY/SELL history, post-close 24h metrics             |
+| `positions`         | Open paper positions                                 |
+| `equity_snapshots`  | Periodic cash + equity snapshots                     |
+| `strategy_meta`     | Last candle time, exposure peak equity, scheduler state |
+| `push_subscriptions`| Web push endpoints                                   |
+
+## CI
+
+GitHub Actions (`.github/workflows/ci.yml`) on push/PR to `main`:
+
+- `pnpm lint`
+- `pnpm test`
+- `pnpm fallow audit --ci`
 
 ## Environment reference
 
@@ -182,6 +311,7 @@ Alternatively set `CRON_URL` explicitly to your public app URL.
 | `SCHEDULER_MODE`             | Production        | Set to `external-cron` with Railway cron      |
 | `AUTO_START_STRATEGY`        | Local optional    | `true` to start in-process scheduler          |
 | `BINANCE_API_BASE_URL`       | No                | Defaults to `https://data-api.binance.vision` |
+| `BACKTEST_CACHE_DIR`         | No                | Kline + ML cache root (default `backtest-cache`) |
 | `WEB_PUSH_VAPID_PUBLIC_KEY`  | No                | Web push public key                           |
 | `WEB_PUSH_VAPID_PRIVATE_KEY` | No                | Web push private key                          |
 | `WEB_PUSH_SUBJECT`           | No                | `mailto:` or `https:` contact for VAPID       |

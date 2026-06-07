@@ -7,7 +7,7 @@ import {
 } from "@/types/trade-metrics";
 import { pnlPercentFromPrices } from "@/utils/pnl-percent";
 
-export interface SimPosition {
+interface SimPosition {
   symbol: string;
   qty: number;
   buyPrice: number;
@@ -62,10 +62,7 @@ export class SimulatedLedger {
     const { symbol, decision, price } = params;
 
     if (decision.action === "HOLD") {
-      this.applyHoldUpdate({
-        symbol,
-        updatedMaxPrice: decision.updatedMaxPrice,
-      });
+      this.applyHoldUpdate({ symbol, updatedMaxPrice: decision.updatedMaxPrice });
       return false;
     }
 
@@ -74,95 +71,41 @@ export class SimulatedLedger {
     }
 
     if (
-      decision.candleOpenTime === null ||
       decision.qty === undefined ||
+      decision.candleOpenTime === null ||
       decision.reason === undefined
     ) {
       return false;
     }
 
-    const qty = decision.qty;
+    const tradeAction = decision.action;
+    const { qty } = decision;
     const notional = qty * price;
     const fee = (notional * this.feeBps) / 10_000;
 
-    if (decision.action === "BUY") {
-      const totalCost = notional + fee;
-      if (totalCost > this.cash) {
-        return false;
-      }
-
-      this.cash -= totalCost;
-      this.positions.set(symbol, {
+    if (tradeAction === "BUY") {
+      return this.applyBuyDecision({
         symbol,
-        qty,
-        buyPrice: price,
-        maxPriceAfterBuy: price,
-        buyOpenTime: decision.candleOpenTime,
-      });
-    } else {
-      const position = this.positions.get(symbol);
-      if (!position) {
-        return false;
-      }
-
-      const buyPrice = position.buyPrice;
-      const maxPriceAfterBuy =
-        decision.updatedMaxPrice ??
-        position.maxPriceAfterBuy ??
-        position.buyPrice;
-      const realizedPnlPct = pnlPercentFromPrices(buyPrice, price);
-
-      this.cash += notional - fee;
-      this.positions.delete(symbol);
-      this.lastSellOpenTime.set(symbol, decision.candleOpenTime);
-
-      this.trades.push({
-        symbol,
-        side: decision.action,
+        candleOpenTime: decision.candleOpenTime,
+        reason: decision.reason,
         qty,
         price,
         notional,
         fee,
-        candleOpenTime: decision.candleOpenTime,
-        reason: decision.reason,
-        openPrice: buyPrice,
-        closePrice: price,
-        maxPriceAfterBuy,
-        realizedPnlPct,
-        ...(params.postClose24h ?? NULL_TRADE_POST_CLOSE_24H),
       });
-
-      return true;
     }
 
-    this.trades.push({
+    return this.applySellDecision({
       symbol,
-      side: decision.action,
+      candleOpenTime: decision.candleOpenTime,
+      reason: decision.reason,
+      updatedMaxPrice: decision.updatedMaxPrice,
       qty,
       price,
       notional,
       fee,
-      candleOpenTime: decision.candleOpenTime,
-      reason: decision.reason,
-      openPrice: price,
-      closePrice: null,
-      maxPriceAfterBuy: price,
-      realizedPnlPct: null,
-      ...NULL_TRADE_POST_CLOSE_24H,
+      postClose24h: params.postClose24h,
     });
-
-    return true;
-  }
-
-  getMarkPrices(params: {
-    symbol: string;
-    close: number;
-  }): Map<string, number> {
-    const prices = new Map<string, number>();
-    for (const symbol of this.positions.keys()) {
-      prices.set(symbol, params.symbol === symbol ? params.close : 0);
-    }
-    return prices;
   }
 
   getEquity(markPrices: Map<string, number>): number {
@@ -176,5 +119,86 @@ export class SimulatedLedger {
     }
 
     return equity;
+  }
+
+  private applyBuyDecision(params: {
+    symbol: string;
+    candleOpenTime: number;
+    reason: string;
+    qty: number;
+    price: number;
+    notional: number;
+    fee: number;
+  }): boolean {
+    const totalCost = params.notional + params.fee;
+    if (totalCost > this.cash) {
+      return false;
+    }
+
+    this.cash -= totalCost;
+    this.positions.set(params.symbol, {
+      symbol: params.symbol,
+      qty: params.qty,
+      buyPrice: params.price,
+      maxPriceAfterBuy: params.price,
+      buyOpenTime: params.candleOpenTime,
+    });
+    this.trades.push({
+      symbol: params.symbol,
+      side: "BUY",
+      qty: params.qty,
+      price: params.price,
+      notional: params.notional,
+      fee: params.fee,
+      candleOpenTime: params.candleOpenTime,
+      reason: params.reason,
+      openPrice: params.price,
+      closePrice: null,
+      maxPriceAfterBuy: params.price,
+      realizedPnlPct: null,
+      ...NULL_TRADE_POST_CLOSE_24H,
+    });
+    return true;
+  }
+
+  private applySellDecision(params: {
+    symbol: string;
+    candleOpenTime: number;
+    reason: string;
+    updatedMaxPrice?: number;
+    qty: number;
+    price: number;
+    notional: number;
+    fee: number;
+    postClose24h?: TradePostClose24hMetrics;
+  }): boolean {
+    const position = this.positions.get(params.symbol);
+    if (!position) {
+      return false;
+    }
+
+    const maxPriceAfterBuy =
+      params.updatedMaxPrice ?? position.maxPriceAfterBuy ?? position.buyPrice;
+    const realizedPnlPct = pnlPercentFromPrices(position.buyPrice, params.price);
+
+    this.cash += params.notional - params.fee;
+    this.positions.delete(params.symbol);
+    this.lastSellOpenTime.set(params.symbol, params.candleOpenTime);
+    this.trades.push({
+      symbol: params.symbol,
+      side: "SELL",
+      qty: params.qty,
+      price: params.price,
+      notional: params.notional,
+      fee: params.fee,
+      candleOpenTime: params.candleOpenTime,
+      reason: params.reason,
+      openPrice: position.buyPrice,
+      closePrice: params.price,
+      maxPriceAfterBuy,
+      realizedPnlPct,
+      ...(params.postClose24h ?? NULL_TRADE_POST_CLOSE_24H),
+    });
+    return true;
   }
 }

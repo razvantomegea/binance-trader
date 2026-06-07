@@ -42,19 +42,17 @@ declare global {
 }
 
 function getState(): StrategyHeartbeatState {
-  if (!globalThis.__strategyHeartbeatState) {
-    globalThis.__strategyHeartbeatState = {
-      running: false,
-      startedAtMs: null,
-      lastRunAtMs: null,
-      lastCompletedHourKey: null,
-      runningNow: false,
-      lastError: null,
-      lastResult: null,
-      timer: null,
-      hydratedFromMeta: false,
-    };
-  }
+  globalThis.__strategyHeartbeatState ??= {
+    running: false,
+    startedAtMs: null,
+    lastRunAtMs: null,
+    lastCompletedHourKey: null,
+    runningNow: false,
+    lastError: null,
+    lastResult: null,
+    timer: null,
+    hydratedFromMeta: false,
+  };
 
   return globalThis.__strategyHeartbeatState;
 }
@@ -82,20 +80,24 @@ function computeNextHourlyRunIso(tsMs: number): string {
 }
 
 async function runIfNeeded(state: StrategyHeartbeatState): Promise<void> {
-  if (!state.running || state.runningNow) {
-    return;
-  }
-
   const nowMs = Date.now();
-  if (!isTopOfHour(nowMs)) {
+  if (!shouldRun(state, nowMs)) {
     return;
   }
+  await runScheduledCycle(state, toHourKey(nowMs));
+}
 
-  const hourKey = toHourKey(nowMs);
-  if (state.lastCompletedHourKey === hourKey) {
-    return;
+function shouldRun(state: StrategyHeartbeatState, nowMs: number): boolean {
+  if (!state.running || state.runningNow || !isTopOfHour(nowMs)) {
+    return false;
   }
+  return state.lastCompletedHourKey !== toHourKey(nowMs);
+}
 
+async function runScheduledCycle(
+  state: StrategyHeartbeatState,
+  hourKey: string,
+): Promise<void> {
   state.runningNow = true;
   state.lastError = null;
 
@@ -109,15 +111,22 @@ async function runIfNeeded(state: StrategyHeartbeatState): Promise<void> {
       `[heartbeat] H1 done: trades=${result.tradesExecuted} equity=${result.equity.toFixed(2)}`,
     );
   } catch (error) {
-    state.lastCompletedHourKey = hourKey;
-    const message =
-      error instanceof Error ? error.message : "Strategy run failed";
-    state.lastError = message;
-    await recordSchedulerRun({ error: message });
-    console.error("[heartbeat] H1 failed", error);
+    await handleCycleFailure(state, hourKey, error);
   } finally {
     state.runningNow = false;
   }
+}
+
+async function handleCycleFailure(
+  state: StrategyHeartbeatState,
+  hourKey: string,
+  error: unknown,
+): Promise<void> {
+  state.lastCompletedHourKey = hourKey;
+  const message = error instanceof Error ? error.message : "Strategy run failed";
+  state.lastError = message;
+  await recordSchedulerRun({ error: message });
+  console.error("[heartbeat] H1 failed", error);
 }
 
 function startHeartbeatLoop(state: StrategyHeartbeatState): void {

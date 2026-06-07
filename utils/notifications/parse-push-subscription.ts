@@ -12,8 +12,8 @@ export function parsePushSubscriptionBody(
   }
 
   const record = body as Record<string, unknown>;
-  const endpoint = record.endpoint;
-  const keys = record.keys;
+  const {endpoint} = record;
+  const {keys} = record;
 
   if (!isNonEmptyString(endpoint)) {
     return null;
@@ -24,8 +24,8 @@ export function parsePushSubscriptionBody(
   }
 
   const keysRecord = keys as Record<string, unknown>;
-  const p256dh = keysRecord.p256dh;
-  const auth = keysRecord.auth;
+  const {p256dh} = keysRecord;
+  const {auth} = keysRecord;
 
   if (!isNonEmptyString(p256dh) || !isNonEmptyString(auth)) {
     return null;
@@ -44,7 +44,7 @@ export function parseUnsubscribeBody(
     return null;
   }
 
-  const endpoint = (body as Record<string, unknown>).endpoint;
+  const {endpoint} = (body as Record<string, unknown>);
   if (!isNonEmptyString(endpoint)) {
     return null;
   }

@@ -77,6 +77,67 @@ function peaksMatch(stored: string | null, computed: number): boolean {
   return Math.abs(storedValue - computed) <= storedValue * 1e-9;
 }
 
+async function computePeakForSell(params: {
+  sell: {
+    id: number;
+    symbol: string;
+    maxPriceAfterBuy: string | null;
+    interval: string;
+    candleOpenTime: Date;
+    createdAt: Date;
+  };
+  buysBySymbol: Map<string, BuyLookupRow[]>;
+}): Promise<number | null> {
+  const buy = findBuyForSell(params.sell, params.buysBySymbol);
+  if (!buy) {
+    return null;
+  }
+
+  const buyPrice = parseFiniteNumber(buy.price);
+  if (!Number.isFinite(buyPrice) || buyPrice <= 0) {
+    return null;
+  }
+
+  const buyOpenTime = buy.candleOpenTime.getTime();
+  const sellOpenTime = params.sell.candleOpenTime.getTime();
+  const klines = await getHistoricalClosedKlines({
+    symbol: params.sell.symbol,
+    interval: params.sell.interval as CandleInterval,
+    startTime: buyOpenTime,
+    endTime: sellOpenTime,
+  });
+
+  return computePeakWhilePositionOpen({
+    buyPrice,
+    buyOpenTime,
+    klines,
+    sellOpenTime,
+  });
+}
+
+async function processSellRow(params: {
+  sell: {
+    id: number;
+    symbol: string;
+    maxPriceAfterBuy: string | null;
+    interval: string;
+    candleOpenTime: Date;
+    createdAt: Date;
+  };
+  buysBySymbol: Map<string, BuyLookupRow[]>;
+}): Promise<"updated" | "skipped"> {
+  const computedPeak = await computePeakForSell(params);
+  if (computedPeak === null || peaksMatch(params.sell.maxPriceAfterBuy, computedPeak)) {
+    return "skipped";
+  }
+
+  await getDb()
+    .update(trades)
+    .set({ maxPriceAfterBuy: String(computedPeak) })
+    .where(eq(trades.id, params.sell.id));
+  return "updated";
+}
+
 export async function backfillMaxPriceAfterBuy(): Promise<BackfillMaxPriceAfterBuyResult> {
   const sellRows = await getDb()
     .select({
@@ -98,55 +159,20 @@ export async function backfillMaxPriceAfterBuy(): Promise<BackfillMaxPriceAfterB
   let skipped = 0;
 
   for (const sell of sellRows) {
-    const buy = findBuyForSell(sell, buysBySymbol);
-    if (!buy) {
-      skipped += 1;
-      continue;
-    }
-
-    const buyPrice = parseFiniteNumber(buy.price);
-    const buyOpenTime = buy.candleOpenTime.getTime();
-    const sellOpenTime = sell.candleOpenTime.getTime();
-
-    if (!Number.isFinite(buyPrice) || buyPrice <= 0) {
-      skipped += 1;
-      continue;
-    }
-
-    let klines;
     try {
-      klines = await getHistoricalClosedKlines({
-        symbol: sell.symbol,
-        interval: sell.interval as CandleInterval,
-        startTime: buyOpenTime,
-        endTime: sellOpenTime,
-      });
+      const result = await processSellRow({ sell, buysBySymbol });
+      if (result === "updated") {
+        updated += 1;
+      } else {
+        skipped += 1;
+      }
     } catch (error) {
       console.error(
         `Max-price-after-buy backfill failed for trade ${sell.id}:`,
         error,
       );
       skipped += 1;
-      continue;
     }
-
-    const computedPeak = computePeakWhilePositionOpen({
-      buyPrice,
-      buyOpenTime,
-      klines,
-      sellOpenTime,
-    });
-
-    if (peaksMatch(sell.maxPriceAfterBuy, computedPeak)) {
-      skipped += 1;
-      continue;
-    }
-
-    await getDb()
-      .update(trades)
-      .set({ maxPriceAfterBuy: String(computedPeak) })
-      .where(eq(trades.id, sell.id));
-    updated += 1;
   }
 
   return {

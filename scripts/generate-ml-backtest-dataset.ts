@@ -8,6 +8,10 @@ import {
   STRATEGY_INTERVAL,
   STRATEGY_LOOKBACK_CLOSES,
 } from "@/constants/strategy";
+import {
+  ML_DEFAULT_FEE_BPS,
+  ML_FORWARD_HORIZON_HOURS,
+} from "@/constants/ml-strategy";
 import { generateDatasetRowsForSymbol } from "@/helpers/ml/generate-dataset-rows";
 import {
   getEvaluationStartOpenTime,
@@ -16,15 +20,13 @@ import {
 } from "@/helpers/strategy/backtest/historical-kline-provider";
 import { assertLocalhostOnly } from "@/helpers/strategy/backtest/assert-localhost-only";
 import type { MlDecisionRow } from "@/types/ml-strategy";
+import { HOUR_MS } from "@/utils/binance/candle-time";
 import { getMlDatasetsDir } from "@/utils/ml/ml-artifact-paths";
 import { writeJsonl } from "@/utils/ml/read-write-jsonl";
-import { getTradingSymbols } from "@/utils/binance/get-usdt-symbols";
 import {
-  ML_FORWARD_HORIZON_HOURS,
-  ML_DEFAULT_FEE_BPS,
-} from "@/constants/ml-strategy";
-import { HOUR_MS } from "@/utils/binance/candle-time";
-import { parseCliNumber } from "./ml-cli-args";
+  parseMlBaseArgs,
+  resolveSymbols,
+} from "./ml/parse-ml-cli-args";
 
 interface CliOptions {
   days: number;
@@ -35,46 +37,18 @@ interface CliOptions {
 }
 
 function parseArgs(argv: string[]): CliOptions {
-  const options: CliOptions = {
+  const baseOptions = parseMlBaseArgs(argv, {
     days: 180,
     concurrency: BINANCE_FETCH_CONCURRENCY,
     feeBps: ML_DEFAULT_FEE_BPS,
-  };
+  });
+  const options: CliOptions = { ...baseOptions };
 
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     const next = argv[i + 1];
 
-    if (arg === "--days" && next) {
-      options.days = parseCliNumber({
-        flag: "--days",
-        value: next,
-        integer: true,
-        min: 1,
-      });
-      i += 1;
-    } else if (arg === "--symbols" && next) {
-      options.symbols = next
-        .split(/[,\s]+/)
-        .map((s) => s.trim().toUpperCase())
-        .filter(Boolean);
-      i += 1;
-    } else if (arg === "--concurrency" && next) {
-      options.concurrency = parseCliNumber({
-        flag: "--concurrency",
-        value: next,
-        integer: true,
-        min: 1,
-      });
-      i += 1;
-    } else if (arg === "--fee-bps" && next) {
-      options.feeBps = parseCliNumber({
-        flag: "--fee-bps",
-        value: next,
-        min: 0,
-      });
-      i += 1;
-    } else if (arg === "--output" && next) {
+    if (arg === "--output" && next) {
       options.output = next;
       i += 1;
     }
@@ -83,33 +57,69 @@ function parseArgs(argv: string[]): CliOptions {
   return options;
 }
 
-async function resolveSymbols(symbols?: string[]): Promise<string[]> {
-  if (symbols && symbols.length > 0) {
-    return [...new Set(symbols)].sort();
+interface DatasetTimeRange {
+  fetchStartTime: number;
+  endTime: number;
+  evalStartTime: number;
+  labelEndTime: number;
+}
+
+function resolveTimeRange(days: number): DatasetTimeRange {
+  const { startTime: fetchStartTime, endTime } = getHistoricalRange({
+    days,
+  });
+  const evalStartTime = getEvaluationStartOpenTime({
+    rangeStartTime: fetchStartTime,
+    lookbackCloses: STRATEGY_LOOKBACK_CLOSES,
+  });
+  const labelEndTime = endTime - ML_FORWARD_HORIZON_HOURS * HOUR_MS;
+  return { fetchStartTime, endTime, evalStartTime, labelEndTime };
+}
+
+function buildRows(params: {
+  symbols: string[];
+  klinesBySymbol: Awaited<ReturnType<typeof loadHistoricalKlinesBySymbol>>;
+  evalStartTime: number;
+  labelEndTime: number;
+  feeBps: number;
+}): MlDecisionRow[] {
+  const { symbols, klinesBySymbol, evalStartTime, labelEndTime, feeBps } = params;
+  const rows: MlDecisionRow[] = [];
+  for (const symbol of symbols) {
+    const klinesAsc = klinesBySymbol.get(symbol);
+    if (!klinesAsc || klinesAsc.length === 0) {
+      continue;
+    }
+    const symbolRows = generateDatasetRowsForSymbol({
+      symbol,
+      klinesAsc,
+      startTime: evalStartTime,
+      endTime: labelEndTime,
+      feeBps,
+    });
+    rows.push(...symbolRows);
+    console.log(`  ${symbol}: ${symbolRows.length} rows`);
   }
-  return [...(await getTradingSymbols())].sort();
+  return rows;
+}
+
+function printSummary(rows: MlDecisionRow[], outputPath: string): void {
+  const positive = rows.filter((row) => row.label === 1).length;
+  const ratio = rows.length > 0 ? ((positive / rows.length) * 100).toFixed(2) : "0";
+  console.log(`Dataset saved: ${outputPath}`);
+  console.log(`Rows: ${rows.length}, positive labels: ${positive} (${ratio}%)`);
 }
 
 async function main(): Promise<void> {
   assertLocalhostOnly();
   const options = parseArgs(process.argv.slice(2));
   const symbols = await resolveSymbols(options.symbols);
-
-  const { startTime: fetchStartTime, endTime } = getHistoricalRange({
-    days: options.days,
-  });
-
-  const evalStartTime = getEvaluationStartOpenTime({
-    rangeStartTime: fetchStartTime,
-    lookbackCloses: STRATEGY_LOOKBACK_CLOSES,
-  });
-
-  const labelEndTime = endTime - ML_FORWARD_HORIZON_HOURS * HOUR_MS;
-
+  const { fetchStartTime, endTime, evalStartTime, labelEndTime } = resolveTimeRange(
+    options.days,
+  );
   console.log(
     `Generating ML dataset: symbols=${symbols.length}, days=${options.days}, sampleRange=${new Date(evalStartTime).toISOString()}..${new Date(labelEndTime).toISOString()}`,
   );
-
   const klinesBySymbol = await loadHistoricalKlinesBySymbol({
     symbols,
     interval: STRATEGY_INTERVAL,
@@ -117,42 +127,21 @@ async function main(): Promise<void> {
     endTime,
     concurrency: options.concurrency,
   });
-
-  const rows: MlDecisionRow[] = [];
-
-  for (const symbol of symbols) {
-    const klinesAsc = klinesBySymbol.get(symbol);
-    if (!klinesAsc || klinesAsc.length === 0) {
-      continue;
-    }
-
-    const symbolRows = generateDatasetRowsForSymbol({
-      symbol,
-      klinesAsc,
-      startTime: evalStartTime,
-      endTime: labelEndTime,
-      feeBps: options.feeBps,
-    });
-
-    rows.push(...symbolRows);
-    console.log(`  ${symbol}: ${symbolRows.length} rows`);
-  }
-
+  const rows = buildRows({
+    symbols,
+    klinesBySymbol,
+    evalStartTime,
+    labelEndTime,
+    feeBps: options.feeBps,
+  });
   rows.sort(
     (a, b) => a.openTime - b.openTime || a.symbol.localeCompare(b.symbol),
   );
-
   const outputPath =
     options.output ?? join(getMlDatasetsDir(), `dataset-${Date.now()}.jsonl`);
-
   await mkdir(getMlDatasetsDir(), { recursive: true });
   await writeJsonl(outputPath, rows);
-
-  const positive = rows.filter((row) => row.label === 1).length;
-  console.log(`Dataset saved: ${outputPath}`);
-  console.log(
-    `Rows: ${rows.length}, positive labels: ${positive} (${rows.length > 0 ? ((positive / rows.length) * 100).toFixed(2) : 0}%)`,
-  );
+  printSummary(rows, outputPath);
 }
 
 main().catch((error) => {

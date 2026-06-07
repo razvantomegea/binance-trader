@@ -18,6 +18,45 @@ interface SymbolListProps {
   loading: boolean;
 }
 
+function filterSymbols(symbols: SymbolRow[], query: string): SymbolRow[] {
+  const usdtSymbols = symbols.filter((row) => isUsdtSymbol(row.symbol));
+  const normalized = query.trim().toUpperCase();
+  if (!normalized) {
+    return usdtSymbols;
+  }
+  return usdtSymbols.filter((row) => row.symbol.includes(normalized));
+}
+
+function SymbolListItem({
+  row,
+  selected,
+  onSelect,
+}: {
+  row: SymbolRow;
+  selected: boolean;
+  onSelect: (symbol: string) => void;
+}) {
+  return (
+    <li key={row.symbol}>
+      <button
+        type="button"
+        onClick={() => onSelect(row.symbol)}
+        className={clsx(
+          "flex w-full items-center justify-between gap-2 border-b border-zinc-100 px-3 py-2 text-left text-sm transition-colors dark:border-zinc-900",
+          selected
+            ? "bg-zinc-100 dark:bg-zinc-900"
+            : "hover:bg-zinc-50 dark:hover:bg-zinc-900/60",
+        )}
+      >
+        <span className="min-w-0 shrink truncate font-medium">{row.symbol}</span>
+        <span className="shrink-0 text-right tabular-nums text-zinc-600 dark:text-zinc-300">
+          {row.close ?? "—"}
+        </span>
+      </button>
+    </li>
+  );
+}
+
 export function SymbolList({
   symbols,
   selectedSymbol,
@@ -26,14 +65,7 @@ export function SymbolList({
 }: SymbolListProps) {
   const [query, setQuery] = useState("");
 
-  const filtered = useMemo(() => {
-    const usdtSymbols = symbols.filter((row) => isUsdtSymbol(row.symbol));
-    const normalized = query.trim().toUpperCase();
-    if (!normalized) {
-      return usdtSymbols;
-    }
-    return usdtSymbols.filter((row) => row.symbol.includes(normalized));
-  }, [query, symbols]);
+  const filtered = useMemo(() => filterSymbols(symbols, query), [query, symbols]);
 
   return (
     <div
@@ -56,29 +88,14 @@ export function SymbolList({
           <p className="p-4 text-sm text-zinc-500">Loading symbols...</p>
         ) : (
           <ul>
-            {filtered.map((row) => {
-              return (
-                <li key={row.symbol}>
-                  <button
-                    type="button"
-                    onClick={() => onSelect(row.symbol)}
-                    className={clsx(
-                      "flex w-full items-center justify-between gap-2 border-b border-zinc-100 px-3 py-2 text-left text-sm transition-colors dark:border-zinc-900",
-                      selectedSymbol === row.symbol
-                        ? "bg-zinc-100 dark:bg-zinc-900"
-                        : "hover:bg-zinc-50 dark:hover:bg-zinc-900/60",
-                    )}
-                  >
-                    <span className="min-w-0 shrink truncate font-medium">
-                      {row.symbol}
-                    </span>
-                    <span className="shrink-0 text-right tabular-nums text-zinc-600 dark:text-zinc-300">
-                      {row.close ?? "—"}
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
+            {filtered.map((row) => (
+              <SymbolListItem
+                key={row.symbol}
+                row={row}
+                selected={selectedSymbol === row.symbol}
+                onSelect={onSelect}
+              />
+            ))}
           </ul>
         )}
       </div>

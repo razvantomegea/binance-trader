@@ -35,6 +35,60 @@ function toDecisionPosition(position: OpenPosition): DecisionPositionState {
   };
 }
 
+function resolveLastSellOpenTime(position: OpenPosition | undefined, symbol: string) {
+  if (position) {
+    return Promise.resolve(null);
+  }
+  return getLastSymbolCloseTime(symbol);
+}
+
+async function persistHoldPeakIfNeeded(params: {
+  symbol: string;
+  position: OpenPosition | undefined;
+  decision: ReturnType<typeof evaluateDecision>;
+}) {
+  const { position, decision } = params;
+  if (
+    decision.action !== "HOLD" ||
+    !position ||
+    decision.updatedMaxPrice === undefined ||
+    decision.updatedMaxPrice <= (position.maxPriceAfterBuy ?? position.buyPrice)
+  ) {
+    return;
+  }
+
+  await getDb()
+    .update(positions)
+    .set({ maxPriceAfterBuy: String(decision.updatedMaxPrice) })
+    .where(eq(positions.symbol, params.symbol));
+}
+
+function resolveTradePayload(params: {
+  side: "BUY" | "SELL";
+  decision: ReturnType<typeof evaluateDecision>;
+  latestClose: number;
+  latestCandle: Awaited<ReturnType<typeof getRecentClosedKlines>>[number];
+}) {
+  const tradePrice =
+    params.side === "SELL" && params.decision.exitPrice !== undefined
+      ? params.decision.exitPrice
+      : params.latestClose;
+
+  let maxPriceAfterBuy: number | undefined;
+  if (params.side === "SELL") {
+    maxPriceAfterBuy = params.decision.updatedMaxPrice;
+  } else {
+    maxPriceAfterBuy = getUpdatedPeakPrice({
+      currentMax: params.latestClose,
+      high: params.latestCandle.high,
+      close: params.latestClose,
+      markPrice: params.latestClose,
+    });
+  }
+
+  return { tradePrice, maxPriceAfterBuy };
+}
+
 export async function evaluateSymbol({
   symbol,
   interval,
@@ -48,9 +102,7 @@ export async function evaluateSymbol({
     count: STRATEGY_LOOKBACK_CLOSES,
   });
 
-  const lastSellOpenTime = position
-    ? null
-    : await getLastSymbolCloseTime(symbol);
+  const lastSellOpenTime = await resolveLastSellOpenTime(position, symbol);
 
   const latestClose = closed[0]!.close;
 
@@ -67,36 +119,17 @@ export async function evaluateSymbol({
     return { candleOpenTime: decision.candleOpenTime, traded: false };
   }
 
-  if (
-    decision.action === "HOLD" &&
-    position &&
-    decision.updatedMaxPrice !== undefined &&
-    decision.updatedMaxPrice > (position.maxPriceAfterBuy ?? position.buyPrice)
-  ) {
-    await getDb()
-      .update(positions)
-      .set({ maxPriceAfterBuy: String(decision.updatedMaxPrice) })
-      .where(eq(positions.symbol, symbol));
-  }
+  await persistHoldPeakIfNeeded({ symbol, position, decision });
 
   if (decision.action === "BUY" || decision.action === "SELL") {
     const side = decision.action;
     const latestCandle = closed[0]!;
-    const tradePrice =
-      side === "SELL" && decision.exitPrice !== undefined
-        ? decision.exitPrice
-        : latestClose;
-    const maxPriceAfterBuy =
-      side === "SELL" && decision.updatedMaxPrice !== undefined
-        ? decision.updatedMaxPrice
-        : side === "BUY"
-          ? getUpdatedPeakPrice({
-              currentMax: latestClose,
-              high: latestCandle.high,
-              close: latestClose,
-              markPrice: latestClose,
-            })
-          : undefined;
+    const { tradePrice, maxPriceAfterBuy } = resolveTradePayload({
+      side,
+      decision,
+      latestClose,
+      latestCandle,
+    });
 
     await placeTrade({
       symbol,

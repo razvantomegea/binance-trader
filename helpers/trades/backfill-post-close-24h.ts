@@ -23,6 +23,35 @@ function toDbNumeric(value: number | null): string | null {
   return String(value);
 }
 
+async function computeRowMetrics(params: {
+  row: {
+    symbol: string;
+    price: string;
+    interval: string;
+    candleOpenTime: Date;
+  };
+  windowMs: number;
+}) {
+  const sellClosePrice = parseFiniteNumber(params.row.price);
+  if (!Number.isFinite(sellClosePrice) || sellClosePrice <= 0) {
+    return null;
+  }
+
+  const sellCandleOpenTime = params.row.candleOpenTime.getTime();
+  const klinesAsc = await getHistoricalClosedKlines({
+    symbol: params.row.symbol,
+    interval: params.row.interval as CandleInterval,
+    startTime: sellCandleOpenTime,
+    endTime: sellCandleOpenTime + params.windowMs,
+  });
+
+  return computePostClose24hExtrema({
+    klinesAsc,
+    sellCandleOpenTime,
+    sellClosePrice,
+  });
+}
+
 export async function backfillPostClose24hMetrics(): Promise<BackfillPostClose24hResult> {
   const lastClosedOpenTime = getLastClosedCandleOpenTime();
   const windowMs = POST_CLOSE_WINDOW_CANDLES * HOUR_MS;
@@ -52,29 +81,8 @@ export async function backfillPostClose24hMetrics(): Promise<BackfillPostClose24
 
   for (const row of rows) {
     try {
-      const sellClosePrice = parseFiniteNumber(row.price);
-      const sellCandleOpenTime = row.candleOpenTime.getTime();
-
-      if (!Number.isFinite(sellClosePrice) || sellClosePrice <= 0) {
-        skipped += 1;
-        continue;
-      }
-
-      const interval = row.interval as CandleInterval;
-      const klinesAsc = await getHistoricalClosedKlines({
-        symbol: row.symbol,
-        interval,
-        startTime: sellCandleOpenTime,
-        endTime: sellCandleOpenTime + windowMs,
-      });
-
-      const metrics = computePostClose24hExtrema({
-        klinesAsc,
-        sellCandleOpenTime,
-        sellClosePrice,
-      });
-
-      if (metrics.maxPriceAfterClose24h === null) {
+      const metrics = await computeRowMetrics({ row, windowMs });
+      if (metrics?.maxPriceAfterClose24h == null) {
         skipped += 1;
         continue;
       }

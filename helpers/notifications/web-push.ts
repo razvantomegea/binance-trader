@@ -30,7 +30,7 @@ function isStaleSubscriptionError(err: unknown): boolean {
   if (typeof err !== "object" || err === null) {
     return false;
   }
-  const statusCode = (err as { statusCode?: number }).statusCode;
+  const {statusCode} = (err as { statusCode?: number });
   return statusCode === 404 || statusCode === 410;
 }
 

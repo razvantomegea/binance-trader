@@ -1,0 +1,234 @@
+{
+  "finding_counts": {
+    "app/api/closing-prices/route.ts": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "app/api/cron/run-strategy/route.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "app/api/debug/zec-entry/route.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "app/api/klines/route.ts": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "app/api/positions/close/route.ts": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "app/api/push/vapid-public-key/route.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/base-area-chart.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/dashboard/dashboard-data-requests.ts": {
+      "crap_moderate": {
+        "count": 2
+      }
+    },
+    "components/dashboard/strategy-controls.tsx": {
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 2
+      }
+    },
+    "components/dashboard/use-dashboard-data.ts": {
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/portfolio-summary.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/price-chart.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/push-notification-toggle.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "components/table-fetch-state.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "helpers/closing-prices/get-closing-prices.ts": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "helpers/ml/generate-dataset-rows.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "helpers/ml/precompute-entry-probabilities.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "helpers/ml/train-logistic-model.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "helpers/portfolio/build-portfolio-response.ts": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "helpers/scheduler/strategy-scheduler-meta.ts": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "helpers/strategy/enforce-portfolio-drawdown-cap.ts": {
+      "crap_moderate": {
+        "count": 2
+      }
+    },
+    "helpers/strategy/get-cash.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "helpers/strategy/snapshot-equity.ts": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "helpers/trades/backfill-post-close-24h.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "helpers/trades/get-trades.ts": {
+      "crap_moderate": {
+        "count": 2
+      }
+    },
+    "public/sw.js": {
+      "crap_moderate": {
+        "count": 2
+      }
+    },
+    "scripts/cleanup-backtest-cache.mjs": {
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "scripts/cleanup-backtest-reports.mjs": {
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "scripts/cleanup-cli-shared.mjs": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "scripts/ml/parse-ml-cli-args.ts": {
+      "crap_moderate": {
+        "count": 2
+      }
+    },
+    "scripts/optimize-strategy-params.ts": {
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "scripts/railway-up.mjs": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "scripts/run-backtest-runner.ts": {
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "scripts/train-ml-strategy.ts": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "scripts/trigger-strategy-cron.mjs": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "utils/binance/historical-klines-cache.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "utils/ml/model-io.ts": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "utils/ml/split-dataset-by-time.ts": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "utils/notifications/parse-push-subscription.ts": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "utils/notifications/push-client.ts": {
+      "crap_high": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "utils/strategy/peak-while-open.ts": {
+      "crap_moderate": {
+        "count": 1
+      }
+    }
+  },
+  "runtime_coverage_findings": [],
+  "target_keys": [
+    "utils/binance/is-usdt-symbol.ts:high impact"
+  ]
+}

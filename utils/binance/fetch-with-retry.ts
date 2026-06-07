@@ -63,6 +63,46 @@ function parseRetryAfterMs(response: Response): number | null {
   return Math.max(0, absoluteTs - Date.now());
 }
 
+interface AttemptOutcome {
+  error: Error;
+  retryableResponse: Response | null;
+}
+
+async function runFetchAttempt(url: URL): Promise<Response | AttemptOutcome> {
+  try {
+    await waitForPacingSlot(DEFAULT_MIN_REQUEST_SPACING_MS);
+    const response = await fetch(url);
+    if (response.ok || !isRetryableStatus(response.status)) {
+      return response;
+    }
+    return {
+      retryableResponse: response,
+      error: new Error(
+        `Binance request failed: ${response.status} ${response.statusText}`,
+      ),
+    };
+  } catch (error) {
+    return {
+      retryableResponse: null,
+      error: error instanceof Error ? error : new Error("Binance request failed"),
+    };
+  }
+}
+
+function computeRetryDelayMs(params: {
+  attempt: number;
+  baseDelayMs: number;
+  retryableResponse: Response | null;
+}): number {
+  const retryAfterMs = params.retryableResponse
+    ? parseRetryAfterMs(params.retryableResponse)
+    : null;
+  const boundedRetryAfterMs =
+    retryAfterMs !== null && Number.isFinite(retryAfterMs) ? retryAfterMs : 0;
+  const backoffMs = params.baseDelayMs * 2 ** params.attempt;
+  return Math.max(backoffMs, boundedRetryAfterMs) + randomJitter(RETRY_JITTER_MS);
+}
+
 export async function fetchWithRetry({
   url,
   maxRetries = DEFAULT_MAX_RETRIES,
@@ -72,35 +112,20 @@ export async function fetchWithRetry({
   let lastRetryableResponse: Response | null = null;
 
   for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
-    try {
-      await waitForPacingSlot(DEFAULT_MIN_REQUEST_SPACING_MS);
-      const response = await fetch(url);
-
-      if (response.ok || !isRetryableStatus(response.status)) {
-        return response;
-      }
-
-      lastRetryableResponse = response;
-      lastError = new Error(
-        `Binance request failed: ${response.status} ${response.statusText}`,
-      );
-    } catch (error) {
-      lastError =
-        error instanceof Error ? error : new Error("Binance request failed");
+    const outcome = await runFetchAttempt(url);
+    if (outcome instanceof Response) {
+      return outcome;
     }
+    lastError = outcome.error;
+    lastRetryableResponse = outcome.retryableResponse;
 
     if (attempt < maxRetries) {
-      const retryAfterMs = lastRetryableResponse
-        ? parseRetryAfterMs(lastRetryableResponse)
-        : null;
-      const backoffMs = baseDelayMs * 2 ** attempt;
-      const boundedRetryAfterMs =
-        retryAfterMs !== null && Number.isFinite(retryAfterMs)
-          ? retryAfterMs
-          : 0;
       await delay(
-        Math.max(backoffMs, boundedRetryAfterMs) +
-          randomJitter(RETRY_JITTER_MS),
+        computeRetryDelayMs({
+          attempt,
+          baseDelayMs,
+          retryableResponse: lastRetryableResponse,
+        }),
       );
     }
   }
