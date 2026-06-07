@@ -1,36 +1,18 @@
-import { execSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
+import {
+  assertReleaseReady,
+  getLastTagVersion,
+  readPkgVersion,
+  sh,
+} from "./lib/version.mjs";
 
 const REPO = "razvantomegea/binance-trader";
 
-function sh(cmd) {
-  return execSync(cmd, { encoding: "utf8" }).trim();
-}
+const lastTagVersion = getLastTagVersion();
+const lastTag = lastTagVersion === null ? null : `v${lastTagVersion}`;
+const newVersion = readPkgVersion();
 
-const lastTag = (() => {
-  try {
-    return sh("git describe --tags --abbrev=0 --match v*");
-  } catch {
-    return null;
-  }
-})();
-
-const pkg = JSON.parse(readFileSync("package.json", "utf8"));
-let newVersion;
-
-if (lastTag === null) {
-  newVersion = "1.0.0";
-  if (pkg.version !== "1.0.0") {
-    throw new Error(
-      `First release requires package.json version 1.0.0, got ${pkg.version}`,
-    );
-  }
-} else {
-  const [major, minor, patch] = pkg.version.split(".").map(Number);
-  newVersion = `${major}.${minor}.${patch + 1}`;
-  pkg.version = newVersion;
-  writeFileSync("package.json", `${JSON.stringify(pkg, null, 2)}\n`);
-}
+assertReleaseReady({ lastTagVersion, currentVersion: newVersion });
 
 const tag = `v${newVersion}`;
 const date = new Date().toISOString().slice(0, 10);
@@ -70,9 +52,7 @@ sh(
   "git config user.email 41898282+github-actions[bot]@users.noreply.github.com",
 );
 
-const filesToCommit =
-  lastTag === null ? "CHANGELOG.md" : "package.json CHANGELOG.md";
-sh(`git add ${filesToCommit}`);
+sh("git add CHANGELOG.md");
 sh(`git commit -m "chore(release): ${tag} [skip release]"`);
 sh(`git tag ${tag}`);
 
