@@ -1,5 +1,5 @@
 import { execSync } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 function sh(cmd) {
@@ -8,6 +8,14 @@ function sh(cmd) {
 
 const { version } = JSON.parse(readFileSync("package.json", "utf8"));
 const tag = `v${version}`;
+
+const lcovReportDir = join("coverage", "lcov-report");
+if (!existsSync("coverage") || !existsSync(lcovReportDir)) {
+  console.error(
+    'error: "coverage" and "lcov-report" must exist before execSync can zip coverage',
+  );
+  process.exit(1);
+}
 
 execSync("zip -r coverage-report.zip lcov-report", {
   cwd: "coverage",

@@ -45,7 +45,7 @@ const bullets = rawLog
   .filter(Boolean)
   .filter((line) => !line.startsWith("chore(release):"))
   .map((line) =>
-    line.replace(/\(#(\d+)\)/, `( [#$1](https://github.com/${REPO}/pull/$1) )`),
+    line.replace(/\(#(\d+)\)/, `([#$1](https://github.com/${REPO}/pull/$1))`),
   )
   .map((line) => `- ${line}`)
   .join("\n");
@@ -76,8 +76,44 @@ const filesToCommit =
 sh(`git add ${filesToCommit}`);
 sh(`git commit -m "chore(release): ${tag} [skip release]"`);
 sh(`git tag ${tag}`);
-sh("git push origin main");
-sh(`git push origin ${tag}`);
-sh(`gh release create ${tag} --title ${tag} --notes-file release-notes.md`);
+
+let mainPushed = false;
+let tagPushed = false;
+try {
+  sh("git push origin main");
+  mainPushed = true;
+  sh(`git push origin ${tag}`);
+  tagPushed = true;
+  sh(`gh release create ${tag} --title ${tag} --notes-file release-notes.md`);
+} catch (error) {
+  console.error("Release failed:", error.message ?? error);
+  if (tagPushed) {
+    try {
+      sh(`git push --delete origin ${tag}`);
+    } catch (cleanupError) {
+      console.error(
+        `Failed to delete remote tag ${tag}:`,
+        cleanupError.message ?? cleanupError,
+      );
+    }
+  }
+  if (mainPushed) {
+    try {
+      sh("git reset --hard HEAD~1");
+      sh("git push --force origin main");
+    } catch (cleanupError) {
+      console.error(
+        "Failed to revert main push:",
+        cleanupError.message ?? cleanupError,
+      );
+    }
+  }
+  try {
+    sh(`git tag -d ${tag}`);
+  } catch {
+    // local tag may already be gone
+  }
+  throw error;
+}
 
 console.log(`Released ${tag}`);
