@@ -33,7 +33,9 @@ jobs:
           (github.event_name == 'push' &&
            github.ref == 'refs/heads/main' &&
            !contains(github.event.head_commit.message, '[skip release]'))
-        run: node scripts/bump-version.mjs --check
+        run: |
+          git fetch origin --tags --force
+          node scripts/bump-version.mjs --check
 
       - run: pnpm install --frozen-lockfile
 
@@ -83,7 +85,9 @@ jobs:
       - name: Bump version, tag, and create release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: node scripts/release-on-main.mjs
+        run: |
+          git fetch origin --tags --force
+          node scripts/release-on-main.mjs
 
       - name: Attach coverage to release
         env:

@@ -7,11 +7,12 @@ export function sh(cmd) {
 
 export function getLastTagVersion() {
   try {
-    const tag = execSync("git describe --tags --abbrev=0 --match v*", {
+    const out = execSync('git tag -l "v*" --sort=-version:refname', {
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"],
     }).trim();
-    return tag.slice(1);
+    const latest = out.split("\n").filter(Boolean)[0];
+    return latest ? latest.slice(1) : null;
   } catch {
     return null;
   }
