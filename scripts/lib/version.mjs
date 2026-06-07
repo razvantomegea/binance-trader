@@ -28,7 +28,14 @@ export function writePkgVersion(version) {
   writeFileSync("package.json", `${JSON.stringify(pkg, null, 2)}\n`);
 }
 
+const PATCH_VERSION_PATTERN = /^\d+\.\d+\.\d+$/;
+
 export function bumpPatch(version) {
+  if (!PATCH_VERSION_PATTERN.test(version)) {
+    throw new Error(
+      `Invalid version "${version}": expected exactly three numeric parts (e.g. 1.0.0)`,
+    );
+  }
   const [major, minor, patch] = version.split(".").map(Number);
   return `${major}.${minor}.${patch + 1}`;
 }
@@ -36,9 +43,12 @@ export function bumpPatch(version) {
 export function compareVersions(a, b) {
   const pa = a.split(".").map(Number);
   const pb = b.split(".").map(Number);
-  for (let i = 0; i < 3; i++) {
-    if (pa[i] !== pb[i]) {
-      return pa[i] - pb[i];
+  const partCount = Math.max(pa.length, pb.length);
+  for (let i = 0; i < partCount; i++) {
+    const partA = pa[i] ?? 0;
+    const partB = pb[i] ?? 0;
+    if (partA !== partB) {
+      return partA - partB;
     }
   }
   return 0;
