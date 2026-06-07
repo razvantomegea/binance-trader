@@ -21,4 +21,4 @@ The project documentation is in @README.md
 - Be critical and think like an experienced software engineer. Focus on facts, not opinions.
 - Write as little code as possible and keep things as simple as possible. The less code written, the better.
 - Never read .env files
-- Ask as much questions as possible to have as much context as possible if the answer is not found in the repository until 100% accuracy and certeinty is reached.
+- Ask as much questions as possible to have as much context as possible if the answer is not found in the repository until 100% accuracy and certainty is reached.
