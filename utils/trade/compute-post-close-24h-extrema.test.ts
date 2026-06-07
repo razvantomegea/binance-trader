@@ -61,6 +61,7 @@ describe("computePostClose24hExtrema", () => {
     });
 
     expect(metrics.maxPriceAfterClose24h).toBeNull();
+    expect(metrics.minPriceAfterClose24h).toBeNull();
   });
 
   it("uses partial window when fewer than 24 future candles exist", () => {
