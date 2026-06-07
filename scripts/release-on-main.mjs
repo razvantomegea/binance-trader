@@ -53,16 +53,15 @@ const bullets = rawLog
 const section = `## [${newVersion}] - ${date}\n\n${bullets || "- Maintenance release"}\n\n`;
 
 const changelog = readFileSync("CHANGELOG.md", "utf8");
-const introMarker = "Versions are auto-released on every merge to `main`.\n\n";
-const introEnd = changelog.indexOf(introMarker);
+const introLine = "Versions are auto-released on every merge to `main`.";
+const introEnd = changelog.indexOf(introLine);
 if (introEnd === -1) {
   throw new Error("CHANGELOG.md intro marker not found");
 }
+const insertAt = introEnd + introLine.length;
 writeFileSync(
   "CHANGELOG.md",
-  changelog.slice(0, introEnd + introMarker.length) +
-    section +
-    changelog.slice(introEnd + introMarker.length),
+  `${changelog.slice(0, insertAt).replace(/\n+$/, "")}\n\n${section}${changelog.slice(insertAt).replace(/^\n+/, "")}`,
 );
 writeFileSync("release-notes.md", section);
 
