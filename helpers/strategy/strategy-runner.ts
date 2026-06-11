@@ -87,23 +87,27 @@ export async function runStrategy(): Promise<RunStrategyResult> {
     items: symbols,
     batchSize: BINANCE_FETCH_CONCURRENCY,
     processItem: async (symbol) => {
-      const result = await evaluateSymbol({
-        symbol,
-        interval,
-        position: positions.get(symbol),
-        cash,
-        lastProcessedOpenTime: lastProcessed,
-      });
+      try {
+        const result = await evaluateSymbol({
+          symbol,
+          interval,
+          position: positions.get(symbol),
+          cash,
+          lastProcessedOpenTime: lastProcessed,
+        });
 
-      latestCandleOpenTime = updateLatestCandleTime(
-        latestCandleOpenTime,
-        result.candleOpenTime,
-      );
+        latestCandleOpenTime = updateLatestCandleTime(
+          latestCandleOpenTime,
+          result.candleOpenTime,
+        );
 
-      if (result.traded) {
-        tradesExecuted += 1;
-        cash = await getCash();
-        await refreshPortfolioState({ positions });
+        if (result.traded) {
+          tradesExecuted += 1;
+          cash = await getCash();
+          await refreshPortfolioState({ positions });
+        }
+      } catch (error) {
+        console.error(`[runStrategy] ${symbol} failed:`, error);
       }
     },
   });
