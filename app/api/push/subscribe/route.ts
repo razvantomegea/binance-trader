@@ -1,10 +1,16 @@
 import { NextResponse } from "next/server";
 
 import { upsertPushSubscription } from "@/helpers/notifications/subscriptions";
+import { blockProductionMutations } from "@/utils/api/block-production-mutations";
 import { getErrorDetails } from "@/utils/error-handling";
 import { parsePushSubscriptionBody } from "@/utils/notifications/parse-push-subscription";
 
 export async function POST(request: Request) {
+  const blocked = blockProductionMutations();
+  if (blocked) {
+    return blocked;
+  }
+
   let body: unknown;
   try {
     body = await request.json();
