@@ -94,38 +94,62 @@ async function runStrategyBackfills(): Promise<
   return { postClose24hBackfill, maxPriceAfterBuyBackfill };
 }
 
-export async function runStrategy(): Promise<RunStrategyResult> {
-  const interval = STRATEGY_INTERVAL;
-  const symbols = (await getUsdtSymbols()).filter(isUsdtSymbol);
-  if (symbols.length === 0) {
-    throw new Error("No valid USDT symbols available for strategy run.");
-  }
-  const lastProcessed = await getLastCandleTime(interval);
-  const positions = await getOpenPositions();
-  let cash = await getCash();
+async function evaluateSymbolBatch(params: {
+  batch: string[];
+  interval: typeof STRATEGY_INTERVAL;
+  positions: Map<string, OpenPosition>;
+  cash: number;
+  lastProcessed: number | null;
+}): Promise<(EvaluateSymbolResult | null)[]> {
+  return processInBatches({
+    items: params.batch,
+    batchSize: BINANCE_FETCH_CONCURRENCY,
+    processItem: async (symbol): Promise<EvaluateSymbolResult | null> => {
+      try {
+        return await evaluateSymbol({
+          symbol,
+          interval: params.interval,
+          position: params.positions.get(symbol),
+          cash: params.cash,
+          lastProcessedOpenTime: params.lastProcessed,
+        });
+      } catch (error) {
+        console.error(`[runStrategy] ${symbol} failed:`, error);
+        return null;
+      }
+    },
+  });
+}
 
+async function runSymbolEvaluationLoop(params: {
+  symbols: string[];
+  interval: typeof STRATEGY_INTERVAL;
+  lastProcessed: number | null;
+  positions: Map<string, OpenPosition>;
+  initialCash: number;
+}): Promise<{
+  tradesExecuted: number;
+  latestCandleOpenTime: number | null;
+}> {
+  let cash = params.initialCash;
   let tradesExecuted = 0;
-  let latestCandleOpenTime = lastProcessed;
+  let latestCandleOpenTime = params.lastProcessed;
 
-  for (let index = 0; index < symbols.length; index += BINANCE_FETCH_CONCURRENCY) {
-    const batch = symbols.slice(index, index + BINANCE_FETCH_CONCURRENCY);
-    const batchResults = await processInBatches({
-      items: batch,
-      batchSize: BINANCE_FETCH_CONCURRENCY,
-      processItem: async (symbol): Promise<EvaluateSymbolResult | null> => {
-        try {
-          return await evaluateSymbol({
-            symbol,
-            interval,
-            position: positions.get(symbol),
-            cash,
-            lastProcessedOpenTime: lastProcessed,
-          });
-        } catch (error) {
-          console.error(`[runStrategy] ${symbol} failed:`, error);
-          return null;
-        }
-      },
+  for (
+    let index = 0;
+    index < params.symbols.length;
+    index += BINANCE_FETCH_CONCURRENCY
+  ) {
+    const batch = params.symbols.slice(
+      index,
+      index + BINANCE_FETCH_CONCURRENCY,
+    );
+    const batchResults = await evaluateSymbolBatch({
+      batch,
+      interval: params.interval,
+      positions: params.positions,
+      cash,
+      lastProcessed: params.lastProcessed,
     });
 
     let batchHadTrade = false;
@@ -145,9 +169,31 @@ export async function runStrategy(): Promise<RunStrategyResult> {
 
     if (batchHadTrade) {
       cash = await getCash();
-      await refreshPortfolioState({ positions });
+      await refreshPortfolioState({ positions: params.positions });
     }
   }
+
+  return { tradesExecuted, latestCandleOpenTime };
+}
+
+export async function runStrategy(): Promise<RunStrategyResult> {
+  const interval = STRATEGY_INTERVAL;
+  const symbols = (await getUsdtSymbols()).filter(isUsdtSymbol);
+  if (symbols.length === 0) {
+    throw new Error("No valid USDT symbols available for strategy run.");
+  }
+  const lastProcessed = await getLastCandleTime(interval);
+  const positions = await getOpenPositions();
+  const initialCash = await getCash();
+
+  const { tradesExecuted, latestCandleOpenTime } =
+    await runSymbolEvaluationLoop({
+      symbols,
+      interval,
+      lastProcessed,
+      positions,
+      initialCash,
+    });
 
   if (latestCandleOpenTime !== null) {
     await setLastCandleTime({ interval, openTime: latestCandleOpenTime });

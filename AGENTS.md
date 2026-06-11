@@ -24,3 +24,4 @@ The project documentation is in @README.md
 - Ask me as many questions as possible to understand the context, goal, and ideas until 100% accuracy and certainty is reached if the answer is not found in the repository.
 - Search the web before making architectural changes and decisions and ask other models too. Do this step whenever the plan goes wrong and needs re-adjustments. Don't make decisions on your own without second opinion and always ask first.
 - Before providing any solution, always think if this is the simplest solution with least amount of code possible.
+- Always check pnpm format, lint:fix, test, test:e2e and build after any task finished
