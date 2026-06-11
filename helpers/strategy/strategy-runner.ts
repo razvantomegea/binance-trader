@@ -70,6 +70,27 @@ async function backfillWithFallback<T>(
   }
 }
 
+const EMPTY_BACKFILL = { scanned: 0, updated: 0, skipped: 0 };
+
+async function runStrategyBackfills(): Promise<
+  Pick<
+    RunStrategyResult,
+    "postClose24hBackfill" | "maxPriceAfterBuyBackfill"
+  >
+> {
+  const postClose24hBackfill = await backfillWithFallback(
+    () => backfillPostClose24hMetrics(),
+    EMPTY_BACKFILL,
+    "Post-close 24h backfill failed:",
+  );
+  const maxPriceAfterBuyBackfill = await backfillWithFallback(
+    () => backfillMaxPriceAfterBuy(),
+    EMPTY_BACKFILL,
+    "Max-price-after-buy backfill failed:",
+  );
+  return { postClose24hBackfill, maxPriceAfterBuyBackfill };
+}
+
 export async function runStrategy(): Promise<RunStrategyResult> {
   const interval = STRATEGY_INTERVAL;
   const symbols = (await getUsdtSymbols()).filter(isUsdtSymbol);
@@ -119,16 +140,8 @@ export async function runStrategy(): Promise<RunStrategyResult> {
   await enforcePortfolioDrawdownCap({ interval });
 
   const { cash: finalCash, equity } = await snapshotEquity({ interval });
-  const postClose24hBackfill = await backfillWithFallback(
-    () => backfillPostClose24hMetrics(),
-    { scanned: 0, updated: 0, skipped: 0 },
-    "Post-close 24h backfill failed:",
-  );
-  const maxPriceAfterBuyBackfill = await backfillWithFallback(
-    () => backfillMaxPriceAfterBuy(),
-    { scanned: 0, updated: 0, skipped: 0 },
-    "Max-price-after-buy backfill failed:",
-  );
+  const { postClose24hBackfill, maxPriceAfterBuyBackfill } =
+    await runStrategyBackfills();
 
   return {
     interval,
