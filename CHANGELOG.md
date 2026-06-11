@@ -6,6 +6,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 Versions are auto-released on every merge to `main`.
 
+## [1.0.4] - 2026-06-11
+
+- Add runStrategyBackfills function to streamline backfill execution (58779dd)
+- Refine agent guidelines and improve error handling in strategy execution (76a30e6)
+
 ## [1.0.3] - 2026-06-07
 
 - Implement conditional rendering for strategy toggle button based on environment (573501d)
