@@ -6,6 +6,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 Versions are auto-released on every merge to `main`.
 
+## [1.0.6] - 2026-06-11
+
+- Disable dashboard mutations in production ([#5](https://github.com/razvantomegea/binance-trader/pull/5)) (6740750)
+- Update README.md (aaf4518)
+
 ## [1.0.5] - 2026-06-11
 
 - Enhance strategy execution and agent guidelines (ab4e908)
