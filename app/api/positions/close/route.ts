@@ -4,6 +4,7 @@ import {
   closeOpenPosition,
   PositionNotFoundError,
 } from "@/helpers/strategy/close-open-position";
+import { blockProductionMutations } from "@/utils/api/block-production-mutations";
 import { isUsdtSymbol } from "@/utils/binance/is-usdt-symbol";
 
 interface ClosePositionBody {
@@ -11,6 +12,11 @@ interface ClosePositionBody {
 }
 
 export async function POST(request: Request) {
+  const blocked = blockProductionMutations();
+  if (blocked) {
+    return blocked;
+  }
+
   let body: ClosePositionBody;
   try {
     body = (await request.json()) as ClosePositionBody;

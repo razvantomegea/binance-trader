@@ -1,4 +1,5 @@
 import { PushNotificationToggle } from "@/components/push-notification-toggle";
+import { ALLOW_DASHBOARD_MUTATIONS } from "@/constants/environment";
 import { DataTestId } from "@/constants/data-test-id";
 
 import type {
@@ -6,8 +7,6 @@ import type {
   CronAlertSeverity,
   StrategyStatus,
 } from "@/components/dashboard/types";
-
-const showStrategyToggle = process.env.NODE_ENV !== "production";
 
 function getStrategyButtonLabel({
   strategyActionPending,
@@ -76,8 +75,8 @@ export function StrategyControls({
   return (
     <>
       <div className="flex flex-wrap items-center justify-end gap-3">
-        <PushNotificationToggle />
-        {showStrategyToggle ? (
+        {ALLOW_DASHBOARD_MUTATIONS ? <PushNotificationToggle /> : null}
+        {ALLOW_DASHBOARD_MUTATIONS ? (
           <button
             type="button"
             data-testid={DataTestId.StrategyToggle}

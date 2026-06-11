@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 
 import { MOBILE_DASHBOARD_PANEL_MIN_HEIGHT_CLASS_NAME } from "@/constants/dashboard-layout";
+import { ALLOW_DASHBOARD_MUTATIONS } from "@/constants/environment";
 import { DataTestId } from "@/constants/data-test-id";
 import { EquityCurve } from "@/components/equity-curve";
 import { PortfolioSummary } from "@/components/portfolio-summary";
@@ -81,7 +82,9 @@ export function Dashboard() {
           closingSymbol={closingSymbol}
           closePositionError={closePositionError}
           onSelectSymbol={selectUsdtSymbol}
-          onClosePosition={closePosition}
+          onClosePosition={
+            ALLOW_DASHBOARD_MUTATIONS ? closePosition : undefined
+          }
         />
       </main>
     </DashboardShell>
