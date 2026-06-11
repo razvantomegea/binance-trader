@@ -6,6 +6,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 Versions are auto-released on every merge to `main`.
 
+## [1.0.5] - 2026-06-11
+
+- Enhance strategy execution and agent guidelines (ab4e908)
+- Refactor runStrategy to use batch processing for symbol evaluation (8496b58)
+
 ## [1.0.4] - 2026-06-11
 
 - Add runStrategyBackfills function to streamline backfill execution (58779dd)
