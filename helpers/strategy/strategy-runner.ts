@@ -1,6 +1,9 @@
 import { BINANCE_FETCH_CONCURRENCY } from "@/constants/binance";
 import { STRATEGY_INTERVAL } from "@/constants/strategy";
-import { evaluateSymbol } from "@/helpers/strategy/evaluate-symbol";
+import {
+  evaluateSymbol,
+  type EvaluateSymbolResult,
+} from "@/helpers/strategy/evaluate-symbol";
 import { getCash } from "@/helpers/strategy/get-cash";
 import {
   getLastCandleTime,
@@ -104,34 +107,47 @@ export async function runStrategy(): Promise<RunStrategyResult> {
   let tradesExecuted = 0;
   let latestCandleOpenTime = lastProcessed;
 
-  await processInBatches({
-    items: symbols,
-    batchSize: BINANCE_FETCH_CONCURRENCY,
-    processItem: async (symbol) => {
-      try {
-        const result = await evaluateSymbol({
-          symbol,
-          interval,
-          position: positions.get(symbol),
-          cash,
-          lastProcessedOpenTime: lastProcessed,
-        });
-
-        latestCandleOpenTime = updateLatestCandleTime(
-          latestCandleOpenTime,
-          result.candleOpenTime,
-        );
-
-        if (result.traded) {
-          tradesExecuted += 1;
-          cash = await getCash();
-          await refreshPortfolioState({ positions });
+  for (let index = 0; index < symbols.length; index += BINANCE_FETCH_CONCURRENCY) {
+    const batch = symbols.slice(index, index + BINANCE_FETCH_CONCURRENCY);
+    const batchResults = await processInBatches({
+      items: batch,
+      batchSize: BINANCE_FETCH_CONCURRENCY,
+      processItem: async (symbol): Promise<EvaluateSymbolResult | null> => {
+        try {
+          return await evaluateSymbol({
+            symbol,
+            interval,
+            position: positions.get(symbol),
+            cash,
+            lastProcessedOpenTime: lastProcessed,
+          });
+        } catch (error) {
+          console.error(`[runStrategy] ${symbol} failed:`, error);
+          return null;
         }
-      } catch (error) {
-        console.error(`[runStrategy] ${symbol} failed:`, error);
+      },
+    });
+
+    let batchHadTrade = false;
+    for (const result of batchResults) {
+      if (result === null) {
+        continue;
       }
-    },
-  });
+      latestCandleOpenTime = updateLatestCandleTime(
+        latestCandleOpenTime,
+        result.candleOpenTime,
+      );
+      if (result.traded) {
+        tradesExecuted += 1;
+        batchHadTrade = true;
+      }
+    }
+
+    if (batchHadTrade) {
+      cash = await getCash();
+      await refreshPortfolioState({ positions });
+    }
+  }
 
   if (latestCandleOpenTime !== null) {
     await setLastCandleTime({ interval, openTime: latestCandleOpenTime });
