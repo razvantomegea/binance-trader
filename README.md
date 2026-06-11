@@ -4,6 +4,8 @@ Next.js dashboard for **paper trading** USDT pairs on Binance spot data. A sched
 
 > **Disclaimer:** This project is for education and experimentation only. It does not place real orders on Binance and is not financial advice. Use at your own risk.
 
+Check out the live app: https://binance-trading-production.up.railway.app
+
 ## Features
 
 - Portfolio summary, open positions, trade history, and equity curve
