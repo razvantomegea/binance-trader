@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useMemo } from "react";
 
 import { MOBILE_DASHBOARD_PANEL_MIN_HEIGHT_CLASS_NAME } from "@/constants/dashboard-layout";
 import { ALLOW_DASHBOARD_MUTATIONS } from "@/constants/environment";
@@ -16,6 +17,8 @@ import { STRATEGY_DESCRIPTION } from "@/components/dashboard/strategy-descriptio
 import { useDashboardData } from "@/components/dashboard/use-dashboard-data";
 import { STRATEGY_INTERVAL } from "@/constants/strategy";
 import { useDashboardHeaderHeight } from "@/hooks/use-dashboard-header-height";
+import type { PortfolioResponse, TradesResponse } from "@/types/portfolio";
+import { buildTradeMarkers } from "@/utils/chart/build-trade-markers";
 
 function DashboardShell({ children }: { children: ReactNode }) {
   return (
@@ -30,23 +33,7 @@ function DashboardShell({ children }: { children: ReactNode }) {
 
 export function Dashboard() {
   const headerRef = useDashboardHeaderHeight();
-  const {
-    selectedSymbol,
-    symbolRows,
-    portfolio,
-    trades,
-    snapshots,
-    loadingSymbols,
-    loadingPortfolio,
-    strategyStatus,
-    strategyActionPending,
-    cronAlerts,
-    closingSymbol,
-    closePositionError,
-    selectUsdtSymbol,
-    closePosition,
-    toggleStrategy,
-  } = useDashboardData();
+  const dashboardData = useDashboardData();
 
   return (
     <DashboardShell>
@@ -55,39 +42,54 @@ export function Dashboard() {
         className="shrink-0 border-b border-zinc-200 bg-white px-4 py-4 dark:border-zinc-800 dark:bg-zinc-950"
       >
         <DashboardHeader
-          strategyStatus={strategyStatus}
-          strategyActionPending={strategyActionPending}
-          loadingPortfolio={loadingPortfolio}
-          cronAlerts={cronAlerts}
-          onToggleStrategy={toggleStrategy}
+          strategyStatus={dashboardData.strategyStatus}
+          strategyActionPending={dashboardData.strategyActionPending}
+          loadingPortfolio={dashboardData.loadingPortfolio}
+          cronAlerts={dashboardData.cronAlerts}
+          onToggleStrategy={dashboardData.toggleStrategy}
         />
         <div className="mt-4 w-full">
-          <PortfolioSummary portfolio={portfolio} loading={loadingPortfolio} />
+          <PortfolioSummary
+            portfolio={dashboardData.portfolio}
+            loading={dashboardData.loadingPortfolio}
+          />
         </div>
       </header>
 
-      <main className="flex min-h-0 w-full flex-1 flex-col gap-4 overflow-y-auto p-4">
-        <DashboardCharts
-          symbolRows={symbolRows}
-          selectedSymbol={selectedSymbol}
-          loadingSymbols={loadingSymbols}
-          loadingPortfolio={loadingPortfolio}
-          snapshots={snapshots}
-          onSelectSymbol={selectUsdtSymbol}
-        />
-        <DashboardTables
-          portfolioPositions={portfolio?.positions ?? []}
-          trades={trades}
-          loadingPortfolio={loadingPortfolio}
-          closingSymbol={closingSymbol}
-          closePositionError={closePositionError}
-          onSelectSymbol={selectUsdtSymbol}
-          onClosePosition={
-            ALLOW_DASHBOARD_MUTATIONS ? closePosition : undefined
-          }
-        />
-      </main>
+      <DashboardMain dashboardData={dashboardData} />
     </DashboardShell>
+  );
+}
+
+function DashboardMain({
+  dashboardData,
+}: {
+  dashboardData: ReturnType<typeof useDashboardData>;
+}) {
+  return (
+    <main className="flex min-h-0 w-full flex-1 flex-col gap-4 overflow-y-auto p-4">
+      <DashboardCharts
+        symbolRows={dashboardData.symbolRows}
+        selectedSymbol={dashboardData.selectedSymbol}
+        loadingSymbols={dashboardData.loadingSymbols}
+        loadingPortfolio={dashboardData.loadingPortfolio}
+        snapshots={dashboardData.snapshots}
+        trades={dashboardData.trades}
+        positions={dashboardData.portfolio?.positions ?? []}
+        onSelectSymbol={dashboardData.selectUsdtSymbol}
+      />
+      <DashboardTables
+        portfolioPositions={dashboardData.portfolio?.positions ?? []}
+        trades={dashboardData.trades}
+        loadingPortfolio={dashboardData.loadingPortfolio}
+        closingSymbol={dashboardData.closingSymbol}
+        closePositionError={dashboardData.closePositionError}
+        onSelectSymbol={dashboardData.selectUsdtSymbol}
+        onClosePosition={
+          ALLOW_DASHBOARD_MUTATIONS ? dashboardData.closePosition : undefined
+        }
+      />
+    </main>
   );
 }
 
@@ -134,6 +136,8 @@ function DashboardCharts({
   loadingSymbols,
   loadingPortfolio,
   snapshots,
+  trades,
+  positions,
   onSelectSymbol,
 }: {
   symbolRows: Parameters<typeof SymbolList>[0]["symbols"];
@@ -141,8 +145,15 @@ function DashboardCharts({
   loadingSymbols: boolean;
   loadingPortfolio: boolean;
   snapshots: Parameters<typeof EquityCurve>[0]["snapshots"];
+  trades: TradesResponse["trades"];
+  positions: PortfolioResponse["positions"];
   onSelectSymbol: Parameters<typeof SymbolList>[0]["onSelect"];
 }) {
+  const chartMarkers = useMemo(
+    () => buildTradeMarkers({ symbol: selectedSymbol, trades, positions }),
+    [selectedSymbol, trades, positions],
+  );
+
   return (
     <div className="relative flex w-full shrink-0 flex-col gap-4">
       <SymbolList
@@ -161,7 +172,11 @@ function DashboardCharts({
           >
             {selectedSymbol} · H1
           </h2>
-          <PriceChart symbol={selectedSymbol} interval={STRATEGY_INTERVAL} />
+          <PriceChart
+            symbol={selectedSymbol}
+            interval={STRATEGY_INTERVAL}
+            markers={chartMarkers}
+          />
         </section>
         <section
           className={`flex w-full flex-col ${MOBILE_DASHBOARD_PANEL_MIN_HEIGHT_CLASS_NAME} rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950`}

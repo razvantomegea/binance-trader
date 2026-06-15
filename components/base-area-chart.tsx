@@ -4,6 +4,7 @@ import {
   Area,
   AreaChart,
   CartesianGrid,
+  ReferenceDot,
   Tooltip,
   XAxis,
   YAxis,
@@ -11,6 +12,7 @@ import {
 
 import { chartContainerClassName } from "@/components/chart-container";
 import { useElementSize } from "@/hooks/use-element-size";
+import type { SnappedChartMarker } from "@/types/chart";
 
 interface BaseAreaChartProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -22,6 +24,7 @@ interface BaseAreaChartProps {
   tooltipValueFormatter: (value: number) => string;
   yAxisDomain?: [string | number, string | number];
   yAxisFormatter?: (value: number) => string;
+  markers?: SnappedChartMarker[];
 }
 
 const COMPACT_BREAKPOINT = 640;
@@ -43,6 +46,53 @@ function getTooltipContentStyle(compact: boolean) {
   };
 }
 
+function getMarkerFill(kind: SnappedChartMarker["kind"]): string {
+  return kind === "entry" ? "#10b981" : "#ef4444";
+}
+
+function ChartReferenceMarkers({
+  markers,
+  compact,
+}: {
+  markers?: SnappedChartMarker[];
+  compact: boolean;
+}) {
+  return markers?.map((marker) => (
+    <ReferenceDot
+      key={marker.id}
+      x={marker.x}
+      y={marker.y}
+      r={compact ? 4 : 5}
+      fill={getMarkerFill(marker.kind)}
+      stroke="#fafafa"
+      strokeWidth={1}
+      label={{
+        value: marker.kind === "entry" ? "B" : "S",
+        position: "top",
+        fontSize: compact ? 9 : 10,
+        fill: getMarkerFill(marker.kind),
+      }}
+    />
+  ));
+}
+
+function ChartGradient({
+  gradientId,
+  color,
+}: {
+  gradientId: string;
+  color: string;
+}) {
+  return (
+    <defs>
+      <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+        <stop offset="5%" stopColor={color} stopOpacity={0.35} />
+        <stop offset="95%" stopColor={color} stopOpacity={0} />
+      </linearGradient>
+    </defs>
+  );
+}
+
 function BaseAreaChartContent({
   data,
   dataKey,
@@ -52,6 +102,7 @@ function BaseAreaChartContent({
   tooltipValueFormatter,
   yAxisDomain,
   yAxisFormatter,
+  markers,
   compact,
   width,
   height,
@@ -63,12 +114,7 @@ function BaseAreaChartContent({
       data={data}
       margin={{ top: 4, right: compact ? 4 : 8, left: 0, bottom: 0 }}
     >
-      <defs>
-        <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="5%" stopColor={color} stopOpacity={0.35} />
-          <stop offset="95%" stopColor={color} stopOpacity={0} />
-        </linearGradient>
-      </defs>
+      <ChartGradient gradientId={gradientId} color={color} />
       <CartesianGrid strokeDasharray="3 3" stroke="#27272a" opacity={0.3} />
       <XAxis dataKey="time" hide />
       <YAxis
@@ -100,6 +146,7 @@ function BaseAreaChartContent({
         strokeWidth={compact ? 1.5 : 2}
         dot={false}
       />
+      <ChartReferenceMarkers markers={markers} compact={compact} />
     </AreaChart>
   );
 }
@@ -113,6 +160,7 @@ export function BaseAreaChart({
   tooltipValueFormatter,
   yAxisDomain,
   yAxisFormatter,
+  markers,
 }: BaseAreaChartProps) {
   const { ref, width, height } = useElementSize<HTMLDivElement>();
   const compact = width > 0 && width < COMPACT_BREAKPOINT;
@@ -130,6 +178,7 @@ export function BaseAreaChart({
           tooltipValueFormatter={tooltipValueFormatter}
           yAxisDomain={yAxisDomain}
           yAxisFormatter={yAxisFormatter}
+          markers={markers}
           compact={compact}
           width={width}
           height={height}

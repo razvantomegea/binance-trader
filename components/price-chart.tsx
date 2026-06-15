@@ -1,22 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type { CandleInterval, KlineCandle } from "@/types/binance";
+import type { ChartMarker, ChartPoint } from "@/types/chart";
 
 import { chartContainerClassName } from "@/components/chart-container";
 import { DataTestId } from "@/constants/data-test-id";
+import { snapMarkersToChart } from "@/utils/chart/snap-markers-to-chart";
 
 import { BaseAreaChart } from "./base-area-chart";
 
 interface PriceChartProps {
   symbol: string;
   interval: CandleInterval;
-}
-
-interface ChartPoint {
-  time: string;
-  close: number;
+  markers?: ChartMarker[];
 }
 
 const formatTooltipValue = (value: number) => value.toFixed(6);
@@ -29,6 +27,7 @@ function buildChartUrl(symbol: string, interval: CandleInterval): string {
 
 function mapCandlesToChartPoints(candles: KlineCandle[]): ChartPoint[] {
   return candles.map((candle) => ({
+    openTimeMs: candle.openTime,
     time: new Date(candle.openTime).toLocaleString(),
     close: candle.close,
   }));
@@ -49,6 +48,17 @@ function ChartStateMessage({
       className={`flex items-center justify-center text-sm ${className} ${chartContainerClassName}`}
     >
       {text}
+    </div>
+  );
+}
+
+function ChartMarkerLegend() {
+  return (
+    <div className="mt-2 flex flex-wrap gap-4 text-xs text-zinc-500">
+      <span className="text-emerald-600 dark:text-emerald-400">
+        ● Entry (BUY)
+      </span>
+      <span className="text-red-600 dark:text-red-400">● Exit (SELL)</span>
     </div>
   );
 }
@@ -100,8 +110,16 @@ function usePriceChartPoints(symbol: string, interval: CandleInterval) {
   return { data, loading, error };
 }
 
-export function PriceChart({ symbol, interval }: PriceChartProps) {
+export function PriceChart({
+  symbol,
+  interval,
+  markers = [],
+}: PriceChartProps) {
   const { data, loading, error } = usePriceChartPoints(symbol, interval);
+  const snappedMarkers = useMemo(
+    () => snapMarkersToChart({ markers, points: data }),
+    [markers, data],
+  );
 
   if (loading) {
     return (
@@ -134,7 +152,9 @@ export function PriceChart({ symbol, interval }: PriceChartProps) {
         tooltipValueFormatter={formatTooltipValue}
         yAxisDomain={["auto", "auto"]}
         yAxisFormatter={formatYAxis}
+        markers={snappedMarkers}
       />
+      {markers.length > 0 ? <ChartMarkerLegend /> : null}
     </div>
   );
 }
