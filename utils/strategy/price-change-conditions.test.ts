@@ -27,20 +27,20 @@ describe("hasGainVsAnyRef", () => {
     ).toBe(false);
   });
 
-  it("returns true at exactly 40% gain boundary", () => {
+  it("returns true at exactly 50% gain boundary", () => {
     expect(
       hasGainVsAnyRef({
-        reference: 140,
+        reference: 150,
         refs: [100],
         thresholdPct: ENTRY_RANGE_PCT,
       }),
     ).toBe(true);
   });
 
-  it("returns false just below 40% gain", () => {
+  it("returns false just below 50% gain", () => {
     expect(
       hasGainVsAnyRef({
-        reference: 139,
+        reference: 149,
         refs: [100],
         thresholdPct: ENTRY_RANGE_PCT,
       }),

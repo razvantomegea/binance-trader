@@ -179,7 +179,7 @@ describe("evaluateDecision entry", () => {
     });
 
     expect(result.action).toBe("BUY");
-    expect(result.reason).toBe("entry_band_0.4_0.6");
+    expect(result.reason).toBe("entry_band_0.5_0.75");
   });
 
   it("does not buy when 24h range is more than 100%", () => {
@@ -275,7 +275,7 @@ describe("evaluateDecision entry", () => {
     });
 
     expect(result.action).toBe("BUY");
-    expect(result.reason).toBe("entry_band_0.4_0.6");
+    expect(result.reason).toBe("entry_band_0.5_0.75");
   });
 });
 

@@ -85,7 +85,7 @@ describe("evaluateSymbol entry", () => {
     expect(mockedPlaceTrade).toHaveBeenCalledWith(
       expect.objectContaining({
         side: "BUY",
-        reason: "entry_band_0.4_0.6",
+        reason: "entry_band_0.5_0.75",
       }),
     );
   });
@@ -206,7 +206,7 @@ describe("evaluateSymbol entry", () => {
     expect(mockedPlaceTrade).toHaveBeenCalledWith(
       expect.objectContaining({
         side: "BUY",
-        reason: "entry_band_0.4_0.6",
+        reason: "entry_band_0.5_0.75",
       }),
     );
   });

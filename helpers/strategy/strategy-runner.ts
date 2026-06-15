@@ -76,10 +76,7 @@ async function backfillWithFallback<T>(
 const EMPTY_BACKFILL = { scanned: 0, updated: 0, skipped: 0 };
 
 async function runStrategyBackfills(): Promise<
-  Pick<
-    RunStrategyResult,
-    "postClose24hBackfill" | "maxPriceAfterBuyBackfill"
-  >
+  Pick<RunStrategyResult, "postClose24hBackfill" | "maxPriceAfterBuyBackfill">
 > {
   const postClose24hBackfill = await backfillWithFallback(
     () => backfillPostClose24hMetrics(),
