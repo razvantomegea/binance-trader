@@ -109,4 +109,35 @@ describe("buildTradeMarkers", () => {
     expect(markers).toHaveLength(1);
     expect(markers[0]?.id).toBe("1");
   });
+
+  it("skips trades with invalid candleOpenTime or price", () => {
+    const markers = buildTradeMarkers({
+      symbol: "ETHUSDT",
+      trades: [
+        { ...baseTrade, candleOpenTime: "invalid" },
+        { ...sellTrade, price: "not-a-number" },
+        sellTrade,
+      ],
+      positions: [],
+    });
+
+    expect(markers).toEqual([
+      {
+        kind: "exit",
+        openTimeMs: Date.parse("2026-06-07T09:00:00.000Z"),
+        price: 3000,
+        id: "2",
+      },
+    ]);
+  });
+
+  it("skips position entry with invalid buyTime or buyPrice", () => {
+    const markers = buildTradeMarkers({
+      symbol: "ETHUSDT",
+      trades: [],
+      positions: [{ ...openPosition, buyTime: "invalid", buyPrice: "bad" }],
+    });
+
+    expect(markers).toEqual([]);
+  });
 });
