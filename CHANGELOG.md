@@ -6,6 +6,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 Versions are auto-released on every merge to `main`.
 
+## [1.0.7] - 2026-06-18
+
+- Refactor chart components for improved layout and structure (0d02cab)
+- Implement validation for trade and position markers (684103e)
+- Enhance chart functionality with trade markers (28a97cd)
+- Update entry range parameters and related tests (eb482ca)
+
 ## [1.0.6] - 2026-06-11
 
 - Disable dashboard mutations in production ([#5](https://github.com/razvantomegea/binance-trader/pull/5)) (6740750)
