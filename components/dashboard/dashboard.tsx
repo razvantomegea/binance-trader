@@ -130,6 +130,30 @@ function DashboardHeader({
   );
 }
 
+function DashboardChartPanel({
+  title,
+  titleTestId,
+  children,
+}: {
+  title: string;
+  titleTestId?: DataTestId;
+  children: ReactNode;
+}) {
+  return (
+    <section
+      className={`flex w-full min-h-0 flex-col ${MOBILE_DASHBOARD_PANEL_MIN_HEIGHT_CLASS_NAME} rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950`}
+    >
+      <h2
+        className="mb-3 shrink-0 text-sm font-medium text-zinc-500"
+        data-testid={titleTestId}
+      >
+        {title}
+      </h2>
+      <div className="flex min-h-0 flex-1 flex-col">{children}</div>
+    </section>
+  );
+}
+
 function DashboardCharts({
   symbolRows,
   selectedSymbol,
@@ -163,29 +187,19 @@ function DashboardCharts({
         loading={loadingSymbols}
       />
       <div className="flex min-w-0 flex-col gap-4 lg:ml-72 lg:pl-4 xl:ml-80">
-        <section
-          className={`flex w-full flex-col ${MOBILE_DASHBOARD_PANEL_MIN_HEIGHT_CLASS_NAME} rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950`}
+        <DashboardChartPanel
+          title={`${selectedSymbol} · H1`}
+          titleTestId={DataTestId.PriceChartTitle}
         >
-          <h2
-            className="mb-3 shrink-0 text-sm font-medium text-zinc-500"
-            data-testid={DataTestId.PriceChartTitle}
-          >
-            {selectedSymbol} · H1
-          </h2>
           <PriceChart
             symbol={selectedSymbol}
             interval={STRATEGY_INTERVAL}
             markers={chartMarkers}
           />
-        </section>
-        <section
-          className={`flex w-full flex-col ${MOBILE_DASHBOARD_PANEL_MIN_HEIGHT_CLASS_NAME} rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950`}
-        >
-          <h2 className="mb-3 shrink-0 text-sm font-medium text-zinc-500">
-            Strategy equity (hourly)
-          </h2>
+        </DashboardChartPanel>
+        <DashboardChartPanel title="Strategy equity (hourly)">
           <EquityCurve snapshots={snapshots} loading={loadingPortfolio} />
-        </section>
+        </DashboardChartPanel>
       </div>
     </div>
   );

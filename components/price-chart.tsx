@@ -142,7 +142,10 @@ export function PriceChart({
   }
 
   return (
-    <div data-testid={DataTestId.PriceChartReady}>
+    <div
+      className="flex min-h-0 flex-1 flex-col"
+      data-testid={DataTestId.PriceChartReady}
+    >
       <BaseAreaChart
         data={data}
         dataKey="close"

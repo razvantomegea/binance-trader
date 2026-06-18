@@ -62,12 +62,11 @@ export function buildTradeMarkers({
   );
 
   const position = positions.find((row) => row.symbol === symbol);
-  const positionMarker = position ? positionToMarker(position) : null;
-  if (
-    positionMarker &&
-    !entryTradeIds.has(String(position.buyTradeId))
-  ) {
-    markers.push(positionMarker);
+  if (position) {
+    const positionMarker = positionToMarker(position);
+    if (positionMarker && !entryTradeIds.has(String(position.buyTradeId))) {
+      markers.push(positionMarker);
+    }
   }
 
   return markers;
