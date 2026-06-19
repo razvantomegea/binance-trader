@@ -31,7 +31,18 @@ function mockMetaStore(store: Record<string, string | undefined>) {
     const value = store[key];
     return value === undefined ? [] : [{ key, value }];
   });
-  const where = vi.fn().mockReturnValue({ limit });
+  const where = vi.fn().mockImplementation(() => ({
+    limit,
+    then(
+      onFulfilled: (rows: { key: string; value: string }[]) => unknown,
+      onRejected?: (reason: unknown) => unknown,
+    ) {
+      const rows = Object.entries(store)
+        .filter((entry): entry is [string, string] => entry[1] !== undefined)
+        .map(([key, value]) => ({ key, value }));
+      return Promise.resolve(rows).then(onFulfilled, onRejected);
+    },
+  }));
   const from = vi.fn().mockReturnValue({ where });
   const select = vi.fn().mockReturnValue({ from });
 

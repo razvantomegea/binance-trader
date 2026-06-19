@@ -14,6 +14,7 @@ import {
   applyRefreshData,
   fetchAndReadDashboardData,
 } from "@/components/dashboard/dashboard-data-requests";
+import { DASHBOARD_POLL_MS } from "@/constants/dashboard";
 import type {
   CronAlert,
   DashboardCoreSetters,
@@ -27,7 +28,7 @@ import type {
   UseDashboardDataResult,
 } from "@/components/dashboard/types";
 
-const POLL_MS = 30_000;
+const POLL_MS = DASHBOARD_POLL_MS;
 const DEFAULT_SYMBOL = "BTCUSDT";
 
 function useDashboardCoreState(): DashboardCoreState & DashboardCoreSetters {
@@ -161,8 +162,10 @@ function useDashboardRefresh({
 function usePollingRefresh(refresh: () => Promise<void>): void {
   useEffect(() => {
     let cancelled = false;
+    let timer: ReturnType<typeof window.setInterval> | null = null;
+
     const tick = async () => {
-      if (cancelled) {
+      if (cancelled || document.hidden) {
         return;
       }
       try {
@@ -173,16 +176,44 @@ function usePollingRefresh(refresh: () => Promise<void>): void {
         }
       }
     };
-    const timer = window.setInterval(() => {
+
+    const stopPolling = () => {
+      if (timer !== null) {
+        window.clearInterval(timer);
+        timer = null;
+      }
+    };
+
+    const startPolling = () => {
+      stopPolling();
+      if (cancelled || document.hidden) {
+        return;
+      }
+      timer = window.setInterval(() => {
+        void tick();
+      }, POLL_MS);
+    };
+
+    const onVisibilityChange = () => {
+      if (document.hidden) {
+        stopPolling();
+        return;
+      }
       void tick();
-    }, POLL_MS);
+      startPolling();
+    };
+
+    startPolling();
     const initial = window.setTimeout(() => {
       void tick();
     }, 0);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
     return () => {
       cancelled = true;
       window.clearTimeout(initial);
-      window.clearInterval(timer);
+      stopPolling();
+      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [refresh]);
 }

@@ -1,6 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { DASHBOARD_POLL_MS } from "@/constants/dashboard";
 import { mockStrategyStatus } from "@/e2e/fixtures/dashboard-api-mocks";
 import {
   type DashboardFetchMock,
@@ -360,7 +361,7 @@ function registerPollingTests(): void {
     const callsAfterInit = fetchMock.mock.calls.length;
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(30_000);
+      await vi.advanceTimersByTimeAsync(DASHBOARD_POLL_MS);
     });
 
     expect(fetchMock.mock.calls.length).toBeGreaterThan(callsAfterInit);

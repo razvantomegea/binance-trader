@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 
 import { getDb } from "@/db";
 import { withDbRetry } from "@/db/with-db-retry";
@@ -10,6 +10,31 @@ const STARTED_AT_KEY = "scheduler_started_at";
 const LAST_RUN_AT_KEY = "scheduler_last_run_at";
 const LAST_ERROR_KEY = "scheduler_last_error";
 const LAST_RESULT_KEY = "scheduler_last_result";
+
+const SCHEDULER_META_KEYS = [
+  RUNNING_KEY,
+  STARTED_AT_KEY,
+  LAST_RUN_AT_KEY,
+  LAST_ERROR_KEY,
+  LAST_RESULT_KEY,
+] as const;
+
+async function getMetaValues(
+  keys: readonly string[],
+): Promise<Map<string, string>> {
+  if (keys.length === 0) {
+    return new Map();
+  }
+
+  const rows = await withDbRetry(() =>
+    getDb()
+      .select()
+      .from(strategyMeta)
+      .where(inArray(strategyMeta.key, [...keys])),
+  );
+
+  return new Map(rows.map((row) => [row.key, row.value]));
+}
 
 async function getMetaValue(key: string): Promise<string | null> {
   const [row] = await withDbRetry(() =>
@@ -79,11 +104,12 @@ export async function getSchedulerPersistedStatus(): Promise<{
   lastError: string | null;
   lastResult: RunStrategyResult | null;
 }> {
-  const running = await getSchedulerRunning();
-  const startedAtRaw = await getMetaValue(STARTED_AT_KEY);
-  const lastRunAtRaw = await getMetaValue(LAST_RUN_AT_KEY);
-  const lastErrorRaw = await getMetaValue(LAST_ERROR_KEY);
-  const lastResultRaw = await getMetaValue(LAST_RESULT_KEY);
+  const meta = await getMetaValues(SCHEDULER_META_KEYS);
+  const running = meta.get(RUNNING_KEY) === "true";
+  const startedAtRaw = meta.get(STARTED_AT_KEY) ?? null;
+  const lastRunAtRaw = meta.get(LAST_RUN_AT_KEY) ?? null;
+  const lastErrorRaw = meta.get(LAST_ERROR_KEY) ?? null;
+  const lastResultRaw = meta.get(LAST_RESULT_KEY) ?? null;
 
   const startedAtMs = startedAtRaw ? Number(startedAtRaw) : null;
   const lastRunAtMs = lastRunAtRaw ? Number(lastRunAtRaw) : null;
