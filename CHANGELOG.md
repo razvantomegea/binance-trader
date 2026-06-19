@@ -6,6 +6,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 Versions are auto-released on every merge to `main`.
 
+## [1.0.8] - 2026-06-19
+
+- Refactor dashboard polling implementation and introduce dedicated hook (03db451)
+- Refactor dashboard polling mechanism to use configurable interval (c404acf)
+- Update tar dependency version in package.json and pnpm-lock.yaml to 7.5.16 (f464a63)
+
 ## [1.0.7] - 2026-06-18
 
 - Refactor chart components for improved layout and structure (0d02cab)
