@@ -6,6 +6,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 Versions are auto-released on every merge to `main`.
 
+## [1.0.9] - 2026-06-19
+
+- Refactor historical klines cache loading and instrumentation registration (4904c2f)
+- Update ESLint configuration to include Prettier integration (3dbf35d)
+- Refactor instrumentation tests and improve environment variable handling (42245bc)
+
 ## [1.0.8] - 2026-06-19
 
 - Refactor dashboard polling implementation and introduce dedicated hook (03db451)
