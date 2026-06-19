@@ -10,13 +10,13 @@ import type {
 } from "@/types/binance";
 import { fetchWithRetry } from "@/utils/binance/fetch-with-retry";
 import {
-  findReusableHistoricalKlinesCache,
-  writeHistoricalKlinesCache,
-} from "@/utils/binance/historical-klines-cache";
-import {
   getLastClosedCandleOpenTime,
   HOUR_MS,
 } from "@/utils/binance/candle-time";
+
+async function loadHistoricalKlinesCache() {
+  return import("@/utils/binance/historical-klines-cache");
+}
 
 interface GetKlinesParams {
   symbol: string;
@@ -253,6 +253,8 @@ async function hydrateHistoricalRange(params: {
   startTime: number;
   cappedEndTime: number;
 }): Promise<KlineCandle[]> {
+  const { findReusableHistoricalKlinesCache } =
+    await loadHistoricalKlinesCache();
   const reusable = await findReusableHistoricalKlinesCache({
     symbol: params.symbol,
     interval: params.interval,
@@ -306,6 +308,7 @@ export async function getHistoricalClosedKlines({
   });
 
   if (merged.length > 0) {
+    const { writeHistoricalKlinesCache } = await loadHistoricalKlinesCache();
     await writeHistoricalKlinesCache({
       symbol,
       interval,
