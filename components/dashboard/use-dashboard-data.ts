@@ -14,7 +14,7 @@ import {
   applyRefreshData,
   fetchAndReadDashboardData,
 } from "@/components/dashboard/dashboard-data-requests";
-import { DASHBOARD_POLL_MS } from "@/constants/dashboard";
+import { useDashboardPolling } from "@/hooks/use-dashboard-polling";
 import type {
   CronAlert,
   DashboardCoreSetters,
@@ -28,7 +28,6 @@ import type {
   UseDashboardDataResult,
 } from "@/components/dashboard/types";
 
-const POLL_MS = DASHBOARD_POLL_MS;
 const DEFAULT_SYMBOL = "BTCUSDT";
 
 function useDashboardCoreState(): DashboardCoreState & DashboardCoreSetters {
@@ -157,65 +156,6 @@ function useDashboardRefresh({
     setStrategyStatus,
     setLoadingSymbols,
   ]);
-}
-
-function usePollingRefresh(refresh: () => Promise<void>): void {
-  useEffect(() => {
-    let cancelled = false;
-    let timer: ReturnType<typeof window.setInterval> | null = null;
-
-    const tick = async () => {
-      if (cancelled || document.hidden) {
-        return;
-      }
-      try {
-        await refresh();
-      } catch (error) {
-        if (!cancelled) {
-          console.error("Dashboard polling refresh failed:", error);
-        }
-      }
-    };
-
-    const stopPolling = () => {
-      if (timer !== null) {
-        window.clearInterval(timer);
-        timer = null;
-      }
-    };
-
-    const startPolling = () => {
-      stopPolling();
-      if (cancelled || document.hidden) {
-        return;
-      }
-      timer = window.setInterval(() => {
-        void tick();
-      }, POLL_MS);
-    };
-
-    const onVisibilityChange = () => {
-      if (document.hidden) {
-        stopPolling();
-        return;
-      }
-      void tick();
-      startPolling();
-    };
-
-    startPolling();
-    const initial = window.setTimeout(() => {
-      void tick();
-    }, 0);
-    document.addEventListener("visibilitychange", onVisibilityChange);
-
-    return () => {
-      cancelled = true;
-      window.clearTimeout(initial);
-      stopPolling();
-      document.removeEventListener("visibilitychange", onVisibilityChange);
-    };
-  }, [refresh]);
 }
 
 function useClosePositionAction({
@@ -397,7 +337,7 @@ export function useDashboardData(): UseDashboardDataResult {
     setStrategyStatus: strategy.setStrategyStatus,
     setStatusRequestError: strategy.setStatusRequestError,
   });
-  usePollingRefresh(refresh);
+  useDashboardPolling(refresh);
 
   const closePosition = useClosePositionAction({
     refresh,

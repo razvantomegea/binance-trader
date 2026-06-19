@@ -1,7 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { DASHBOARD_POLL_MS } from "@/constants/dashboard";
 import { mockStrategyStatus } from "@/e2e/fixtures/dashboard-api-mocks";
 import {
   type DashboardFetchMock,
@@ -348,27 +347,6 @@ function registerPollingAndDedupeTests(): void {
   });
 }
 
-function registerPollingTests(): void {
-  it("polls on interval", async () => {
-    vi.useFakeTimers();
-    const fetchMock = installDashboardFetchMock();
-    renderHook(() => useDashboardData());
-
-    await act(async () => {
-      await vi.runOnlyPendingTimersAsync();
-    });
-
-    const callsAfterInit = fetchMock.mock.calls.length;
-
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(DASHBOARD_POLL_MS);
-    });
-
-    expect(fetchMock.mock.calls.length).toBeGreaterThan(callsAfterInit);
-    vi.useRealTimers();
-  });
-}
-
 describe("useDashboardData", () => {
   beforeEach(() => {
     installDashboardFetchMock();
@@ -387,5 +365,4 @@ describe("useDashboardData", () => {
   registerStrategyToggleTests();
   registerAlertAndNotificationTests();
   registerPollingAndDedupeTests();
-  registerPollingTests();
 });

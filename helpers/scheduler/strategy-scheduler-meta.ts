@@ -68,6 +68,25 @@ function normalizeMetaString(value: string | null): string | null {
   return value ?? null;
 }
 
+function parseMetaTimestamp(raw: string | null): number | null {
+  if (!raw) {
+    return null;
+  }
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function parseLastResult(raw: string | null): RunStrategyResult | null {
+  if (!raw) {
+    return null;
+  }
+  try {
+    return JSON.parse(raw) as RunStrategyResult;
+  } catch {
+    return null;
+  }
+}
+
 export async function getSchedulerRunning(): Promise<boolean> {
   const value = await getMetaValue(RUNNING_KEY);
   if (value === null) {
@@ -111,23 +130,11 @@ export async function getSchedulerPersistedStatus(): Promise<{
   const lastErrorRaw = meta.get(LAST_ERROR_KEY) ?? null;
   const lastResultRaw = meta.get(LAST_RESULT_KEY) ?? null;
 
-  const startedAtMs = startedAtRaw ? Number(startedAtRaw) : null;
-  const lastRunAtMs = lastRunAtRaw ? Number(lastRunAtRaw) : null;
-
-  let lastResult: RunStrategyResult | null = null;
-  if (lastResultRaw) {
-    try {
-      lastResult = JSON.parse(lastResultRaw) as RunStrategyResult;
-    } catch {
-      lastResult = null;
-    }
-  }
-
   return {
     running,
-    startedAtMs: Number.isFinite(startedAtMs) ? startedAtMs : null,
-    lastRunAtMs: Number.isFinite(lastRunAtMs) ? lastRunAtMs : null,
+    startedAtMs: parseMetaTimestamp(startedAtRaw),
+    lastRunAtMs: parseMetaTimestamp(lastRunAtRaw),
     lastError: normalizeMetaString(lastErrorRaw),
-    lastResult,
+    lastResult: parseLastResult(lastResultRaw),
   };
 }
