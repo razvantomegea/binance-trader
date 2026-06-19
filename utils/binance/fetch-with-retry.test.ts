@@ -1,14 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { fetchWithRetry, resetFetchPacingForTests } from "./fetch-with-retry";
+
 const mockFetch = vi.fn();
 
 vi.stubGlobal("fetch", mockFetch);
-
-async function loadFetchWithRetry() {
-  vi.resetModules();
-  const mod = await import("./fetch-with-retry");
-  return mod.fetchWithRetry;
-}
 
 function jsonResponse(
   status: number,
@@ -26,6 +22,7 @@ describe("fetchWithRetry", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     mockFetch.mockReset();
+    resetFetchPacingForTests();
   });
 
   afterEach(() => {
@@ -33,7 +30,6 @@ describe("fetchWithRetry", () => {
   });
 
   it("returns ok response on first attempt", async () => {
-    const fetchWithRetry = await loadFetchWithRetry();
     const url = new URL("https://example.com/klines");
     mockFetch.mockResolvedValueOnce(jsonResponse(200, []));
 
@@ -46,7 +42,6 @@ describe("fetchWithRetry", () => {
   });
 
   it("retries on 429 then succeeds", async () => {
-    const fetchWithRetry = await loadFetchWithRetry();
     const url = new URL("https://example.com/klines");
     mockFetch
       .mockResolvedValueOnce(jsonResponse(429, {}, { "retry-after": "1" }))
@@ -61,7 +56,6 @@ describe("fetchWithRetry", () => {
   });
 
   it("retries on 500 then throws after max retries", async () => {
-    const fetchWithRetry = await loadFetchWithRetry();
     const url = new URL("https://example.com/klines");
     mockFetch.mockResolvedValue(jsonResponse(500, {}));
 
@@ -75,7 +69,6 @@ describe("fetchWithRetry", () => {
   });
 
   it("does not retry non-retryable 400 responses", async () => {
-    const fetchWithRetry = await loadFetchWithRetry();
     const url = new URL("https://example.com/klines");
     mockFetch.mockResolvedValueOnce(jsonResponse(400, {}));
 
@@ -88,7 +81,6 @@ describe("fetchWithRetry", () => {
   });
 
   it("retries on network error", async () => {
-    const fetchWithRetry = await loadFetchWithRetry();
     const url = new URL("https://example.com/klines");
     mockFetch
       .mockRejectedValueOnce(new Error("network down"))
@@ -103,7 +95,6 @@ describe("fetchWithRetry", () => {
   });
 
   it("parses retry-after as an absolute HTTP date", async () => {
-    const fetchWithRetry = await loadFetchWithRetry();
     const url = new URL("https://example.com/klines");
     const retryAt = new Date(Date.now() + 1000).toUTCString();
     mockFetch
@@ -119,7 +110,6 @@ describe("fetchWithRetry", () => {
   });
 
   it("ignores invalid retry-after headers", async () => {
-    const fetchWithRetry = await loadFetchWithRetry();
     const url = new URL("https://example.com/klines");
     mockFetch
       .mockResolvedValueOnce(
@@ -136,7 +126,6 @@ describe("fetchWithRetry", () => {
   });
 
   it("paces concurrent requests via module queue", async () => {
-    const fetchWithRetry = await loadFetchWithRetry();
     const url = new URL("https://example.com/klines");
     mockFetch.mockResolvedValue(jsonResponse(200, []));
 

@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { getDb, resetDbInstanceForTests } from "@/db";
+
 vi.mock("@neondatabase/serverless", () => ({
   neon: vi.fn(() => vi.fn()),
 }));
@@ -12,27 +14,25 @@ describe("getDb", () => {
   const originalUrl = process.env.DATABASE_URL;
 
   beforeEach(() => {
-    vi.resetModules();
+    resetDbInstanceForTests();
     delete process.env.DATABASE_URL;
   });
 
   afterEach(() => {
+    resetDbInstanceForTests();
     if (originalUrl) {
       process.env.DATABASE_URL = originalUrl;
     } else {
       delete process.env.DATABASE_URL;
     }
-    vi.resetModules();
   });
 
-  it("throws when DATABASE_URL is not set", async () => {
-    const { getDb } = await import("@/db");
+  it("throws when DATABASE_URL is not set", () => {
     expect(() => getDb()).toThrow("DATABASE_URL is not set");
   });
 
-  it("returns singleton db instance when DATABASE_URL is set", async () => {
+  it("returns singleton db instance when DATABASE_URL is set", () => {
     process.env.DATABASE_URL = "postgresql://test:test@localhost/test";
-    const { getDb } = await import("@/db");
     const first = getDb();
     const second = getDb();
     expect(first).toBe(second);

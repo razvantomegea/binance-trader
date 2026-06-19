@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { register } from "./instrumentation";
+
 const mockStartCron = vi.fn();
 
 vi.mock("@/helpers/scheduler/start-cron", () => ({
@@ -8,7 +10,6 @@ vi.mock("@/helpers/scheduler/start-cron", () => ({
 
 describe("instrumentation register", () => {
   beforeEach(() => {
-    vi.resetModules();
     vi.clearAllMocks();
     delete process.env.NEXT_RUNTIME;
     delete process.env.AUTO_START_STRATEGY;
@@ -23,7 +24,6 @@ describe("instrumentation register", () => {
     process.env.NEXT_RUNTIME = "edge";
     process.env.AUTO_START_STRATEGY = "true";
 
-    const { register } = await import("./instrumentation");
     await register();
 
     expect(mockStartCron).not.toHaveBeenCalled();
@@ -33,7 +33,6 @@ describe("instrumentation register", () => {
     process.env.NEXT_RUNTIME = "nodejs";
     process.env.AUTO_START_STRATEGY = "false";
 
-    const { register } = await import("./instrumentation");
     await register();
 
     expect(mockStartCron).not.toHaveBeenCalled();
@@ -43,7 +42,6 @@ describe("instrumentation register", () => {
     process.env.NEXT_RUNTIME = "nodejs";
     process.env.AUTO_START_STRATEGY = "true";
 
-    const { register } = await import("./instrumentation");
     await register();
 
     expect(mockStartCron).toHaveBeenCalledOnce();

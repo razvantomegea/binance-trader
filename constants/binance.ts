@@ -1,10 +1,13 @@
 import type { CandleInterval } from "@/types/binance";
 
-const trimmedBinanceApiBaseUrl = process.env.BINANCE_API_BASE_URL?.trim() ?? "";
-export const BINANCE_API_BASE_URL =
-  trimmedBinanceApiBaseUrl.length > 0
-    ? trimmedBinanceApiBaseUrl
-    : "https://data-api.binance.vision";
+export function resolveBinanceApiBaseUrl(
+  envValue: string | undefined = process.env.BINANCE_API_BASE_URL,
+): string {
+  const trimmed = envValue?.trim() ?? "";
+  return trimmed.length > 0 ? trimmed : "https://data-api.binance.vision";
+}
+
+export const BINANCE_API_BASE_URL = resolveBinanceApiBaseUrl();
 
 export const CANDLE_INTERVALS = [
   "H1",

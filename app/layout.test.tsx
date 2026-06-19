@@ -1,7 +1,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import RootLayout from "./layout";
+import RootLayout, { metadata } from "./layout";
 
 describe("RootLayout", () => {
   afterEach(() => {
@@ -20,9 +20,7 @@ describe("RootLayout", () => {
     expect(document.querySelector("body")).toHaveClass("min-h-full");
   });
 
-  it("exports page metadata for the trading dashboard", async () => {
-    const { metadata } = await import("./layout");
-
+  it("exports page metadata for the trading dashboard", () => {
     expect(metadata.title).toBe("Binance Trading Dashboard");
     expect(metadata.description).toContain("paper trading");
   });

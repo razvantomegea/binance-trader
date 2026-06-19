@@ -12,3 +12,7 @@ export async function ensureMaxPriceAfterBuyBackfill(): Promise<void> {
 
   await backfillPromise;
 }
+
+export function resetBackfillPromiseForTests(): void {
+  backfillPromise = null;
+}

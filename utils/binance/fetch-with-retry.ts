@@ -135,3 +135,8 @@ export async function fetchWithRetry({
 
   throw lastError ?? new Error("Binance request failed");
 }
+
+export function resetFetchPacingForTests(): void {
+  nextAllowedRequestAtMs = 0;
+  pacingQueue = Promise.resolve();
+}

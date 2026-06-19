@@ -5,20 +5,21 @@ vi.mock("@/helpers/trades/backfill-max-price-after-buy", () => ({
 }));
 
 import { backfillMaxPriceAfterBuy } from "@/helpers/trades/backfill-max-price-after-buy";
+import {
+  ensureMaxPriceAfterBuyBackfill,
+  resetBackfillPromiseForTests,
+} from "./ensure-max-price-after-buy-backfill";
 
 const mockedBackfill = vi.mocked(backfillMaxPriceAfterBuy);
 
 describe("ensureMaxPriceAfterBuyBackfill", () => {
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.clearAllMocks();
-    vi.resetModules();
+    resetBackfillPromiseForTests();
   });
 
   it("awaits backfill once and resolves", async () => {
     mockedBackfill.mockResolvedValue({ scanned: 1, updated: 1, skipped: 0 });
-
-    const { ensureMaxPriceAfterBuyBackfill } =
-      await import("./ensure-max-price-after-buy-backfill");
 
     await ensureMaxPriceAfterBuyBackfill();
 
@@ -35,9 +36,6 @@ describe("ensureMaxPriceAfterBuyBackfill", () => {
       }) as ReturnType<typeof backfillMaxPriceAfterBuy>,
     );
 
-    const { ensureMaxPriceAfterBuyBackfill } =
-      await import("./ensure-max-price-after-buy-backfill");
-
     const first = ensureMaxPriceAfterBuyBackfill();
     const second = ensureMaxPriceAfterBuyBackfill();
 
@@ -51,9 +49,6 @@ describe("ensureMaxPriceAfterBuyBackfill", () => {
     mockedBackfill
       .mockRejectedValueOnce(new Error("db down"))
       .mockResolvedValueOnce({ scanned: 0, updated: 0, skipped: 0 });
-
-    const { ensureMaxPriceAfterBuyBackfill } =
-      await import("./ensure-max-price-after-buy-backfill");
 
     await ensureMaxPriceAfterBuyBackfill();
     await ensureMaxPriceAfterBuyBackfill();

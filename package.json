@@ -34,6 +34,7 @@
     "prepare": "node scripts/setup-git-hooks.mjs",
     "version:bump": "node scripts/bump-version.mjs",
     "version:check": "node scripts/bump-version.mjs --check",
+    "prerelease": "pnpm format && pnpm lint:fix && pnpm test:coverage && pnpm test:e2e && pnpm build && pnpm fallow:audit",
     "release:on-main": "node scripts/release-on-main.mjs",
     "fallow": "fallow",
     "fallow:audit": "fallow audit",

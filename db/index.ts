@@ -15,3 +15,7 @@ export function getDb() {
   }
   return dbInstance;
 }
+
+export function resetDbInstanceForTests(): void {
+  dbInstance = null;
+}
