@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { getTradingSymbols, getUsdtSymbols } from "./get-usdt-symbols";
+import {
+  getTradingSymbols,
+  getUsdtSymbols,
+  resetUsdtSymbolsCacheForTests,
+} from "./get-usdt-symbols";
 
 const mockFetch = vi.fn();
 
@@ -19,6 +23,7 @@ function exchangeInfoResponse(
 describe("getUsdtSymbols", () => {
   beforeEach(() => {
     mockFetch.mockReset();
+    resetUsdtSymbolsCacheForTests();
   });
 
   it("filters trading USDT pairs and sorts", async () => {
@@ -51,5 +56,39 @@ describe("getUsdtSymbols", () => {
     );
 
     await expect(getTradingSymbols()).resolves.toEqual(["ADAUSDT"]);
+  });
+
+  it("skips the Next.js data cache and requests a reduced exchangeInfo payload", async () => {
+    mockFetch.mockResolvedValueOnce(
+      exchangeInfoResponse([
+        { symbol: "BTCUSDT", quoteAsset: "USDT", status: "TRADING" },
+      ]),
+    );
+
+    await getUsdtSymbols();
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.stringMatching(
+        /\/api\/v3\/exchangeInfo\?.*showPermissionSets=false/,
+      ),
+      expect.objectContaining({ cache: "no-store" }),
+    );
+    const [, init] = mockFetch.mock.calls[0] as [
+      string,
+      RequestInit | undefined,
+    ];
+    expect(init).not.toHaveProperty("next");
+  });
+
+  it("reuses the filtered symbol list within the cache ttl", async () => {
+    mockFetch.mockResolvedValue(
+      exchangeInfoResponse([
+        { symbol: "BTCUSDT", quoteAsset: "USDT", status: "TRADING" },
+      ]),
+    );
+
+    await expect(getUsdtSymbols()).resolves.toEqual(["BTCUSDT"]);
+    await expect(getUsdtSymbols()).resolves.toEqual(["BTCUSDT"]);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 });

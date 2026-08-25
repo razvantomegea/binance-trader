@@ -197,11 +197,14 @@ AUTO_START_STRATEGY=true
 
 Web push endpoints copied from a public host may not work on `localhost` — re-subscribe if needed.
 
+Locally, `pnpm start:local` or `pnpm push:setup` writes VAPID keys to `.env.local` if they are missing. `pnpm dev` also generates them on the first Enable click when they are still unset. Production still needs `WEB_PUSH_VAPID_PUBLIC_KEY`, `WEB_PUSH_VAPID_PRIVATE_KEY`, and `WEB_PUSH_SUBJECT` set explicitly.
+
 ### Scripts
 
 | Command                       | Description                                                    |
 | ----------------------------- | -------------------------------------------------------------- |
 | `pnpm start:local`            | Docker Postgres + `pnpm dev` (PowerShell helper)               |
+| `pnpm push:setup`             | Generate web push VAPID keys into `.env.local` if missing      |
 | `pnpm dev`                    | Next.js dev server                                             |
 | `pnpm build`                  | Production build                                               |
 | `pnpm start`                  | Production server                                              |
@@ -369,8 +372,8 @@ Railway deploy scripts remain available for optional rollback and are independen
 | `TARGET_DATABASE_URL`        | For `pnpm db:copy`  | Target Postgres (local Docker)                   |
 | `BINANCE_API_BASE_URL`       | No                  | Defaults to `https://data-api.binance.vision`    |
 | `BACKTEST_CACHE_DIR`         | No                  | Kline + ML cache root (default `backtest-cache`) |
-| `WEB_PUSH_VAPID_PUBLIC_KEY`  | No                  | Web push public key                              |
-| `WEB_PUSH_VAPID_PRIVATE_KEY` | No                  | Web push private key                             |
+| `WEB_PUSH_VAPID_PUBLIC_KEY`  | No                  | Web push public key (auto-generated locally)     |
+| `WEB_PUSH_VAPID_PRIVATE_KEY` | No                  | Web push private key (auto-generated locally)    |
 | `WEB_PUSH_SUBJECT`           | No                  | `mailto:` or `https:` contact for VAPID          |
 
 ## License

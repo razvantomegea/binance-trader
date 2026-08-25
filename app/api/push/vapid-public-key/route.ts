@@ -1,17 +1,9 @@
 import { NextResponse } from "next/server";
 
-function normalizeVapidPublicKey(value: string): string {
-  const trimmed = value.trim();
-  const withoutQuotes =
-    trimmed.startsWith('"') && trimmed.endsWith('"')
-      ? trimmed.slice(1, -1)
-      : trimmed;
-  return withoutQuotes.trim();
-}
+import { resolveVapidPublicKey } from "@/helpers/notifications/vapid-env";
 
 export async function GET() {
-  const rawPublicKey = process.env.WEB_PUSH_VAPID_PUBLIC_KEY;
-  const publicKey = rawPublicKey ? normalizeVapidPublicKey(rawPublicKey) : null;
+  const publicKey = await resolveVapidPublicKey();
   if (!publicKey) {
     return NextResponse.json(
       { error: "Web push is not configured" },

@@ -5,23 +5,25 @@ import {
   removePushSubscription,
 } from "@/helpers/notifications/subscriptions";
 import type { TradeExecutedPushPayload } from "@/helpers/notifications/types";
+import { resolveVapidDetails } from "@/helpers/notifications/vapid-env";
 
 let vapidConfigured = false;
 
-function ensureVapidConfigured(): boolean {
+async function ensureVapidConfigured(): Promise<boolean> {
   if (vapidConfigured) {
     return true;
   }
 
-  const publicKey = process.env.WEB_PUSH_VAPID_PUBLIC_KEY;
-  const privateKey = process.env.WEB_PUSH_VAPID_PRIVATE_KEY;
-  const subject = process.env.WEB_PUSH_SUBJECT;
-
-  if (!publicKey || !privateKey || !subject) {
+  const details = await resolveVapidDetails();
+  if (!details) {
     return false;
   }
 
-  webpush.setVapidDetails(subject, publicKey, privateKey);
+  webpush.setVapidDetails(
+    details.subject,
+    details.publicKey,
+    details.privateKey,
+  );
   vapidConfigured = true;
   return true;
 }
@@ -37,7 +39,7 @@ function isStaleSubscriptionError(err: unknown): boolean {
 export async function sendTradeExecutedPush(
   payload: TradeExecutedPushPayload,
 ): Promise<void> {
-  if (!ensureVapidConfigured()) {
+  if (!(await ensureVapidConfigured())) {
     console.warn("Web push skipped: VAPID env vars not configured");
     return;
   }

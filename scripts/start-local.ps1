@@ -30,6 +30,9 @@ if (-not (Test-Path ".env.local")) {
   Copy-Item ".env.example" ".env.local"
 }
 
+Write-Host "Ensuring web push VAPID keys..."
+pnpm exec tsx scripts/ensure-vapid-keys.ts
+
 if ($Mode -eq "dev") {
   Write-Host "Starting Next.js (pnpm dev) with in-process scheduler..."
   pnpm dev
