@@ -143,9 +143,7 @@ async function prepareTarget(target, force, targetNonEmpty) {
     return;
   }
   console.info("[copy] --force: truncating target tables");
-  await target.unsafe(
-    `TRUNCATE ${TABLES.join(", ")} RESTART IDENTITY CASCADE`,
-  );
+  await target.unsafe(`TRUNCATE ${TABLES.join(", ")} RESTART IDENTITY CASCADE`);
 }
 
 async function runCopy({ force, sourceUrl, targetUrl }) {
