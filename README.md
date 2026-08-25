@@ -138,7 +138,7 @@ public/sw.js                  Service worker for web push
 2. Copy env template and start Postgres:
 
    ```bash
-   copy .env.example .env.local
+   cp .env.example .env.local
    docker compose up -d
    ```
 

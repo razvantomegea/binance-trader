@@ -23,16 +23,7 @@ function makeStatus(overrides: Partial<StrategyStatus> = {}): StrategyStatus {
   };
 }
 
-describe("buildCronAlerts", () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-    vi.setSystemTime(NOW_MS);
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
+function registerRequestAndErrorCases(): void {
   it("adds status request error alert", () => {
     const alerts = buildCronAlerts({
       strategyStatus: null,
@@ -89,7 +80,9 @@ describe("buildCronAlerts", () => {
       message: "Last strategy run failed: db timeout",
     });
   });
+}
 
+function registerRunningStateCases(): void {
   it("does not add running-state alerts when strategy is not running", () => {
     const alerts = buildCronAlerts({
       strategyStatus: makeStatus({
@@ -143,6 +136,31 @@ describe("buildCronAlerts", () => {
     });
   });
 
+  it("returns no running-state alerts for healthy running strategy", () => {
+    const alerts = buildCronAlerts({
+      strategyStatus: makeStatus(),
+      statusRequestError: null,
+      actionError: null,
+    });
+
+    expect(alerts).toEqual([]);
+  });
+
+  it("ignores invalid ISO timestamps for running-state checks", () => {
+    const alerts = buildCronAlerts({
+      strategyStatus: makeStatus({
+        lastRunAt: "not-a-date",
+        startedAt: "also-bad",
+      }),
+      statusRequestError: null,
+      actionError: null,
+    });
+
+    expect(alerts).toEqual([]);
+  });
+}
+
+function registerPreStartLastRunAtCases(): void {
   it("ignores lastRunAt from before the current scheduler start", () => {
     const alerts = buildCronAlerts({
       strategyStatus: makeStatus({
@@ -178,27 +196,19 @@ describe("buildCronAlerts", () => {
     });
     expect(alerts.map((alert) => alert.id)).not.toContain("stale-last-run");
   });
+}
 
-  it("returns no running-state alerts for healthy running strategy", () => {
-    const alerts = buildCronAlerts({
-      strategyStatus: makeStatus(),
-      statusRequestError: null,
-      actionError: null,
-    });
-
-    expect(alerts).toEqual([]);
+describe("buildCronAlerts", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW_MS);
   });
 
-  it("ignores invalid ISO timestamps for running-state checks", () => {
-    const alerts = buildCronAlerts({
-      strategyStatus: makeStatus({
-        lastRunAt: "not-a-date",
-        startedAt: "also-bad",
-      }),
-      statusRequestError: null,
-      actionError: null,
-    });
-
-    expect(alerts).toEqual([]);
+  afterEach(() => {
+    vi.useRealTimers();
   });
+
+  registerRequestAndErrorCases();
+  registerRunningStateCases();
+  registerPreStartLastRunAtCases();
 });

@@ -46,6 +46,27 @@ function requireUrl(name) {
   return value;
 }
 
+/** Host/port/db/user identity; ignores query options such as sslmode. */
+function connectionIdentity(urlString) {
+  const url = new URL(urlString);
+  const protocol = url.protocol === "postgres:" ? "postgresql:" : url.protocol;
+  const host = url.hostname.toLowerCase();
+  const port = url.port || "5432";
+  const database = decodeURIComponent(url.pathname.replace(/^\//, ""));
+  const user = decodeURIComponent(url.username);
+  return `${protocol}//${user}@${host}:${port}/${database}`;
+}
+
+function assertDistinctDatabases(sourceUrl, targetUrl) {
+  if (connectionIdentity(sourceUrl) !== connectionIdentity(targetUrl)) {
+    return;
+  }
+  console.error(
+    "SOURCE_DATABASE_URL and TARGET_DATABASE_URL resolve to the same database.",
+  );
+  process.exit(1);
+}
+
 async function tableHasRows(sql, table) {
   const rows = await sql.unsafe(`SELECT 1 FROM ${table} LIMIT 1`);
   return rows.length > 0;
@@ -75,16 +96,14 @@ async function copyTable(source, target, table) {
   const columns = Object.keys(rows[0]);
   const columnList = columns.map((c) => `"${c}"`).join(", ");
 
-  await target.begin(async (tx) => {
-    for (const row of rows) {
-      const values = columns.map((c) => row[c]);
-      const placeholders = columns.map((_, i) => `$${i + 1}`).join(", ");
-      await tx.unsafe(
-        `INSERT INTO ${table} (${columnList}) VALUES (${placeholders})`,
-        values,
-      );
-    }
-  });
+  for (const row of rows) {
+    const values = columns.map((c) => row[c]);
+    const placeholders = columns.map((_, i) => `$${i + 1}`).join(", ");
+    await target.unsafe(
+      `INSERT INTO ${table} (${columnList}) VALUES (${placeholders})`,
+      values,
+    );
+  }
 
   console.info(`[copy] ${table}: ${rows.length} rows`);
   return rows.length;
@@ -98,13 +117,15 @@ async function copyAllTables(source, target) {
 
 async function resetSequences(target) {
   for (const { table, column, sequence } of SERIAL_SEQUENCES) {
-    await target.unsafe(`
-      SELECT setval(
-        '${sequence}',
-        COALESCE((SELECT MAX(${column}) FROM ${table}), 1),
-        true
-      )
-    `);
+    const [row] = await target.unsafe(
+      `SELECT MAX(${column})::bigint AS max_id FROM ${table}`,
+    );
+    const maxId = row?.max_id;
+    if (maxId == null) {
+      await target.unsafe(`SELECT setval('${sequence}', 1, false)`);
+    } else {
+      await target.unsafe(`SELECT setval('${sequence}', ${maxId}, true)`);
+    }
     console.info(`[copy] reset sequence ${sequence}`);
   }
 }
@@ -117,35 +138,36 @@ async function logTargetCounts(target) {
   }
 }
 
-async function prepareTarget(target, force) {
-  const targetNonEmpty = await anyTableHasRows(target);
-  if (targetNonEmpty && !force) {
-    console.error(
-      "Target database already has rows. Re-run with --force to truncate and replace.",
-    );
-    process.exit(1);
+async function prepareTarget(target, force, targetNonEmpty) {
+  if (!targetNonEmpty || !force) {
+    return;
   }
-  if (targetNonEmpty && force) {
-    console.info("[copy] --force: truncating target tables");
-    await target.unsafe(
-      `TRUNCATE ${TABLES.join(", ")} RESTART IDENTITY CASCADE`,
-    );
-  }
+  console.info("[copy] --force: truncating target tables");
+  await target.unsafe(
+    `TRUNCATE ${TABLES.join(", ")} RESTART IDENTITY CASCADE`,
+  );
 }
 
 async function runCopy({ force, sourceUrl, targetUrl }) {
-  if (sourceUrl === targetUrl) {
-    console.error("SOURCE_DATABASE_URL and TARGET_DATABASE_URL must differ.");
-    process.exit(1);
-  }
+  assertDistinctDatabases(sourceUrl, targetUrl);
 
   const source = postgres(sourceUrl, { max: 1, idle_timeout: 5 });
   const target = postgres(targetUrl, { max: 1, idle_timeout: 5 });
 
   try {
-    await prepareTarget(target, force);
-    await copyAllTables(source, target);
-    await resetSequences(target);
+    const targetNonEmpty = await anyTableHasRows(target);
+    if (targetNonEmpty && !force) {
+      console.error(
+        "Target database already has rows. Re-run with --force to truncate and replace.",
+      );
+      process.exit(1);
+    }
+
+    await target.begin(async (tx) => {
+      await prepareTarget(tx, force, targetNonEmpty);
+      await copyAllTables(source, tx);
+      await resetSequences(tx);
+    });
     await logTargetCounts(target);
   } finally {
     await source.end({ timeout: 5 });

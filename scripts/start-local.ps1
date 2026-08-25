@@ -14,7 +14,7 @@ Write-Host "Waiting for Postgres health..."
 $ready = $false
 for ($i = 0; $i -lt 30; $i++) {
   $status = docker compose ps --format json 2>$null | ConvertFrom-Json
-  if ($status.Health -eq "healthy" -or $status.State -eq "running") {
+  if ($status.Health -eq "healthy") {
     $ready = $true
     break
   }
