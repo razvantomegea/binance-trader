@@ -176,7 +176,6 @@ async function ensureStateHydrated(
   state.lastError = persisted.lastError;
   state.lastResult = persisted.lastResult;
   startHeartbeatLoop(state);
-  void runIfNeeded(state);
   console.info("[heartbeat] strategy scheduler restored from persisted state");
 }
 

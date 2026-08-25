@@ -171,7 +171,7 @@ DATABASE_URL=postgresql://trading:trading@localhost:5432/trading
 AUTO_START_STRATEGY=true
 ```
 
-`AUTO_START_STRATEGY=true` starts the in-process heartbeat inside the Next.js process via `instrumentation.ts`. It checks every 5 minutes (UTC-aligned) and runs the strategy in the first 5 minutes of each hour. Use `pnpm dev` for Start/Stop controls in the UI (`pnpm start` runs with `NODE_ENV=production` and hides dashboard mutations).
+`AUTO_START_STRATEGY=true` starts the in-process heartbeat inside the Next.js process via `instrumentation.ts`. It checks every 5 minutes (UTC-aligned) and runs the strategy on those ticks in the first 5 minutes of each hour. Restoring a persisted running scheduler does not run immediately. Use `pnpm dev` for Start/Stop controls in the UI (`pnpm start` runs with `NODE_ENV=production` and hides dashboard mutations).
 
 **Uptime:** sleep/hibernate stops the heartbeat. Missed hours are not walked; the next run evaluates the latest closed H1 candle against `last_candle_H1`. On Windows, `.\scripts\install-startup.bat` relaunches the local server after sign-in.
 

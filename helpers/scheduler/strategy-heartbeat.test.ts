@@ -147,7 +147,7 @@ describe("strategy-heartbeat state restoration and run constraints", () => {
     expect(mockRunStrategy).toHaveBeenCalledOnce();
   });
 
-  it("runs restored scheduler inside the hourly window", async () => {
+  it("does not run strategy on restore before the next hourly window", async () => {
     vi.setSystemTime(new Date("2024-06-01T10:01:00.000Z"));
     mockGetSchedulerPersistedStatus.mockResolvedValue({
       running: true,
@@ -159,6 +159,10 @@ describe("strategy-heartbeat state restoration and run constraints", () => {
 
     await getStrategyHeartbeatStatus();
     await vi.advanceTimersByTimeAsync(0);
+
+    expect(mockRunStrategy).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(59 * 60 * 1000);
 
     expect(mockRunStrategy).toHaveBeenCalledOnce();
   });
