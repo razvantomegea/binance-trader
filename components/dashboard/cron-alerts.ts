@@ -13,6 +13,23 @@ function parseIsoToMs(value: string | null): number | null {
   return Number.isFinite(ts) ? ts : null;
 }
 
+/** Runs recorded before the current start (e.g. after DB migrate) do not count. */
+function lastRunSinceStartMs({
+  lastRunAtMs,
+  startedAtMs,
+}: {
+  lastRunAtMs: number | null;
+  startedAtMs: number | null;
+}): number | null {
+  if (lastRunAtMs === null) {
+    return null;
+  }
+  if (startedAtMs !== null && lastRunAtMs < startedAtMs) {
+    return null;
+  }
+  return lastRunAtMs;
+}
+
 function getStaleCronAlert({
   nowMs,
   lastRunAtMs,
@@ -26,7 +43,8 @@ function getStaleCronAlert({
   return {
     id: "stale-last-run",
     severity: "warning",
-    message: "Cron looks stale: no successful run in the last 40 minutes.",
+    message:
+      "Scheduler looks stale: no successful run in the last ~70 minutes.",
   };
 }
 
@@ -109,8 +127,11 @@ function addRunningStateAlerts(
     return;
   }
   const nowMs = Date.now();
-  const lastRunAtMs = parseIsoToMs(strategyStatus.lastRunAt);
   const startedAtMs = parseIsoToMs(strategyStatus.startedAt);
+  const lastRunAtMs = lastRunSinceStartMs({
+    lastRunAtMs: parseIsoToMs(strategyStatus.lastRunAt),
+    startedAtMs,
+  });
   const staleAlert = getStaleCronAlert({ nowMs, lastRunAtMs });
   const neverRanAlert = getNeverRanAfterStartAlert({
     nowMs,

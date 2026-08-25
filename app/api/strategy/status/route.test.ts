@@ -15,7 +15,7 @@ describe("GET /api/strategy/status", () => {
 
   it("returns 503 on retryable db error", async () => {
     mockedGetStrategyHeartbeatStatus.mockRejectedValue(
-      new Error("Control plane request failed"),
+      new Error("Connection terminated unexpectedly"),
     );
 
     const response = await GET();

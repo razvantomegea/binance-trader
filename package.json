@@ -27,6 +27,8 @@
     "ml:eval": "node scripts/run-ml.mjs eval",
     "ml:optimize": "node scripts/run-ml.mjs optimize",
     "db:push": "drizzle-kit push",
+    "db:copy": "node scripts/copy-postgres.mjs",
+    "start:local": "powershell -ExecutionPolicy Bypass -File scripts/start-local.ps1",
     "cron:trigger": "node scripts/trigger-strategy-cron.mjs",
     "railway:up": "pnpm run railway:up:web",
     "railway:up:web": "node scripts/railway-up.mjs RAILWAY_WEB_SERVICE",
@@ -44,10 +46,10 @@
     "fallow:fix-dry-run": "fallow fix --dry-run"
   },
   "dependencies": {
-    "@neondatabase/serverless": "1.0.2",
     "clsx": "2.1.1",
     "drizzle-orm": "0.45.2",
     "next": "16.2.6",
+    "postgres": "3.4.7",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-is": "19.2.4",

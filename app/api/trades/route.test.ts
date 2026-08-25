@@ -22,7 +22,7 @@ describe("GET /api/trades", () => {
 
   it("returns 503 on retryable db error", async () => {
     mockedGetTrades.mockRejectedValue(
-      new Error("Control plane request failed"),
+      new Error("Connection terminated unexpectedly"),
     );
 
     const response = await GET(new Request(BASE_URL));

@@ -1,13 +1,8 @@
 import { NextResponse } from "next/server";
 
 import { stopStrategyHeartbeat } from "@/helpers/scheduler/strategy-heartbeat";
-import { hasValidCronSecret } from "@/utils/api/cron-secret-auth";
 
-export async function POST(request: Request) {
-  if (!hasValidCronSecret(request)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export async function POST() {
   try {
     const result = await stopStrategyHeartbeat();
     return NextResponse.json(result, { status: 200 });

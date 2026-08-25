@@ -5,19 +5,19 @@ import { STRATEGY_CRON_INTERVAL_MS } from "@/constants/cron";
 import { computeNextStrategyCronRunIso } from "./compute-next-cron-run";
 
 describe("computeNextStrategyCronRunIso", () => {
-  it("returns next 5-minute UTC boundary", () => {
+  it("returns next hourly UTC boundary", () => {
     const tsMs = Date.parse("2026-06-07T12:03:45.000Z");
 
     expect(computeNextStrategyCronRunIso(tsMs)).toBe(
-      "2026-06-07T12:05:00.000Z",
+      "2026-06-07T13:00:00.000Z",
     );
   });
 
   it("advances to next slot when timestamp is exactly on boundary", () => {
-    const tsMs = Date.parse("2026-06-07T12:05:00.000Z");
+    const tsMs = Date.parse("2026-06-07T12:00:00.000Z");
 
     expect(computeNextStrategyCronRunIso(tsMs)).toBe(
-      "2026-06-07T12:10:00.000Z",
+      "2026-06-07T13:00:00.000Z",
     );
   });
 

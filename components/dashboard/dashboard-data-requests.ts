@@ -1,6 +1,6 @@
 import { STRATEGY_INTERVAL } from "@/constants/strategy";
 import { isUsdtSymbol } from "@/utils/binance/is-usdt-symbol";
-import { computeNextStrategyCronRunIso } from "@/utils/scheduler/compute-next-cron-run";
+import { computeNextHourlyRunIso } from "@/utils/scheduler/compute-next-hourly-run";
 import type {
   EquityCurveResponse,
   PortfolioResponse,
@@ -83,7 +83,7 @@ async function readStrategyStatus({
       ...status,
       nextRunAt:
         status.nextRunAt ??
-        (status.running ? computeNextStrategyCronRunIso(nowMs) : null),
+        (status.running ? computeNextHourlyRunIso(nowMs) : null),
     },
     error: null,
   };

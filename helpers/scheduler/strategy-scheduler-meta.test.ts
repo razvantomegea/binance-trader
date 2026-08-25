@@ -10,7 +10,6 @@ import { getDb } from "@/db";
 import {
   getSchedulerPersistedStatus,
   getSchedulerRunning,
-  isServerlessScheduler,
   recordSchedulerRun,
   setSchedulerRunning,
 } from "./strategy-scheduler-meta";
@@ -61,14 +60,6 @@ function mockMetaStore(store: Record<string, string | undefined>) {
 describe("strategy-scheduler-meta", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    delete process.env.SCHEDULER_MODE;
-  });
-
-  it("detects serverless scheduler mode", () => {
-    process.env.SCHEDULER_MODE = "external-cron";
-    expect(isServerlessScheduler()).toBe(true);
-    delete process.env.SCHEDULER_MODE;
-    expect(isServerlessScheduler()).toBe(false);
   });
 
   it("returns false when running meta is absent", async () => {

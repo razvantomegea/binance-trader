@@ -7,7 +7,7 @@ import {
   mockTrades,
 } from "@/e2e/fixtures/dashboard-api-mocks";
 import { STRATEGY_CRON_INTERVAL_MS } from "@/constants/cron";
-import { computeNextStrategyCronRunIso } from "@/utils/scheduler/compute-next-cron-run";
+import { computeNextHourlyRunIso } from "@/utils/scheduler/compute-next-hourly-run";
 import { installDashboardFetchMock } from "@/test/dashboard-api-fetch-mocks";
 
 import {
@@ -94,7 +94,7 @@ describe("fetchAndReadDashboardData", () => {
     });
 
     const result = await fetchAndReadDashboardData();
-    const expectedNextRun = computeNextStrategyCronRunIso(NOW_MS);
+    const expectedNextRun = computeNextHourlyRunIso(NOW_MS);
 
     expect(result.strategyRead.status?.nextRunAt).toBe(expectedNextRun);
     expect(

@@ -57,10 +57,6 @@ async function setMetaValue(key: string, value: string): Promise<void> {
   );
 }
 
-export function isServerlessScheduler(): boolean {
-  return process.env.SCHEDULER_MODE === "external-cron";
-}
-
 function normalizeMetaString(value: string | null): string | null {
   if (value === "") {
     return null;

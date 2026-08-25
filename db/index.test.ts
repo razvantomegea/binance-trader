@@ -2,11 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { getDb, resetDbInstanceForTests } from "@/db";
 
-vi.mock("@neondatabase/serverless", () => ({
-  neon: vi.fn(() => vi.fn()),
+vi.mock("postgres", () => ({
+  default: vi.fn(() => ({ mockedSql: true })),
 }));
 
-vi.mock("drizzle-orm/neon-http", () => ({
+vi.mock("drizzle-orm/postgres-js", () => ({
   drizzle: vi.fn(() => ({ mocked: true })),
 }));
 

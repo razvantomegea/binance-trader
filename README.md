@@ -4,7 +4,7 @@ Next.js dashboard for **paper trading** USDT pairs on Binance spot data. A sched
 
 > **Disclaimer:** This project is for education and experimentation only. It does not place real orders on Binance and is not financial advice. Use at your own risk.
 
-Check out the live app: https://binance-trading-production.up.railway.app
+**Primary runtime:** local Next.js + Docker Postgres with an in-process hourly Strategy scheduler. Keep the machine awake (or accept missed H1 candles — the runner evaluates the latest closed candle only, not a full catch-up walk).
 
 ## Features
 
@@ -13,10 +13,10 @@ Check out the live app: https://binance-trading-production.up.railway.app
 - Automated strategy (hourly interval) with configurable rules in `constants/binance.ts`
 - Portfolio-level drawdown cap: liquidates all open positions when equity falls 15% below peak while exposed
 - Post-close 24h metrics on SELL trades (max/min price and % move after exit)
-- Start/stop scheduler from the UI
-- Cron health alerts when external scheduling looks stale or never ran after start
+- Start/stop scheduler from the UI (`pnpm dev`)
+- Scheduler health alerts when runs look stale or never recorded after start
 - Optional web push notifications when trades execute
-- Production scheduling via Railway cron or in-process cron for local dev
+- In-process hourly scheduler (default); optional manual HTTP trigger via `pnpm cron:trigger`
 - Historical backtest runner with kline cache and JSON reports
 - Local ML pipeline: dataset generation, logistic-regression training (TensorFlow.js), evaluation, and strategy-parameter optimization
 
@@ -45,7 +45,7 @@ Default parameters are centralized in `constants/strategy-params.ts` as `DEFAULT
 ## Stack
 
 - [Next.js](https://nextjs.org/) 16 (App Router), React 19, Tailwind CSS 4
-- [Drizzle ORM](https://orm.drizzle.team/) + Postgres (e.g. [Neon](https://neon.tech/))
+- [Drizzle ORM](https://orm.drizzle.team/) + Postgres via [postgres.js](https://github.com/porsager/postgres) (Docker Compose locally)
 - Binance public market data (`data-api.binance.vision` by default)
 - [Recharts](https://recharts.org/) for dashboard charts
 - [TensorFlow.js](https://www.tensorflow.org/js) for local ML training (dev dependency)
@@ -69,7 +69,7 @@ app/                          Next.js App Router
     ├── usdt-symbols/         Tradable USDT pairs
     ├── positions/close/      Manual position close
     ├── strategy/             start | stop | status
-    ├── cron/run-strategy/    External cron trigger (protected)
+    ├── cron/run-strategy/    Manual HTTP trigger (protected by CRON_SECRET)
     ├── push/                 Web push subscribe/unsubscribe/VAPID key
     └── debug/zec-entry/      Local debug helper
 
@@ -93,7 +93,7 @@ e2e/                          Playwright smoke tests
 
 helpers/                      Business logic
 ├── strategy/                 Runner, decision core, backtest, evaluate-symbol
-├── scheduler/                In-process cron heartbeat
+├── scheduler/                In-process hourly heartbeat
 ├── portfolio/                Portfolio API response builder
 ├── trades/                   Trade queries and metric backfills
 ├── equity-curve/             Snapshot queries
@@ -107,14 +107,15 @@ utils/                        Pure utilities
 ├── ml/                       Features, labels, model I/O, artifact paths
 ├── trade/                    Post-close extrema
 ├── api/                      Cron auth, query parsing
-├── scheduler/                Next cron run computation
+├── scheduler/                Next run computation
 └── notifications/            Push client helpers
 
 constants/                    Strategy, Binance, ML, cron, layout, test-id config
 types/                        Shared TypeScript types
-db/                           Drizzle schema and client
+db/                           Drizzle schema and postgres.js client
+docker-compose.yml            Local Postgres 16
 hooks/                        Dashboard layout and push UI hooks
-scripts/                      CLI: backtest, ML, cron trigger, cleanup, Railway deploy, release
+scripts/                      CLI: backtest, ML, cron trigger, DB copy, local start, release
 backtest-cache/               Local kline cache and ML artifacts (gitignored)
 backtest-results/             Backtest JSON reports (gitignored)
 public/sw.js                  Service worker for web push
@@ -124,7 +125,7 @@ public/sw.js                  Service worker for web push
 
 - Node.js **≥ 20.9**
 - [pnpm](https://pnpm.io/)
-- A Postgres database URL
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (for local Postgres)
 
 ## Local development
 
@@ -134,29 +135,17 @@ public/sw.js                  Service worker for web push
    pnpm install
    ```
 
-2. Create `.env.local` in the project root:
+2. Copy env template and start Postgres:
 
-   ```env
-   # Required
-   DATABASE_URL=postgresql://...
+   ```bash
+   copy .env.example .env.local
+   docker compose up -d
+   ```
 
-   # Strategy scheduler (pick one approach)
-   # A) In-process cron on `pnpm dev` / `pnpm start`:
-   AUTO_START_STRATEGY=true
-   # B) External cron (production-style); call /api/cron/run-strategy yourself:
-   # SCHEDULER_MODE=external-cron
-   # CRON_SECRET=generate-a-long-random-string
+   Or on Windows PowerShell, start Postgres + Next.js together:
 
-   # Optional — override Binance data API base URL
-   # BINANCE_API_BASE_URL=https://data-api.binance.vision
-
-   # Optional — backtest / ML cache directory (default: ./backtest-cache)
-   # BACKTEST_CACHE_DIR=backtest-cache
-
-   # Optional — web push (generate keys: npx web-push generate-vapid-keys)
-   # WEB_PUSH_VAPID_PUBLIC_KEY=
-   # WEB_PUSH_VAPID_PRIVATE_KEY=
-   # WEB_PUSH_SUBJECT=mailto:you@example.com
+   ```powershell
+   pnpm start:local
    ```
 
 3. Push the schema:
@@ -165,7 +154,7 @@ public/sw.js                  Service worker for web push
    pnpm db:push
    ```
 
-4. Start the dev server:
+4. Start the dev server (if you did not use `pnpm start:local`):
 
    ```bash
    pnpm dev
@@ -173,43 +162,78 @@ public/sw.js                  Service worker for web push
 
    Open [http://localhost:3000](http://localhost:3000).
 
+`.env.example` defaults:
+
+```env
+DATABASE_URL=postgresql://trading:trading@localhost:5432/trading
+AUTO_START_STRATEGY=true
+```
+
+`AUTO_START_STRATEGY=true` starts the hourly heartbeat inside the Next.js process via `instrumentation.ts`. Use `pnpm dev` for Start/Stop controls in the UI (`pnpm start` runs with `NODE_ENV=production` and hides dashboard mutations).
+
+**Uptime:** sleep/hibernate stops the heartbeat. Missed hours are not walked; the next run evaluates the latest closed H1 candle against `last_candle_H1`.
+
 `pnpm install` runs `prepare`, which points Git at `.githooks/`. The pre-push hook bumps `package.json` when you push to `main` (commit the bump, then push again).
+
+### Migrate from Neon (or another Postgres)
+
+1. Apply schema on the local DB (`pnpm db:push`).
+2. Use Neon's **direct** `postgresql://` connection string (not HTTP/pooled-only).
+3. Copy tables (preserves serial IDs; refuses a non-empty target unless `--force`):
+
+   ```bash
+   # Windows
+   set SOURCE_DATABASE_URL=postgresql://...@...neon.tech/neondb?sslmode=require
+   set TARGET_DATABASE_URL=postgresql://trading:trading@localhost:5432/trading
+   pnpm db:copy
+
+   # macOS / Linux
+   export SOURCE_DATABASE_URL=postgresql://...@...neon.tech/neondb?sslmode=require
+   export TARGET_DATABASE_URL=postgresql://trading:trading@localhost:5432/trading
+   pnpm db:copy
+   ```
+
+4. Verify the dashboard locally, then pause/delete Neon and Railway in their dashboards so billing stops.
+
+Web push endpoints copied from a public host may not work on `localhost` — re-subscribe if needed.
 
 ### Scripts
 
-| Command                       | Description                                                |
-| ----------------------------- | ---------------------------------------------------------- |
-| `pnpm dev`                    | Next.js dev server                                         |
-| `pnpm build`                  | Production build                                           |
-| `pnpm start`                  | Production server                                          |
-| `pnpm lint`                   | Run ESLint                                                 |
-| `pnpm lint:fix`               | Run ESLint with autofix                                    |
-| `pnpm format`                 | Run Prettier                                               |
-| `pnpm test`                   | Run Vitest                                                 |
-| `pnpm test:coverage`          | Vitest with coverage thresholds on `utils/` and `helpers/` |
-| `pnpm test:watch`             | Vitest watch mode                                          |
-| `pnpm test:e2e`               | Playwright smoke tests (starts dev server)                 |
-| `pnpm test:e2e:ui`            | Playwright UI mode                                         |
-| `pnpm test:e2e:report`        | Open last Playwright HTML report                           |
-| `pnpm backtest`               | Run strategy backtest (localhost only)                     |
-| `pnpm analyze:post-close`     | Analyze post-close 24h behavior                            |
-| `pnpm backtest:cleanup`       | Remove old backtest reports                                |
-| `pnpm backtest:cache:cleanup` | Remove backtest cache files                                |
-| `pnpm ml:dataset`             | Generate ML training dataset from historical data          |
-| `pnpm ml:train`               | Train logistic-regression entry model                      |
-| `pnpm ml:eval`                | Evaluate model + strategy thresholds                       |
-| `pnpm ml:optimize`            | Random-search strategy params with ML filter               |
-| `pnpm db:push`                | Apply Drizzle schema to `DATABASE_URL`                     |
-| `pnpm cron:trigger`           | Manually hit the strategy cron endpoint                    |
-| `pnpm railway:up`             | Deploy web service (alias for `railway:up:web`)            |
-| `pnpm railway:up:web`         | Deploy web service via Railway CLI                         |
-| `pnpm railway:up:cron`        | Deploy cron service via Railway CLI                        |
-| `pnpm version:bump`           | Bump `package.json` patch ahead of latest tag              |
-| `pnpm version:check`          | Verify version is ready for release                        |
-| `pnpm fallow:audit`           | Run Fallow code-health audit                               |
-| `pnpm fallow:dead-code`       | List likely dead code                                      |
-| `pnpm fallow:dupes`           | List duplicate code                                        |
-| `pnpm fallow:health`          | Fallow health summary                                      |
+| Command                       | Description                                                    |
+| ----------------------------- | -------------------------------------------------------------- |
+| `pnpm start:local`            | Docker Postgres + `pnpm dev` (PowerShell helper)               |
+| `pnpm dev`                    | Next.js dev server                                             |
+| `pnpm build`                  | Production build                                               |
+| `pnpm start`                  | Production server                                              |
+| `pnpm lint`                   | Run ESLint                                                     |
+| `pnpm lint:fix`               | Run ESLint with autofix                                        |
+| `pnpm format`                 | Run Prettier                                                   |
+| `pnpm test`                   | Run Vitest                                                     |
+| `pnpm test:coverage`          | Vitest with coverage thresholds on `utils/` and `helpers/`     |
+| `pnpm test:watch`             | Vitest watch mode                                              |
+| `pnpm test:e2e`               | Playwright smoke tests (starts dev server)                     |
+| `pnpm test:e2e:ui`            | Playwright UI mode                                             |
+| `pnpm test:e2e:report`        | Open last Playwright HTML report                               |
+| `pnpm backtest`               | Run strategy backtest (localhost only)                         |
+| `pnpm analyze:post-close`     | Analyze post-close 24h behavior                                |
+| `pnpm backtest:cleanup`       | Remove old backtest reports                                    |
+| `pnpm backtest:cache:cleanup` | Remove backtest cache files                                    |
+| `pnpm ml:dataset`             | Generate ML training dataset from historical data              |
+| `pnpm ml:train`               | Train logistic-regression entry model                          |
+| `pnpm ml:eval`                | Evaluate model + strategy thresholds                           |
+| `pnpm ml:optimize`            | Random-search strategy params with ML filter                   |
+| `pnpm db:push`                | Apply Drizzle schema to `DATABASE_URL`                         |
+| `pnpm db:copy`                | Copy tables from `SOURCE_DATABASE_URL` → `TARGET_DATABASE_URL` |
+| `pnpm cron:trigger`           | Manually hit the strategy cron endpoint                        |
+| `pnpm railway:up`             | Optional rollback: deploy web via Railway CLI                  |
+| `pnpm railway:up:web`         | Optional rollback: deploy web service                          |
+| `pnpm railway:up:cron`        | Optional rollback: deploy cron service                         |
+| `pnpm version:bump`           | Bump `package.json` patch ahead of latest tag                  |
+| `pnpm version:check`          | Verify version is ready for release                            |
+| `pnpm fallow:audit`           | Run Fallow code-health audit                                   |
+| `pnpm fallow:dead-code`       | List likely dead code                                          |
+| `pnpm fallow:dupes`           | List duplicate code                                            |
+| `pnpm fallow:health`          | Fallow health summary                                          |
 
 Backtest and ML scripts refuse to run when `NODE_ENV=production`.
 
@@ -249,9 +273,9 @@ pnpm ml:optimize --model-run-id <runId> --days 180
 
 Labels use a 24h forward horizon with a 15% max drawdown cap. Features include entry-band signals, range position, volatility, and time-of-day. See `constants/ml-strategy.ts` and `utils/ml/build-decision-features.ts`.
 
-### Manual cron trigger (local)
+### Manual strategy trigger
 
-When using `SCHEDULER_MODE=external-cron`:
+Optional poke of `/api/cron/run-strategy` (still requires `CRON_SECRET` and `scheduler_running=true`):
 
 ```bash
 # Windows
@@ -265,47 +289,15 @@ export CRON_SECRET=your-secret
 pnpm cron:trigger
 ```
 
-## Deployment (Railway)
+## Scheduler
 
-The repo includes two [Railway](https://railway.com) config files for a common two-service setup:
+The supported path is the **in-process hourly heartbeat**:
 
-| Service (example name) | Role                                      | Config file         |
-| ---------------------- | ----------------------------------------- | ------------------- |
-| Web app                | Next.js dashboard (always on)             | `railway.json`      |
-| Cron worker            | Calls the strategy API every 5 min, exits | `railway.cron.json` |
+| Env                        | Behavior                                                                |
+| -------------------------- | ----------------------------------------------------------------------- |
+| `AUTO_START_STRATEGY=true` | Heartbeat timer runs inside the Next.js server via `instrumentation.ts` |
 
-### Web service
-
-1. Connect the GitHub repo and deploy with `railway.json`.
-2. Set variables (minimum):
-   - `DATABASE_URL` — Postgres connection string
-   - `SCHEDULER_MODE` = `external-cron`
-   - `CRON_SECRET` — long random string; required for `/api/cron/run-strategy`
-3. Add optional web push variables if you use notifications.
-
-Do **not** set `AUTO_START_STRATEGY=true` when using external cron (avoids duplicate schedulers).
-
-### Cron service
-
-1. Add a second service in the same Railway project, same repo/branch.
-2. **Settings → Config-as-code** → `railway.cron.json` (schedule: `*/5 * * * *`).
-3. Variables (reference the web service by name in your project):
-   - `CRON_SECRET` = `${{<web-service>.CRON_SECRET}}`
-   - `CRON_URL` = `https://${{<web-service>.RAILWAY_PUBLIC_DOMAIN}}/api/cron/run-strategy`
-
-Alternatively set `CRON_URL` explicitly to your public app URL.
-
-### Verify
-
-- Cron deployment logs should show a successful strategy run.
-- On the dashboard, **Last run** updates after a successful trigger.
-
-## Scheduler modes
-
-| Mode       | Env                                            | Behavior                                                                   |
-| ---------- | ---------------------------------------------- | -------------------------------------------------------------------------- |
-| In-process | `AUTO_START_STRATEGY=true`                     | Heartbeat timer runs inside the Next.js server via `instrumentation.ts`    |
-| External   | `SCHEDULER_MODE=external-cron` + `CRON_SECRET` | Strategy runs only when `/api/cron/run-strategy` is called with the secret |
+Start/Stop from the dashboard (dev) flips `strategy_meta` and the in-memory timer. `/api/cron/run-strategy` remains a manual HTTP trigger only — not a second scheduler mode.
 
 ## Database schema
 
@@ -318,6 +310,16 @@ Postgres tables (see `db/schema.ts`):
 | `equity_snapshots`   | Periodic cash + equity snapshots                        |
 | `strategy_meta`      | Last candle time, exposure peak equity, scheduler state |
 | `push_subscriptions` | Web push endpoints                                      |
+
+## Optional Railway rollback
+
+`railway.json` and `railway.cron.json` remain in the repo for emergency redeploy. They are **not** the supported runtime. Prefer local Docker + in-process scheduling to avoid Railway and Neon billing.
+
+If you redeploy:
+
+1. Point `DATABASE_URL` at a Postgres wire URL (postgres.js — not Neon HTTP).
+2. Prefer `AUTO_START_STRATEGY=true` on a always-on web process rather than the cron worker.
+3. Pause unused Railway/Neon resources after you confirm local is healthy.
 
 ## CI and releases
 
@@ -353,22 +355,23 @@ After the quality gate passes on a direct push to `main` (not on PRs):
 
 Bot commits (`chore(release): vX.Y.Z [skip release]`) are skipped to prevent release loops.
 
-Railway deploy (`pnpm railway:up:web` / `pnpm railway:up:cron`) is manual and independent of releases.
+Railway deploy scripts remain available for optional rollback and are independent of releases.
 
 ## Environment reference
 
-| Variable                     | Required          | Description                                      |
-| ---------------------------- | ----------------- | ------------------------------------------------ |
-| `DATABASE_URL`               | Yes               | Postgres connection string                       |
-| `CRON_SECRET`                | For external cron | Protects `/api/cron/run-strategy`                |
-| `SCHEDULER_MODE`             | Production        | Set to `external-cron` with Railway cron         |
-| `AUTO_START_STRATEGY`        | Local optional    | `true` to start in-process scheduler             |
-| `BINANCE_API_BASE_URL`       | No                | Defaults to `https://data-api.binance.vision`    |
-| `BACKTEST_CACHE_DIR`         | No                | Kline + ML cache root (default `backtest-cache`) |
-| `WEB_PUSH_VAPID_PUBLIC_KEY`  | No                | Web push public key                              |
-| `WEB_PUSH_VAPID_PRIVATE_KEY` | No                | Web push private key                             |
-| `WEB_PUSH_SUBJECT`           | No                | `mailto:` or `https:` contact for VAPID          |
-| `CRON_URL`                   | Cron worker only  | Full URL to `run-strategy` (cron service)        |
+| Variable                     | Required            | Description                                      |
+| ---------------------------- | ------------------- | ------------------------------------------------ |
+| `DATABASE_URL`               | Yes                 | Postgres wire URL (`postgresql://…`)             |
+| `AUTO_START_STRATEGY`        | Recommended locally | `true` to start in-process hourly scheduler      |
+| `CRON_SECRET`                | For `cron:trigger`  | Protects `/api/cron/run-strategy`                |
+| `CRON_URL`                   | For `cron:trigger`  | Full URL to `run-strategy`                       |
+| `SOURCE_DATABASE_URL`        | For `pnpm db:copy`  | Source Postgres (e.g. Neon direct)               |
+| `TARGET_DATABASE_URL`        | For `pnpm db:copy`  | Target Postgres (local Docker)                   |
+| `BINANCE_API_BASE_URL`       | No                  | Defaults to `https://data-api.binance.vision`    |
+| `BACKTEST_CACHE_DIR`         | No                  | Kline + ML cache root (default `backtest-cache`) |
+| `WEB_PUSH_VAPID_PUBLIC_KEY`  | No                  | Web push public key                              |
+| `WEB_PUSH_VAPID_PRIVATE_KEY` | No                  | Web push private key                             |
+| `WEB_PUSH_SUBJECT`           | No                  | `mailto:` or `https:` contact for VAPID          |
 
 ## License
 

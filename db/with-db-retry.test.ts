@@ -4,15 +4,19 @@ import { isRetryableDbError, withDbRetry } from "./with-db-retry";
 
 describe("isRetryableDbError", () => {
   it.each([
-    "Control plane request failed: temporary outage",
-    "Too many database connection attempts are currently ongoing",
-    "Failed to acquire permit to connect to the database",
+    "Connection terminated unexpectedly",
+    "connection terminated",
+    "sorry, too many clients already",
+    "connect ECONNREFUSED 127.0.0.1:5432",
+    "connect ETIMEDOUT",
   ])("returns true for retryable message: %s", (message) => {
     expect(isRetryableDbError(new Error(message))).toBe(true);
   });
 
-  it("returns false for neon flag object due to shared visited set", () => {
-    expect(isRetryableDbError({ "neon:retryable": true })).toBe(false);
+  it("returns true for retryable error codes", () => {
+    expect(isRetryableDbError({ code: "ECONNRESET" })).toBe(true);
+    expect(isRetryableDbError({ code: "ETIMEDOUT" })).toBe(true);
+    expect(isRetryableDbError({ code: "57P01" })).toBe(true);
   });
 
   it("returns false for non-retryable errors", () => {
@@ -20,11 +24,12 @@ describe("isRetryableDbError", () => {
       false,
     );
     expect(isRetryableDbError("not an error")).toBe(false);
+    expect(isRetryableDbError({ code: "42P01" })).toBe(false);
   });
 
   it("returns true when nested cause has retryable message", () => {
     const error = new Error("wrapper", {
-      cause: new Error("Control plane request failed: timeout"),
+      cause: new Error("Connection terminated unexpectedly"),
     });
 
     expect(isRetryableDbError(error)).toBe(true);
@@ -79,11 +84,7 @@ describe("withDbRetry", () => {
   it("retries retryable errors with backoff then succeeds", async () => {
     const operation = vi
       .fn()
-      .mockRejectedValueOnce(
-        new Error(
-          "Too many database connection attempts are currently ongoing",
-        ),
-      )
+      .mockRejectedValueOnce(new Error("Connection terminated unexpectedly"))
       .mockResolvedValue("recovered");
 
     const promise = withDbRetry(operation, {
@@ -107,15 +108,11 @@ describe("withDbRetry", () => {
   });
 
   it("throws after exhausting retry attempts", async () => {
-    const retryable = new Error(
-      "Failed to acquire permit to connect to the database",
-    );
+    const retryable = new Error("connection terminated");
     const operation = vi.fn().mockRejectedValue(retryable);
 
     const promise = withDbRetry(operation, { maxAttempts: 3, baseDelayMs: 50 });
-    const assertion = expect(promise).rejects.toThrow(
-      "Failed to acquire permit to connect to the database",
-    );
+    const assertion = expect(promise).rejects.toThrow("connection terminated");
 
     await vi.advanceTimersByTimeAsync(50);
     await vi.advanceTimersByTimeAsync(100);
@@ -142,9 +139,7 @@ describe("withDbRetry", () => {
   });
 
   it("applies increasing backoff across multiple retry attempts", async () => {
-    const retryable = new Error(
-      "Too many database connection attempts are currently ongoing",
-    );
+    const retryable = new Error("sorry, too many clients already");
     const operation = vi
       .fn()
       .mockRejectedValueOnce(retryable)

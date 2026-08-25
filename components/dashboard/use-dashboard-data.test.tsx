@@ -1,6 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { STRATEGY_CRON_NO_RUN_AFTER_START_MS } from "@/constants/cron";
 import { mockStrategyStatus } from "@/e2e/fixtures/dashboard-api-mocks";
 import {
   type DashboardFetchMock,
@@ -277,7 +278,9 @@ function registerAlertAndNotificationTests(): void {
       strategyStatus: {
         ...mockStrategyStatus,
         running: true,
-        startedAt: new Date(Date.now() - 3_600_000).toISOString(),
+        startedAt: new Date(
+          Date.now() - STRATEGY_CRON_NO_RUN_AFTER_START_MS - 1,
+        ).toISOString(),
         lastRunAt: null,
       },
     });

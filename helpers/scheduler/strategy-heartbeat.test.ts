@@ -4,7 +4,6 @@ const mockRunStrategy = vi.fn();
 const mockSetSchedulerRunning = vi.fn();
 const mockGetSchedulerPersistedStatus = vi.fn();
 const mockRecordSchedulerRun = vi.fn();
-const mockIsServerlessScheduler = vi.fn();
 
 vi.mock("@/helpers/strategy/strategy-runner", () => ({
   runStrategy: (...args: unknown[]) => mockRunStrategy(...args),
@@ -13,8 +12,6 @@ vi.mock("@/helpers/strategy/strategy-runner", () => ({
 vi.mock("@/helpers/scheduler/strategy-scheduler-meta", () => ({
   getSchedulerPersistedStatus: (...args: unknown[]) =>
     mockGetSchedulerPersistedStatus(...args),
-  isServerlessScheduler: (...args: unknown[]) =>
-    mockIsServerlessScheduler(...args),
   recordSchedulerRun: (...args: unknown[]) => mockRecordSchedulerRun(...args),
   setSchedulerRunning: (...args: unknown[]) => mockSetSchedulerRunning(...args),
 }));
@@ -34,7 +31,6 @@ function setupHeartbeatSuite(): void {
     vi.useFakeTimers();
     vi.clearAllMocks();
     resetGlobalHeartbeatState();
-    mockIsServerlessScheduler.mockReturnValue(false);
     mockSetSchedulerRunning.mockResolvedValue(undefined);
     mockRecordSchedulerRun.mockResolvedValue(undefined);
     mockGetSchedulerPersistedStatus.mockResolvedValue({
@@ -111,23 +107,6 @@ describe("strategy-heartbeat lifecycle and scheduling", () => {
     expect(mockSetSchedulerRunning).toHaveBeenCalledWith(false);
     expect(status.running).toBe(false);
   });
-
-  it("returns serverless status without local timer", async () => {
-    mockIsServerlessScheduler.mockReturnValue(true);
-    mockGetSchedulerPersistedStatus.mockResolvedValue({
-      running: true,
-      startedAtMs: 1000,
-      lastRunAtMs: 2000,
-      lastError: null,
-      lastResult: null,
-    });
-
-    const status = await getStrategyHeartbeatStatus();
-
-    expect(status.running).toBe(true);
-    expect(status.runningNow).toBe(false);
-    expect(status.nextRunAt).not.toBeNull();
-  });
 });
 
 describe("strategy-heartbeat state restoration and run constraints", () => {
@@ -180,27 +159,8 @@ describe("strategy-heartbeat state restoration and run constraints", () => {
   });
 });
 
-describe("strategy-heartbeat serverless and shutdown behavior", () => {
+describe("strategy-heartbeat shutdown behavior", () => {
   setupHeartbeatSuite();
-
-  it("starts and stops in serverless mode", async () => {
-    mockIsServerlessScheduler.mockReturnValue(true);
-    mockGetSchedulerPersistedStatus.mockResolvedValue({
-      running: true,
-      startedAtMs: 1000,
-      lastRunAtMs: 2000,
-      lastError: null,
-      lastResult: null,
-    });
-
-    const started = await startStrategyHeartbeat();
-    expect(started.running).toBe(true);
-    expect(started.runningNow).toBe(false);
-
-    const stopped = await stopStrategyHeartbeat();
-    expect(stopped.running).toBe(true);
-    expect(mockSetSchedulerRunning).toHaveBeenCalledWith(false);
-  });
 
   it("returns current status when stopping an idle heartbeat", async () => {
     const status = await stopStrategyHeartbeat();
@@ -238,24 +198,6 @@ describe("strategy-heartbeat serverless and shutdown behavior", () => {
     const status = await stopPromise;
     expect(status.running).toBe(false);
     expect(mockRunStrategy).toHaveBeenCalledOnce();
-  });
-
-  it("returns serverless status with null schedule fields when stopped", async () => {
-    mockIsServerlessScheduler.mockReturnValue(true);
-    mockGetSchedulerPersistedStatus.mockResolvedValue({
-      running: false,
-      startedAtMs: null,
-      lastRunAtMs: null,
-      lastError: null,
-      lastResult: null,
-    });
-
-    const status = await getStrategyHeartbeatStatus();
-
-    expect(status.running).toBe(false);
-    expect(status.startedAt).toBeNull();
-    expect(status.lastRunAt).toBeNull();
-    expect(status.nextRunAt).toBeNull();
   });
 
   it("uses current time when persisted startedAtMs is missing", async () => {

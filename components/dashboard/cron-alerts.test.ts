@@ -107,6 +107,9 @@ describe("buildCronAlerts", () => {
   it("adds stale cron alert when last successful run is too old", () => {
     const alerts = buildCronAlerts({
       strategyStatus: makeStatus({
+        startedAt: new Date(
+          NOW_MS - STRATEGY_CRON_STALE_MS - 60 * 60_000,
+        ).toISOString(),
         lastRunAt: new Date(NOW_MS - STRATEGY_CRON_STALE_MS - 1).toISOString(),
       }),
       statusRequestError: null,
@@ -116,7 +119,8 @@ describe("buildCronAlerts", () => {
     expect(alerts).toContainEqual({
       id: "stale-last-run",
       severity: "warning",
-      message: "Cron looks stale: no successful run in the last 40 minutes.",
+      message:
+        "Scheduler looks stale: no successful run in the last ~70 minutes.",
     });
   });
 
@@ -137,6 +141,42 @@ describe("buildCronAlerts", () => {
       severity: "warning",
       message: "Strategy started but no successful run has been recorded yet.",
     });
+  });
+
+  it("ignores lastRunAt from before the current scheduler start", () => {
+    const alerts = buildCronAlerts({
+      strategyStatus: makeStatus({
+        startedAt: new Date(NOW_MS - 5 * 60_000).toISOString(),
+        lastRunAt: new Date(NOW_MS - 30 * 24 * 3_600_000).toISOString(),
+      }),
+      statusRequestError: null,
+      actionError: null,
+    });
+
+    expect(alerts.map((alert) => alert.id)).not.toContain("stale-last-run");
+    expect(alerts.map((alert) => alert.id)).not.toContain(
+      "never-ran-after-start",
+    );
+  });
+
+  it("treats pre-start lastRunAt as never-ran after the start grace window", () => {
+    const alerts = buildCronAlerts({
+      strategyStatus: makeStatus({
+        startedAt: new Date(
+          NOW_MS - STRATEGY_CRON_NO_RUN_AFTER_START_MS - 1,
+        ).toISOString(),
+        lastRunAt: new Date(NOW_MS - 30 * 24 * 3_600_000).toISOString(),
+      }),
+      statusRequestError: null,
+      actionError: null,
+    });
+
+    expect(alerts).toContainEqual({
+      id: "never-ran-after-start",
+      severity: "warning",
+      message: "Strategy started but no successful run has been recorded yet.",
+    });
+    expect(alerts.map((alert) => alert.id)).not.toContain("stale-last-run");
   });
 
   it("returns no running-state alerts for healthy running strategy", () => {

@@ -1,27 +1,11 @@
-AGENTS.md
-This file provides guidance to all agents, LLMs, and AI tools when working with code in this repository. These are a mandatory.
+# AGENTS.md
 
-### Documentation
+**Follow** [`../AGENTS.md`](../AGENTS.md) — universal agent governance for `C:\Projects`. Copies: `%USERPROFILE%\.cursor\rules\universal-agent-governance.mdc`, `%USERPROFILE%\.codex\AGENTS.md`.
 
-The project documentation is in @README.md
+Read that file and apply it. Local sections below are this repository only. On conflict, `../AGENTS.md` wins.
 
-## Rules
+## This repository
 
-- Never write code with Claude Opus or GPT 5.5
-- Always use GPT for complex tasks implementations and Claude for UI/UX design
-- The plan must be very specific with small chunks, with code samples, and with explanations on each part for the reasoning.
-- Before writing a new component, function, class, type, interface, etc., search the codebase for similar code to not duplicate (DRY principle)
-- When the accuracy is less than 95% and when in doubt, don't assume or hallucinate. Ask the user questions and if the user is not sure, search the web and documentations.
-- Never modify tests unless the user approves
-- Always use strict types and object params for more than 2 params
-- Always do what asked and nothing more
-- Never mask a problem, always find root cause
-- Avoid monolithic files, extract reusable testable and simple code blocks outside in utils (pure utility functions), types (type, interface, union, etc.), constants (const, enum, etc.), components (React components), helpers (classes, managers, services, business logic etc.)
-- Use as few words as possible. Think and "speak" (write) telegraphically like a robot to reduce token usage (energy) as much as possible (use caveman skill).
-- Be critical and think like an experienced software engineer. Focus on facts, not opinions.
-- Write as little code as possible and keep things as simple as possible. The less code written, the better.
-- Never read .env files
-- Ask me as many questions as possible to understand the context, goal, and ideas until 100% accuracy and certainty is reached if the answer is not found in the repository.
-- Search the web before making architectural changes and decisions and ask other models too. Do this step whenever the plan goes wrong and needs re-adjustments. Don't make decisions on your own without second opinion and always ask first.
-- Before providing any solution, always think if this is the simplest solution with least amount of code possible.
-- Always check pnpm format, lint:fix, test, test:e2e and build after any task finished
+Documentation: `README.md`.
+
+After a task is finished, run `pnpm format`, `pnpm lint:fix`, `pnpm test`, `pnpm test:e2e`, and `pnpm build`.

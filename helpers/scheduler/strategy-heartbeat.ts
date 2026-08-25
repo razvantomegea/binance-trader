@@ -1,6 +1,5 @@
 import {
   getSchedulerPersistedStatus,
-  isServerlessScheduler,
   recordSchedulerRun,
   setSchedulerRunning,
 } from "@/helpers/scheduler/strategy-scheduler-meta";
@@ -8,7 +7,7 @@ import {
   runStrategy,
   type RunStrategyResult,
 } from "@/helpers/strategy/strategy-runner";
-import { computeNextStrategyCronRunIso } from "@/utils/scheduler/compute-next-cron-run";
+import { computeNextHourlyRunIso } from "@/utils/scheduler/compute-next-hourly-run";
 
 const HEARTBEAT_MS = 15_000;
 const STOP_WAIT_TIMEOUT_MS = 5_000;
@@ -70,13 +69,6 @@ function toHourKey(tsMs: number): string {
 function isTopOfHour(tsMs: number): boolean {
   const date = new Date(tsMs);
   return date.getUTCMinutes() === 0;
-}
-
-function computeNextHourlyRunIso(tsMs: number): string {
-  const date = new Date(tsMs);
-  date.setUTCMinutes(0, 0, 0);
-  date.setUTCHours(date.getUTCHours() + 1);
-  return date.toISOString();
 }
 
 async function runIfNeeded(state: StrategyHeartbeatState): Promise<void> {
@@ -178,32 +170,7 @@ function toStatus(state: StrategyHeartbeatState): StrategyHeartbeatStatus {
   };
 }
 
-async function toServerlessStatus(): Promise<StrategyHeartbeatStatus> {
-  const persisted = await getSchedulerPersistedStatus();
-
-  return {
-    running: persisted.running,
-    runningNow: false,
-    heartbeatMs: HEARTBEAT_MS,
-    startedAt: persisted.startedAtMs
-      ? new Date(persisted.startedAtMs).toISOString()
-      : null,
-    lastRunAt: persisted.lastRunAtMs
-      ? new Date(persisted.lastRunAtMs).toISOString()
-      : null,
-    nextRunAt: persisted.running
-      ? computeNextStrategyCronRunIso(Date.now())
-      : null,
-    lastError: persisted.lastError,
-    lastResult: persisted.lastResult,
-  };
-}
-
 export async function getStrategyHeartbeatStatus(): Promise<StrategyHeartbeatStatus> {
-  if (isServerlessScheduler()) {
-    return toServerlessStatus();
-  }
-
   const state = getState();
   await ensureStateHydrated(state);
   return toStatus(state);
@@ -211,11 +178,6 @@ export async function getStrategyHeartbeatStatus(): Promise<StrategyHeartbeatSta
 
 export async function startStrategyHeartbeat(): Promise<StrategyHeartbeatStatus> {
   await setSchedulerRunning(true);
-
-  if (isServerlessScheduler()) {
-    console.info("[heartbeat] strategy scheduler enabled (Railway cron)");
-    return toServerlessStatus();
-  }
 
   const state = getState();
   await ensureStateHydrated(state);
@@ -244,11 +206,6 @@ async function waitForInFlightRun(
 
 export async function stopStrategyHeartbeat(): Promise<StrategyHeartbeatStatus> {
   await setSchedulerRunning(false);
-
-  if (isServerlessScheduler()) {
-    console.info("[heartbeat] strategy scheduler disabled (Railway cron)");
-    return toServerlessStatus();
-  }
 
   const state = getState();
   if (!state.running) {
