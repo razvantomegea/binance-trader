@@ -93,7 +93,7 @@ e2e/                          Playwright smoke tests
 
 helpers/                      Business logic
 ├── strategy/                 Runner, decision core, backtest, evaluate-symbol
-├── scheduler/                In-process hourly heartbeat
+├── scheduler/                In-process 5-minute heartbeat (hourly H1)
 ├── portfolio/                Portfolio API response builder
 ├── trades/                   Trade queries and metric backfills
 ├── equity-curve/             Snapshot queries
@@ -169,7 +169,7 @@ DATABASE_URL=postgresql://trading:trading@localhost:5432/trading
 AUTO_START_STRATEGY=true
 ```
 
-`AUTO_START_STRATEGY=true` starts the hourly heartbeat inside the Next.js process via `instrumentation.ts`. Use `pnpm dev` for Start/Stop controls in the UI (`pnpm start` runs with `NODE_ENV=production` and hides dashboard mutations).
+`AUTO_START_STRATEGY=true` starts the in-process heartbeat inside the Next.js process via `instrumentation.ts`. It checks every 5 minutes (UTC-aligned) and runs the strategy in the first 5 minutes of each hour. Use `pnpm dev` for Start/Stop controls in the UI (`pnpm start` runs with `NODE_ENV=production` and hides dashboard mutations).
 
 **Uptime:** sleep/hibernate stops the heartbeat. Missed hours are not walked; the next run evaluates the latest closed H1 candle against `last_candle_H1`.
 
@@ -294,7 +294,7 @@ pnpm cron:trigger
 
 ## Scheduler
 
-The supported path is the **in-process hourly heartbeat**:
+The supported path is the **in-process heartbeat** (5-minute UTC-aligned checks, hourly H1 evaluation):
 
 | Env                        | Behavior                                                                |
 | -------------------------- | ----------------------------------------------------------------------- |

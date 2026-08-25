@@ -16,6 +16,8 @@ vi.mock("@/helpers/scheduler/strategy-scheduler-meta", () => ({
   setSchedulerRunning: (...args: unknown[]) => mockSetSchedulerRunning(...args),
 }));
 
+import { STRATEGY_HEARTBEAT_MS } from "@/constants/cron";
+
 import {
   getStrategyHeartbeatStatus,
   startStrategyHeartbeat,
@@ -65,7 +67,7 @@ describe("strategy-heartbeat lifecycle and scheduling", () => {
 
     expect(mockSetSchedulerRunning).toHaveBeenCalledWith(true);
     expect(status.running).toBe(true);
-    expect(status.heartbeatMs).toBe(15_000);
+    expect(status.heartbeatMs).toBe(5 * 60 * 1000);
   });
 
   it("does not start duplicate loop when already running", async () => {
@@ -80,7 +82,7 @@ describe("strategy-heartbeat lifecycle and scheduling", () => {
     vi.setSystemTime(new Date("2024-06-01T10:00:00.000Z"));
 
     await startStrategyHeartbeat();
-    await vi.advanceTimersByTimeAsync(15_000);
+    await vi.advanceTimersByTimeAsync(STRATEGY_HEARTBEAT_MS);
 
     expect(mockRunStrategy).toHaveBeenCalledOnce();
     expect(mockRecordSchedulerRun).toHaveBeenCalledWith(
@@ -93,7 +95,7 @@ describe("strategy-heartbeat lifecycle and scheduling", () => {
     mockRunStrategy.mockRejectedValueOnce(new Error("strategy boom"));
 
     await startStrategyHeartbeat();
-    await vi.advanceTimersByTimeAsync(15_000);
+    await vi.advanceTimersByTimeAsync(STRATEGY_HEARTBEAT_MS);
 
     expect(mockRecordSchedulerRun).toHaveBeenCalledWith({
       error: "strategy boom",
@@ -127,11 +129,52 @@ describe("strategy-heartbeat state restoration and run constraints", () => {
     expect(status.lastError).toBe("old");
   });
 
-  it("does not run strategy off the top of the hour", async () => {
+  it("does not run strategy after the first 5 minutes of the hour", async () => {
     vi.setSystemTime(new Date("2024-06-01T10:15:00.000Z"));
 
     await startStrategyHeartbeat();
-    await vi.advanceTimersByTimeAsync(15_000);
+    await vi.advanceTimersByTimeAsync(STRATEGY_HEARTBEAT_MS);
+
+    expect(mockRunStrategy).not.toHaveBeenCalled();
+  });
+
+  it("runs strategy in the first 5 minutes of the hour", async () => {
+    vi.setSystemTime(new Date("2024-06-01T10:03:00.000Z"));
+
+    await startStrategyHeartbeat();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(mockRunStrategy).toHaveBeenCalledOnce();
+  });
+
+  it("runs restored scheduler inside the hourly window", async () => {
+    vi.setSystemTime(new Date("2024-06-01T10:01:00.000Z"));
+    mockGetSchedulerPersistedStatus.mockResolvedValue({
+      running: true,
+      startedAtMs: 5000,
+      lastRunAtMs: null,
+      lastError: null,
+      lastResult: null,
+    });
+
+    await getStrategyHeartbeatStatus();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(mockRunStrategy).toHaveBeenCalledOnce();
+  });
+
+  it("does not rerun H1 on restore when last run was the same hour", async () => {
+    vi.setSystemTime(new Date("2024-06-01T10:03:00.000Z"));
+    mockGetSchedulerPersistedStatus.mockResolvedValue({
+      running: true,
+      startedAtMs: Date.parse("2024-06-01T09:00:00.000Z"),
+      lastRunAtMs: Date.parse("2024-06-01T10:00:05.000Z"),
+      lastError: null,
+      lastResult: null,
+    });
+
+    await getStrategyHeartbeatStatus();
+    await vi.advanceTimersByTimeAsync(0);
 
     expect(mockRunStrategy).not.toHaveBeenCalled();
   });
@@ -140,8 +183,8 @@ describe("strategy-heartbeat state restoration and run constraints", () => {
     vi.setSystemTime(new Date("2024-06-01T12:00:00.000Z"));
 
     await startStrategyHeartbeat();
-    await vi.advanceTimersByTimeAsync(15_000);
-    await vi.advanceTimersByTimeAsync(15_000);
+    await vi.advanceTimersByTimeAsync(STRATEGY_HEARTBEAT_MS);
+    await vi.advanceTimersByTimeAsync(STRATEGY_HEARTBEAT_MS);
 
     expect(mockRunStrategy).toHaveBeenCalledOnce();
   });
@@ -151,7 +194,7 @@ describe("strategy-heartbeat state restoration and run constraints", () => {
     mockRunStrategy.mockRejectedValueOnce("plain failure");
 
     await startStrategyHeartbeat();
-    await vi.advanceTimersByTimeAsync(15_000);
+    await vi.advanceTimersByTimeAsync(STRATEGY_HEARTBEAT_MS);
 
     expect(mockRecordSchedulerRun).toHaveBeenCalledWith({
       error: "Strategy run failed",

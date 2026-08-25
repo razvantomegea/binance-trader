@@ -1,3 +1,4 @@
+import { STRATEGY_HEARTBEAT_MS } from "@/constants/cron";
 import {
   getSchedulerPersistedStatus,
   recordSchedulerRun,
@@ -9,7 +10,6 @@ import {
 } from "@/helpers/strategy/strategy-runner";
 import { computeNextHourlyRunIso } from "@/utils/scheduler/compute-next-hourly-run";
 
-const HEARTBEAT_MS = 15_000;
 const STOP_WAIT_TIMEOUT_MS = 5_000;
 const STOP_WAIT_POLL_MS = 50;
 
@@ -66,9 +66,15 @@ function toHourKey(tsMs: number): string {
   ].join("-");
 }
 
-function isTopOfHour(tsMs: number): boolean {
-  const date = new Date(tsMs);
-  return date.getUTCMinutes() === 0;
+function isInHourlyRunWindow(tsMs: number): boolean {
+  const heartbeatMinutes = STRATEGY_HEARTBEAT_MS / 60_000;
+  return new Date(tsMs).getUTCMinutes() < heartbeatMinutes;
+}
+
+function msUntilNextHeartbeat(nowMs: number): number {
+  const elapsedInSlot = nowMs % STRATEGY_HEARTBEAT_MS;
+  // Sleep/clock skew can make a naive "target - now" delay negative (Node warns and clamps to 1ms).
+  return Math.max(0, STRATEGY_HEARTBEAT_MS - elapsedInSlot);
 }
 
 async function runIfNeeded(state: StrategyHeartbeatState): Promise<void> {
@@ -80,7 +86,7 @@ async function runIfNeeded(state: StrategyHeartbeatState): Promise<void> {
 }
 
 function shouldRun(state: StrategyHeartbeatState, nowMs: number): boolean {
-  if (!state.running || state.runningNow || !isTopOfHour(nowMs)) {
+  if (!state.running || state.runningNow || !isInHourlyRunWindow(nowMs)) {
     return false;
   }
   return state.lastCompletedHourKey !== toHourKey(nowMs);
@@ -126,9 +132,20 @@ function startHeartbeatLoop(state: StrategyHeartbeatState): void {
   if (state.timer) {
     return;
   }
-  state.timer = setInterval(() => {
-    void runIfNeeded(state);
-  }, HEARTBEAT_MS);
+  scheduleHeartbeatTick(state);
+}
+
+function scheduleHeartbeatTick(state: StrategyHeartbeatState): void {
+  const delayMs = msUntilNextHeartbeat(Date.now());
+  state.timer = setTimeout(() => {
+    state.timer = null;
+    void (async () => {
+      await runIfNeeded(state);
+      if (state.running) {
+        scheduleHeartbeatTick(state);
+      }
+    })();
+  }, delayMs);
 }
 
 async function ensureStateHydrated(
@@ -147,9 +164,13 @@ async function ensureStateHydrated(
   state.running = true;
   state.startedAtMs = persisted.startedAtMs ?? Date.now();
   state.lastRunAtMs = persisted.lastRunAtMs;
+  state.lastCompletedHourKey = persisted.lastRunAtMs
+    ? toHourKey(persisted.lastRunAtMs)
+    : null;
   state.lastError = persisted.lastError;
   state.lastResult = persisted.lastResult;
   startHeartbeatLoop(state);
+  void runIfNeeded(state);
   console.info("[heartbeat] strategy scheduler restored from persisted state");
 }
 
@@ -157,7 +178,7 @@ function toStatus(state: StrategyHeartbeatState): StrategyHeartbeatStatus {
   return {
     running: state.running,
     runningNow: state.runningNow,
-    heartbeatMs: HEARTBEAT_MS,
+    heartbeatMs: STRATEGY_HEARTBEAT_MS,
     startedAt: state.startedAtMs
       ? new Date(state.startedAtMs).toISOString()
       : null,
@@ -215,7 +236,7 @@ export async function stopStrategyHeartbeat(): Promise<StrategyHeartbeatStatus> 
   state.running = false;
   await waitForInFlightRun(state);
   if (state.timer) {
-    clearInterval(state.timer);
+    clearTimeout(state.timer);
     state.timer = null;
   }
 
