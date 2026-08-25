@@ -212,6 +212,40 @@ describe("strategy-heartbeat shutdown behavior", () => {
     expect(mockSetSchedulerRunning).toHaveBeenCalledWith(false);
   });
 
+  it("ignores a delayed running:true hydration after stop completes", async () => {
+    let resolvePersist: (value: {
+      running: boolean;
+      startedAtMs: number | null;
+      lastRunAtMs: number | null;
+      lastError: string | null;
+      lastResult: null;
+    }) => void = () => undefined;
+    mockGetSchedulerPersistedStatus.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolvePersist = resolve;
+        }),
+    );
+
+    const statusPromise = getStrategyHeartbeatStatus();
+    await Promise.resolve();
+
+    const stopStatus = await stopStrategyHeartbeat();
+    expect(stopStatus.running).toBe(false);
+
+    resolvePersist({
+      running: true,
+      startedAtMs: 5000,
+      lastRunAtMs: null,
+      lastError: null,
+      lastResult: null,
+    });
+
+    const status = await statusPromise;
+    expect(status.running).toBe(false);
+    expect(mockRunStrategy).not.toHaveBeenCalled();
+  });
+
   it("waits for in-flight run before stopping", async () => {
     vi.setSystemTime(new Date("2024-06-01T14:00:00.000Z"));
     let resolveRun: (

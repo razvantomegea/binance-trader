@@ -7,6 +7,52 @@ param(
 $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot\..
 
+function Test-DockerDaemon {
+  cmd /c "docker info >nul 2>&1"
+  return $LASTEXITCODE -eq 0
+}
+
+function Get-DockerDesktopPath {
+  $candidates = @(
+    (Join-Path $env:LOCALAPPDATA "Programs\DockerDesktop\Docker Desktop.exe"),
+    "C:\Program Files\Docker\Docker\Docker Desktop.exe"
+  )
+  foreach ($path in $candidates) {
+    if (Test-Path $path) {
+      return $path
+    }
+  }
+  return $null
+}
+
+function Wait-DockerDaemon {
+  param([int]$TimeoutSeconds = 180)
+
+  if (Test-DockerDaemon) {
+    return
+  }
+
+  $dockerDesktop = Get-DockerDesktopPath
+  if ($dockerDesktop) {
+    Write-Host "Starting Docker Desktop..."
+    Start-Process $dockerDesktop
+  } else {
+    Write-Host "Waiting for Docker daemon..."
+  }
+
+  $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+  while ((Get-Date) -lt $deadline) {
+    if (Test-DockerDaemon) {
+      return
+    }
+    Start-Sleep -Seconds 2
+  }
+
+  throw "Docker daemon is not ready. Start Docker Desktop, then retry."
+}
+
+Wait-DockerDaemon
+
 Write-Host "Starting Docker Postgres..."
 docker compose up -d
 

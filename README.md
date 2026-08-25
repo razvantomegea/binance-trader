@@ -115,7 +115,7 @@ types/                        Shared TypeScript types
 db/                           Drizzle schema and postgres.js client
 docker-compose.yml            Local Postgres 16
 hooks/                        Dashboard layout and push UI hooks
-scripts/                      CLI: backtest, ML, cron trigger, DB copy, local start, release
+scripts/                      CLI: backtest, ML, cron trigger, DB copy, local start, Windows startup, release
 backtest-cache/               Local kline cache and ML artifacts (gitignored)
 backtest-results/             Backtest JSON reports (gitignored)
 public/sw.js                  Service worker for web push
@@ -148,6 +148,8 @@ public/sw.js                  Service worker for web push
    pnpm start:local
    ```
 
+   **Optional — start at Windows login:** run `.\scripts\install-startup.bat` once. It creates a Startup shortcut that opens a visible console and runs `scripts/start-local.ps1` after you sign in (Docker Postgres + `pnpm dev`). Enable Docker Desktop’s “Start when you sign in” so the daemon is up. Remove the shortcut with `.\scripts\uninstall-startup.bat`.
+
 3. Push the schema:
 
    ```bash
@@ -171,7 +173,7 @@ AUTO_START_STRATEGY=true
 
 `AUTO_START_STRATEGY=true` starts the in-process heartbeat inside the Next.js process via `instrumentation.ts`. It checks every 5 minutes (UTC-aligned) and runs the strategy in the first 5 minutes of each hour. Use `pnpm dev` for Start/Stop controls in the UI (`pnpm start` runs with `NODE_ENV=production` and hides dashboard mutations).
 
-**Uptime:** sleep/hibernate stops the heartbeat. Missed hours are not walked; the next run evaluates the latest closed H1 candle against `last_candle_H1`.
+**Uptime:** sleep/hibernate stops the heartbeat. Missed hours are not walked; the next run evaluates the latest closed H1 candle against `last_candle_H1`. On Windows, `.\scripts\install-startup.bat` relaunches the local server after sign-in.
 
 `pnpm install` runs `prepare`, which points Git at `.githooks/`. The pre-push hook bumps `package.json` when you push to `main` (commit the bump, then push again).
 
@@ -201,42 +203,44 @@ Locally, `pnpm start:local` or `pnpm push:setup` writes VAPID keys to `.env.loca
 
 ### Scripts
 
-| Command                       | Description                                                    |
-| ----------------------------- | -------------------------------------------------------------- |
-| `pnpm start:local`            | Docker Postgres + `pnpm dev` (PowerShell helper)               |
-| `pnpm push:setup`             | Generate web push VAPID keys into `.env.local` if missing      |
-| `pnpm dev`                    | Next.js dev server                                             |
-| `pnpm build`                  | Production build                                               |
-| `pnpm start`                  | Production server                                              |
-| `pnpm lint`                   | Run ESLint                                                     |
-| `pnpm lint:fix`               | Run ESLint with autofix                                        |
-| `pnpm format`                 | Run Prettier                                                   |
-| `pnpm test`                   | Run Vitest                                                     |
-| `pnpm test:coverage`          | Vitest with coverage thresholds on `utils/` and `helpers/`     |
-| `pnpm test:watch`             | Vitest watch mode                                              |
-| `pnpm test:e2e`               | Playwright smoke tests (starts dev server)                     |
-| `pnpm test:e2e:ui`            | Playwright UI mode                                             |
-| `pnpm test:e2e:report`        | Open last Playwright HTML report                               |
-| `pnpm backtest`               | Run strategy backtest (localhost only)                         |
-| `pnpm analyze:post-close`     | Analyze post-close 24h behavior                                |
-| `pnpm backtest:cleanup`       | Remove old backtest reports                                    |
-| `pnpm backtest:cache:cleanup` | Remove backtest cache files                                    |
-| `pnpm ml:dataset`             | Generate ML training dataset from historical data              |
-| `pnpm ml:train`               | Train logistic-regression entry model                          |
-| `pnpm ml:eval`                | Evaluate model + strategy thresholds                           |
-| `pnpm ml:optimize`            | Random-search strategy params with ML filter                   |
-| `pnpm db:push`                | Apply Drizzle schema to `DATABASE_URL`                         |
-| `pnpm db:copy`                | Copy tables from `SOURCE_DATABASE_URL` → `TARGET_DATABASE_URL` |
-| `pnpm cron:trigger`           | Manually hit the strategy cron endpoint                        |
-| `pnpm railway:up`             | Optional rollback: deploy web via Railway CLI                  |
-| `pnpm railway:up:web`         | Optional rollback: deploy web service                          |
-| `pnpm railway:up:cron`        | Optional rollback: deploy cron service                         |
-| `pnpm version:bump`           | Bump `package.json` patch ahead of latest tag                  |
-| `pnpm version:check`          | Verify version is ready for release                            |
-| `pnpm fallow:audit`           | Run Fallow code-health audit                                   |
-| `pnpm fallow:dead-code`       | List likely dead code                                          |
-| `pnpm fallow:dupes`           | List duplicate code                                            |
-| `pnpm fallow:health`          | Fallow health summary                                          |
+| Command                           | Description                                                    |
+| --------------------------------- | -------------------------------------------------------------- |
+| `pnpm start:local`                | Docker Postgres + `pnpm dev` (PowerShell helper)               |
+| `.\scripts\install-startup.bat`   | Install Windows Startup shortcut for the local server          |
+| `.\scripts\uninstall-startup.bat` | Remove the Windows Startup shortcut                            |
+| `pnpm push:setup`                 | Generate web push VAPID keys into `.env.local` if missing      |
+| `pnpm dev`                        | Next.js dev server                                             |
+| `pnpm build`                      | Production build                                               |
+| `pnpm start`                      | Production server                                              |
+| `pnpm lint`                       | Run ESLint                                                     |
+| `pnpm lint:fix`                   | Run ESLint with autofix                                        |
+| `pnpm format`                     | Run Prettier                                                   |
+| `pnpm test`                       | Run Vitest                                                     |
+| `pnpm test:coverage`              | Vitest with coverage thresholds on `utils/` and `helpers/`     |
+| `pnpm test:watch`                 | Vitest watch mode                                              |
+| `pnpm test:e2e`                   | Playwright smoke tests (starts dev server)                     |
+| `pnpm test:e2e:ui`                | Playwright UI mode                                             |
+| `pnpm test:e2e:report`            | Open last Playwright HTML report                               |
+| `pnpm backtest`                   | Run strategy backtest (localhost only)                         |
+| `pnpm analyze:post-close`         | Analyze post-close 24h behavior                                |
+| `pnpm backtest:cleanup`           | Remove old backtest reports                                    |
+| `pnpm backtest:cache:cleanup`     | Remove backtest cache files                                    |
+| `pnpm ml:dataset`                 | Generate ML training dataset from historical data              |
+| `pnpm ml:train`                   | Train logistic-regression entry model                          |
+| `pnpm ml:eval`                    | Evaluate model + strategy thresholds                           |
+| `pnpm ml:optimize`                | Random-search strategy params with ML filter                   |
+| `pnpm db:push`                    | Apply Drizzle schema to `DATABASE_URL`                         |
+| `pnpm db:copy`                    | Copy tables from `SOURCE_DATABASE_URL` → `TARGET_DATABASE_URL` |
+| `pnpm cron:trigger`               | Manually hit the strategy cron endpoint                        |
+| `pnpm railway:up`                 | Optional rollback: deploy web via Railway CLI                  |
+| `pnpm railway:up:web`             | Optional rollback: deploy web service                          |
+| `pnpm railway:up:cron`            | Optional rollback: deploy cron service                         |
+| `pnpm version:bump`               | Bump `package.json` patch ahead of latest tag                  |
+| `pnpm version:check`              | Verify version is ready for release                            |
+| `pnpm fallow:audit`               | Run Fallow code-health audit                                   |
+| `pnpm fallow:dead-code`           | List likely dead code                                          |
+| `pnpm fallow:dupes`               | List duplicate code                                            |
+| `pnpm fallow:health`              | Fallow health summary                                          |
 
 Backtest and ML scripts refuse to run when `NODE_ENV=production`.
 

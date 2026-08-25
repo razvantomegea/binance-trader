@@ -23,6 +23,7 @@ interface StrategyHeartbeatState {
   lastResult: RunStrategyResult | null;
   timer: NodeJS.Timeout | null;
   hydratedFromMeta: boolean;
+  hydrationGeneration: number;
 }
 
 export interface StrategyHeartbeatStatus {
@@ -51,6 +52,7 @@ function getState(): StrategyHeartbeatState {
     lastResult: null,
     timer: null,
     hydratedFromMeta: false,
+    hydrationGeneration: 0,
   };
 
   return globalThis.__strategyHeartbeatState;
@@ -156,7 +158,11 @@ async function ensureStateHydrated(
   }
 
   state.hydratedFromMeta = true;
+  const generation = state.hydrationGeneration;
   const persisted = await getSchedulerPersistedStatus();
+  if (generation !== state.hydrationGeneration) {
+    return;
+  }
   if (!persisted.running) {
     return;
   }
@@ -229,6 +235,7 @@ export async function stopStrategyHeartbeat(): Promise<StrategyHeartbeatStatus> 
   await setSchedulerRunning(false);
 
   const state = getState();
+  state.hydrationGeneration += 1;
   if (!state.running) {
     return toStatus(state);
   }
