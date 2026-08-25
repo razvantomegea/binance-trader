@@ -6,6 +6,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 Versions are auto-released on every merge to `main`.
 
+## [1.0.10] - 2026-08-25
+
+- refactor: Simplify TRUNCATE command in copy-postgres script (4cea8ea)
+- fix: Update PostgreSQL configuration and improve test structure (0dff6ed)
+- feat: Add Docker support and PostgreSQL configuration (733b931)
+
 ## [1.0.9] - 2026-06-19
 
 - Refactor historical klines cache loading and instrumentation registration (4904c2f)
