@@ -162,7 +162,7 @@ public/sw.js                  Service worker for web push
    pnpm dev
    ```
 
-   Open [http://localhost:3000](http://localhost:3000).
+   Open [http://localhost:4000](http://localhost:4000).
 
 `.env.example` defaults:
 
@@ -286,12 +286,12 @@ Optional poke of `/api/cron/run-strategy` (still requires `CRON_SECRET` and `sch
 
 ```bash
 # Windows
-set CRON_URL=http://localhost:3000/api/cron/run-strategy
+set CRON_URL=http://localhost:4000/api/cron/run-strategy
 set CRON_SECRET=your-secret
 pnpm cron:trigger
 
 # macOS / Linux
-export CRON_URL=http://localhost:3000/api/cron/run-strategy
+export CRON_URL=http://localhost:4000/api/cron/run-strategy
 export CRON_SECRET=your-secret
 pnpm cron:trigger
 ```
