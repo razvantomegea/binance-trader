@@ -2,7 +2,6 @@ import {
   BUY_NOTIONAL_PCT,
   ENTRY_RANGE_MAX_PCT,
   ENTRY_RANGE_PCT,
-  MAX_LOSS_PCT,
   TRAILING_STOP_PCT,
 } from "@/constants/binance";
 import {
@@ -21,5 +20,5 @@ export const STRATEGY_DESCRIPTION = [
   `last close vs prior ${STRATEGY_PRIOR_CLOSES} closes`,
   `entry: current and highest close both ${formatPct(ENTRY_RANGE_PCT)}-${formatPct(ENTRY_RANGE_MAX_PCT)} above lowest 24h close`,
   `size: ${formatPct(BUY_NOTIONAL_PCT)} cash`,
-  `exit: ${formatPct(TRAILING_STOP_PCT)} trailing stop, ${formatPct(MAX_LOSS_PCT)} max loss per trade and account while open`,
+  `exit: ${formatPct(TRAILING_STOP_PCT)} trailing stop per trade and account while open`,
 ].join(" | ");

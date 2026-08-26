@@ -3,6 +3,5 @@ export interface StrategyParams {
   entryRangeMaxPct: number;
   buyNotionalPct: number;
   trailingStopPct: number;
-  maxLossPct: number;
   symbolReentryCooldownMs: number;
 }

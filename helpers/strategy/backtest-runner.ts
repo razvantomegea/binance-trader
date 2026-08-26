@@ -207,7 +207,7 @@ function applyDrawdownLiquidationIfNeeded(params: {
     isPortfolioDrawdownBreached({
       equity,
       exposurePeakEquity: nextPeak,
-      thresholdPct: params.strategyParams.maxLossPct,
+      thresholdPct: params.strategyParams.trailingStopPct,
     })
   ) {
     liquidateAllOpenPositions({
@@ -215,7 +215,6 @@ function applyDrawdownLiquidationIfNeeded(params: {
       markPrices: params.markPricesAfterTrades,
       candleOpenTime: params.openTime,
       trailingStopPct: params.strategyParams.trailingStopPct,
-      maxLossPct: params.strategyParams.maxLossPct,
     });
     nextPeak = null;
   }

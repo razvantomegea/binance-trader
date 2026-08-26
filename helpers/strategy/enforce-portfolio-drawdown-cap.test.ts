@@ -78,7 +78,7 @@ describe("enforcePortfolioDrawdownCap", () => {
 
   it("updates peak without liquidating when drawdown not breached", async () => {
     mockedGetOpenPositions.mockResolvedValue(new Map([["BTCUSDT", POSITION]]));
-    mockedSnapshotEquity.mockResolvedValue({ cash: 5000, equity: 9500 });
+    mockedSnapshotEquity.mockResolvedValue({ cash: 5000, equity: 8000 });
     mockedGetExposurePeakEquity.mockResolvedValue(10_000);
 
     const result = await enforcePortfolioDrawdownCap({});
@@ -93,7 +93,7 @@ describe("enforcePortfolioDrawdownCap", () => {
 
   it("liquidates all symbols and clears peak when drawdown breached", async () => {
     mockedGetOpenPositions.mockResolvedValue(new Map([["BTCUSDT", POSITION]]));
-    mockedSnapshotEquity.mockResolvedValue({ cash: 5000, equity: 8000 });
+    mockedSnapshotEquity.mockResolvedValue({ cash: 5000, equity: 7000 });
     mockedGetExposurePeakEquity.mockResolvedValue(10_000);
 
     const result = await enforcePortfolioDrawdownCap({});
@@ -114,7 +114,7 @@ describe("enforcePortfolioDrawdownCap", () => {
 
   it("counts failed liquidations without throwing", async () => {
     mockedGetOpenPositions.mockResolvedValue(new Map([["BTCUSDT", POSITION]]));
-    mockedSnapshotEquity.mockResolvedValue({ cash: 5000, equity: 8000 });
+    mockedSnapshotEquity.mockResolvedValue({ cash: 5000, equity: 7000 });
     mockedGetExposurePeakEquity.mockResolvedValue(10_000);
     mockedPlaceTrade.mockRejectedValue(new Error("order failed"));
 
@@ -125,7 +125,7 @@ describe("enforcePortfolioDrawdownCap", () => {
 
   it("falls back to position buy price when latest kline is missing", async () => {
     mockedGetOpenPositions.mockResolvedValue(new Map([["BTCUSDT", POSITION]]));
-    mockedSnapshotEquity.mockResolvedValue({ cash: 5000, equity: 8000 });
+    mockedSnapshotEquity.mockResolvedValue({ cash: 5000, equity: 7000 });
     mockedGetExposurePeakEquity.mockResolvedValue(10_000);
     mockedGetLatestClosedKline.mockResolvedValue(null);
 

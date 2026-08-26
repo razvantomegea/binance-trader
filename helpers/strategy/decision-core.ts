@@ -46,7 +46,7 @@ export interface EvaluateDecisionResult {
   reason?: string;
   qty?: number;
   updatedMaxPrice?: number;
-  /** Fill price for SELL; capped to trailing stop and max loss floor. */
+  /** Fill price for SELL; capped to the trailing stop. */
   exitPrice?: number;
 }
 
@@ -154,7 +154,6 @@ function evaluateOpenPositionDecision(params: {
       position: stopPosition,
       worstPrice,
       thresholdPct: params.strategyParams.trailingStopPct,
-      maxLossPct: params.strategyParams.maxLossPct,
     })
   ) {
     return {
@@ -167,7 +166,6 @@ function evaluateOpenPositionDecision(params: {
   const exitPrice = getTrailingExitPrice({
     position: stopPosition,
     thresholdPct: params.strategyParams.trailingStopPct,
-    maxLossPct: params.strategyParams.maxLossPct,
   });
   return {
     action: "SELL",

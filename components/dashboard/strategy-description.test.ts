@@ -6,6 +6,9 @@ describe("STRATEGY_DESCRIPTION", () => {
   it("describes the paper strategy with formatted percentages", () => {
     expect(STRATEGY_DESCRIPTION).toContain("H1 paper strategy");
     expect(STRATEGY_DESCRIPTION).toContain("entry:");
+    expect(STRATEGY_DESCRIPTION).toContain(
+      "25% trailing stop per trade and account while open",
+    );
     expect(STRATEGY_DESCRIPTION).toMatch(/\d+(\.\d+)?%/);
   });
 });

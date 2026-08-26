@@ -34,7 +34,6 @@ export const STRATEGY_PARAM_BOUNDS: Record<
   entryRangeMaxPct: { min: 0.5, max: 0.8, step: 0.05 },
   buyNotionalPct: { min: 0.03, max: 0.1, step: 0.01 },
   trailingStopPct: { min: 0.15, max: 0.35, step: 0.05 },
-  maxLossPct: { min: 0.1, max: 0.2, step: 0.025 },
 };
 
 export const SYMBOL_REENTRY_COOLDOWN_OPTIONS_MS = [

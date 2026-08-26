@@ -109,7 +109,6 @@ export function sampleRandomStrategyParams(
       STRATEGY_PARAM_BOUNDS.trailingStopPct,
       rng,
     ),
-    maxLossPct: sampleFromBounds(STRATEGY_PARAM_BOUNDS.maxLossPct, rng),
     symbolReentryCooldownMs:
       SYMBOL_REENTRY_COOLDOWN_OPTIONS_MS[cooldownIndex] ??
       DEFAULT_STRATEGY_PARAMS.symbolReentryCooldownMs,

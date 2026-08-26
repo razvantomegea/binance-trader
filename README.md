@@ -11,7 +11,7 @@ Next.js dashboard for **paper trading** USDT pairs on Binance spot data. A sched
 - Portfolio summary, open positions, trade history, and equity curve
 - Symbol list with price chart (Recharts) and manual position close from the UI
 - Automated strategy (hourly interval) with configurable rules in `constants/binance.ts`
-- Portfolio-level drawdown cap: liquidates all open positions when equity falls 15% below peak while exposed
+- Portfolio-level trailing stop: liquidates all open positions when equity falls 25% below peak while exposed
 - Post-close 24h metrics on SELL trades (max/min price and % move after exit)
 - Start/stop scheduler from the UI (`pnpm dev`)
 - Scheduler health alerts when runs look stale or never recorded after start
@@ -31,11 +31,11 @@ The strategy evaluates once per closed hourly candle (`H1`) and uses close price
 
 - **Exit**:
   - 25% trailing stop (`TRAILING_STOP_PCT = 0.25`) measured from peak price since buy
-  - 15% max loss per trade (`MAX_LOSS_PCT = 0.15`)
+  - Same 25% trailing stop is the account stop: no separate max-loss floor
 
-- **Portfolio drawdown cap**:
+- **Portfolio trailing stop**:
   - While any position is open, tracks peak equity (`exposure_peak_equity` in `strategy_meta`)
-  - If equity drops 15% below that peak, all open positions are liquidated
+  - If equity drops 25% below that peak, all open positions are liquidated
 
 - **Re-entry cooldown**:
   - Symbol cooldown after sell is 24h (`SYMBOL_REENTRY_COOLDOWN_MS`)

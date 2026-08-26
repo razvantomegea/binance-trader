@@ -228,7 +228,7 @@ async function evaluateCandidates(params: {
   for (let i = 0; i < candidates.length; i += 1) {
     const strategyParams = candidates[i]!;
     console.log(
-      `Trial ${i + 1}/${candidates.length}: entry=${strategyParams.entryRangePct}-${strategyParams.entryRangeMaxPct}, trail=${strategyParams.trailingStopPct}, maxLoss=${strategyParams.maxLossPct}`,
+      `Trial ${i + 1}/${candidates.length}: entry=${strategyParams.entryRangePct}-${strategyParams.entryRangeMaxPct}, trail=${strategyParams.trailingStopPct}`,
     );
     const validation = await evaluateStrategyCandidate({
       strategyParams,

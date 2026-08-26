@@ -69,9 +69,6 @@ describe("sampleRandomStrategyParams", () => {
     expect(params.trailingStopPct).toBeGreaterThanOrEqual(
       STRATEGY_PARAM_BOUNDS.trailingStopPct.min,
     );
-    expect(params.maxLossPct).toBeGreaterThanOrEqual(
-      STRATEGY_PARAM_BOUNDS.maxLossPct.min,
-    );
     expect(params.symbolReentryCooldownMs).toBeDefined();
   });
 

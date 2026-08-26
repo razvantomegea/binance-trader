@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { MAX_LOSS_PCT } from "@/constants/binance";
+import { TRAILING_STOP_PCT } from "@/constants/binance";
 
 vi.mock("@/db");
 
@@ -101,7 +101,7 @@ describe("isPortfolioDrawdownBreached", () => {
 
   it("returns true when equity falls below threshold", () => {
     const peak = 10_000;
-    const threshold = MAX_LOSS_PCT;
+    const threshold = TRAILING_STOP_PCT;
     const breachedEquity = peak * (1 - threshold) - 1;
 
     expect(

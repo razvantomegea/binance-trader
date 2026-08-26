@@ -117,7 +117,26 @@ describe("evaluateDecision exits", () => {
     expect(result.reason).toBe("exit_trailing_0.25_vs_peak");
   });
 
-  it("sells at stop price when low gaps below 15% but close recovers", () => {
+  it("holds when price falls 15% from buy because stop is 25% trailing", () => {
+    const buyOpenTime = 1000 * HOUR_MS;
+    const latestOpenTime = buyOpenTime + HOUR_MS;
+    const closed = makeCandles(latestOpenTime, [
+      85,
+      ...Array(STRATEGY_LOOKBACK_CLOSES - 1).fill(100),
+    ]);
+
+    const result = evaluateDecision({
+      closed,
+      position: position({ buyOpenTime, buyPrice: 100 }),
+      cash: 10_000,
+      lastProcessedOpenTime: null,
+      lastSellOpenTime: null,
+    });
+
+    expect(result.action).toBe("HOLD");
+  });
+
+  it("sells at stop price when low gaps below 25% but close recovers", () => {
     const buyOpenTime = 1000 * HOUR_MS;
     const latestOpenTime = buyOpenTime + HOUR_MS;
     const closed = makeCandles(latestOpenTime, [
@@ -134,7 +153,7 @@ describe("evaluateDecision exits", () => {
     });
 
     expect(result.action).toBe("SELL");
-    expect(result.exitPrice).toBe(85);
+    expect(result.exitPrice).toBe(75);
     expect(result.reason).toBe("exit_trailing_0.25_vs_peak");
   });
 

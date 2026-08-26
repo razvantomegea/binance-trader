@@ -106,12 +106,12 @@ describe("evaluateSymbol exits trailing", () => {
     expect(mockedPlaceTrade).not.toHaveBeenCalled();
   });
 
-  it("drawdown exit when price falls 10% from buy with no prior peak above buy", async () => {
+  it("drawdown exit when price falls 25% from buy with no prior peak above buy", async () => {
     const buyOpenTime = 1000 * HOUR_MS;
     const latestOpenTime = buyOpenTime + HOUR_MS;
 
     const candles = makeCandles(latestOpenTime, [
-      85,
+      75,
       ...Array(STRATEGY_LOOKBACK_CLOSES - 1).fill(100),
     ]);
     mockedGetKlines.mockResolvedValue(candles);
