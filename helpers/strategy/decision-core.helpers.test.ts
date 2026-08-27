@@ -5,39 +5,9 @@ import {
   get24hHighLow,
   getCloseHighLow,
   isEntryBandCandidate,
-  type CandleSlice,
 } from "@/helpers/strategy/decision-core";
-
-const HOUR_MS = 3_600_000;
-
-function makeCandle(
-  openTime: number,
-  close: number,
-  overrides: Partial<Pick<CandleSlice, "high" | "low">> = {},
-): CandleSlice {
-  return {
-    openTime,
-    high: overrides.high ?? close,
-    low: overrides.low ?? close,
-    close,
-  };
-}
-
-function makeCandles(
-  startOpenTime: number,
-  specs: Array<number | { close: number; high?: number; low?: number }>,
-): CandleSlice[] {
-  return specs.map((spec, i) => {
-    const openTime = startOpenTime - i * HOUR_MS;
-    if (typeof spec === "number") {
-      return makeCandle(openTime, spec);
-    }
-    return makeCandle(openTime, spec.close, {
-      high: spec.high,
-      low: spec.low,
-    });
-  });
-}
+import { makeCandleSlices } from "@/test/candle-fixtures";
+import { HOUR_MS } from "@/utils/binance/candle-time";
 
 describe("get24hHighLow", () => {
   it("returns highest high and lowest low with their open times", () => {
@@ -69,15 +39,15 @@ describe("getCloseHighLow", () => {
 
 describe("isEntryBandCandidate", () => {
   it("returns false when lookback window is incomplete", () => {
-    const closed = makeCandles(1000 * HOUR_MS, Array(10).fill(150));
+    const closed = makeCandleSlices(1000 * HOUR_MS, Array(10).fill(150));
 
     expect(isEntryBandCandidate({ closed })).toBe(false);
   });
 
   it("returns true when latest and highest close are within entry band", () => {
-    const closed = makeCandles(1000 * HOUR_MS, [
-      155,
-      160,
+    const closed = makeCandleSlices(1000 * HOUR_MS, [
+      130,
+      140,
       ...Array(STRATEGY_LOOKBACK_CLOSES - 2).fill(100),
     ]);
 
@@ -85,7 +55,7 @@ describe("isEntryBandCandidate", () => {
   });
 
   it("returns false when latest close is outside entry band", () => {
-    const closed = makeCandles(1000 * HOUR_MS, [
+    const closed = makeCandleSlices(1000 * HOUR_MS, [
       180,
       ...Array(STRATEGY_LOOKBACK_CLOSES - 1).fill(100),
     ]);
@@ -94,8 +64,8 @@ describe("isEntryBandCandidate", () => {
   });
 
   it("returns false when highest close is outside entry band", () => {
-    const closed = makeCandles(1000 * HOUR_MS, [
-      155,
+    const closed = makeCandleSlices(1000 * HOUR_MS, [
+      130,
       190,
       ...Array(STRATEGY_LOOKBACK_CLOSES - 2).fill(100),
     ]);

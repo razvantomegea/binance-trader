@@ -8,38 +8,10 @@ import {
   evaluateDecision,
   type CandleSlice,
   type DecisionPositionState,
+  type EvaluateDecisionResult,
 } from "@/helpers/strategy/decision-core";
-
-const HOUR_MS = 3_600_000;
-
-function makeCandle(
-  openTime: number,
-  close: number,
-  overrides: Partial<Pick<CandleSlice, "high" | "low">> = {},
-): CandleSlice {
-  return {
-    openTime,
-    high: overrides.high ?? close,
-    low: overrides.low ?? close,
-    close,
-  };
-}
-
-function makeCandles(
-  startOpenTime: number,
-  specs: Array<number | { close: number; high?: number; low?: number }>,
-): CandleSlice[] {
-  return specs.map((spec, i) => {
-    const openTime = startOpenTime - i * HOUR_MS;
-    if (typeof spec === "number") {
-      return makeCandle(openTime, spec);
-    }
-    return makeCandle(openTime, spec.close, {
-      high: spec.high,
-      low: spec.low,
-    });
-  });
-}
+import { type CandleSpec, makeCandleSlices } from "@/test/candle-fixtures";
+import { HOUR_MS } from "@/utils/binance/candle-time";
 
 function position(
   overrides: Partial<DecisionPositionState> = {},
@@ -53,64 +25,68 @@ function position(
   };
 }
 
+function evaluateOpenPosition(params: {
+  specs: CandleSpec[];
+  hoursAfterBuy?: number;
+  positionOverrides?: Partial<DecisionPositionState>;
+}): EvaluateDecisionResult {
+  const buyOpenTime = 1000 * HOUR_MS;
+  const latestOpenTime = buyOpenTime + (params.hoursAfterBuy ?? 1) * HOUR_MS;
+  return evaluateDecision({
+    closed: makeCandleSlices(latestOpenTime, params.specs),
+    position: position({
+      buyOpenTime,
+      buyPrice: 100,
+      ...params.positionOverrides,
+    }),
+    cash: 10_000,
+    lastProcessedOpenTime: null,
+    lastSellOpenTime: null,
+  });
+}
+
+function evaluateFlat(params: {
+  specs: CandleSpec[];
+  lastProcessedOpenTime?: number | null;
+  lastSellOpenTime?: number | null;
+  entryProbability?: number;
+  modelMinProbability?: number;
+}): EvaluateDecisionResult {
+  const latestOpenTime = 1000 * HOUR_MS;
+  return evaluateDecision({
+    closed: makeCandleSlices(latestOpenTime, params.specs),
+    position: undefined,
+    cash: 10_000,
+    lastProcessedOpenTime: params.lastProcessedOpenTime ?? null,
+    lastSellOpenTime: params.lastSellOpenTime ?? null,
+    entryProbability: params.entryProbability,
+    modelMinProbability: params.modelMinProbability,
+  });
+}
+
+const LOOKBACK_BASE = Array(STRATEGY_LOOKBACK_CLOSES - 1).fill(100);
+const LOOKBACK_BASE_MINUS_ONE = Array(STRATEGY_LOOKBACK_CLOSES - 2).fill(100);
+
 describe("evaluateDecision exits", () => {
   it("holds when price increases less than 50%", () => {
-    const buyOpenTime = 1000 * HOUR_MS;
-    const latestOpenTime = buyOpenTime + HOUR_MS;
-    const closed = makeCandles(latestOpenTime, [
-      149,
-      ...Array(STRATEGY_LOOKBACK_CLOSES - 1).fill(100),
-    ]);
-
-    const result = evaluateDecision({
-      closed,
-      position: position({ buyOpenTime, buyPrice: 100 }),
-      cash: 10_000,
-      lastProcessedOpenTime: null,
-      lastSellOpenTime: null,
+    const result = evaluateOpenPosition({
+      specs: [149, ...LOOKBACK_BASE],
     });
-
     expect(result.action).toBe("HOLD");
   });
 
   it("holds when price increases exactly 50%", () => {
-    const buyOpenTime = 1000 * HOUR_MS;
-    const latestOpenTime = buyOpenTime + HOUR_MS;
-    const closed = makeCandles(latestOpenTime, [
-      150,
-      ...Array(STRATEGY_LOOKBACK_CLOSES - 1).fill(100),
-    ]);
-
-    const result = evaluateDecision({
-      closed,
-      position: position({ buyOpenTime, buyPrice: 100 }),
-      cash: 10_000,
-      lastProcessedOpenTime: null,
-      lastSellOpenTime: null,
+    const result = evaluateOpenPosition({
+      specs: [150, ...LOOKBACK_BASE],
     });
-
     expect(result.action).toBe("HOLD");
   });
 
   it("drawdown exit when price falls 25% from peak", () => {
-    const buyOpenTime = 1000 * HOUR_MS;
-    const latestOpenTime = buyOpenTime + 2 * HOUR_MS;
-    const closed = makeCandles(latestOpenTime, [
-      150,
-      200,
-      ...Array(STRATEGY_LOOKBACK_CLOSES - 2).fill(100),
-    ]);
-
-    const result = evaluateDecision({
-      closed,
-      position: position({
-        buyOpenTime,
-        buyPrice: 100,
-        maxPriceAfterBuy: 200,
-      }),
-      cash: 10_000,
-      lastProcessedOpenTime: null,
-      lastSellOpenTime: null,
+    const result = evaluateOpenPosition({
+      specs: [150, 200, ...LOOKBACK_BASE_MINUS_ONE],
+      hoursAfterBuy: 2,
+      positionOverrides: { maxPriceAfterBuy: 200 },
     });
 
     expect(result.action).toBe("SELL");
@@ -118,38 +94,15 @@ describe("evaluateDecision exits", () => {
   });
 
   it("holds when price falls 15% from buy because stop is 25% trailing", () => {
-    const buyOpenTime = 1000 * HOUR_MS;
-    const latestOpenTime = buyOpenTime + HOUR_MS;
-    const closed = makeCandles(latestOpenTime, [
-      85,
-      ...Array(STRATEGY_LOOKBACK_CLOSES - 1).fill(100),
-    ]);
-
-    const result = evaluateDecision({
-      closed,
-      position: position({ buyOpenTime, buyPrice: 100 }),
-      cash: 10_000,
-      lastProcessedOpenTime: null,
-      lastSellOpenTime: null,
+    const result = evaluateOpenPosition({
+      specs: [85, ...LOOKBACK_BASE],
     });
-
     expect(result.action).toBe("HOLD");
   });
 
   it("sells at stop price when low gaps below 25% but close recovers", () => {
-    const buyOpenTime = 1000 * HOUR_MS;
-    const latestOpenTime = buyOpenTime + HOUR_MS;
-    const closed = makeCandles(latestOpenTime, [
-      { close: 90, high: 90, low: 60 },
-      ...Array(STRATEGY_LOOKBACK_CLOSES - 1).fill(100),
-    ]);
-
-    const result = evaluateDecision({
-      closed,
-      position: position({ buyOpenTime, buyPrice: 100 }),
-      cash: 10_000,
-      lastProcessedOpenTime: null,
-      lastSellOpenTime: null,
+    const result = evaluateOpenPosition({
+      specs: [{ close: 90, high: 90, low: 60 }, ...LOOKBACK_BASE],
     });
 
     expect(result.action).toBe("SELL");
@@ -158,172 +111,76 @@ describe("evaluateDecision exits", () => {
   });
 
   it("holds when price peaked at +5% and trailing stop not reached", () => {
-    const buyOpenTime = 1000 * HOUR_MS;
-    const latestOpenTime = buyOpenTime + HOUR_MS;
-    const closed = makeCandles(latestOpenTime, [
-      { close: 100, high: 105, low: 100 },
-      ...Array(STRATEGY_LOOKBACK_CLOSES - 1).fill(100),
-    ]);
-
-    const result = evaluateDecision({
-      closed,
-      position: position({
-        buyOpenTime,
-        buyPrice: 100,
-        maxPriceAfterBuy: 105,
-      }),
-      cash: 10_000,
-      lastProcessedOpenTime: null,
-      lastSellOpenTime: null,
+    const result = evaluateOpenPosition({
+      specs: [{ close: 100, high: 105, low: 100 }, ...LOOKBACK_BASE],
+      positionOverrides: { maxPriceAfterBuy: 105 },
     });
-
     expect(result.action).toBe("HOLD");
   });
 });
 
 describe("evaluateDecision entry", () => {
-  it("buys when close is within 40-60% band above lowest 24h close", () => {
-    const latestOpenTime = 1000 * HOUR_MS;
-    const closed = makeCandles(latestOpenTime, [
-      150,
-      ...Array(STRATEGY_LOOKBACK_CLOSES - 1).fill(100),
-    ]);
-
-    const result = evaluateDecision({
-      closed,
-      position: undefined,
-      cash: 10_000,
-      lastProcessedOpenTime: null,
-      lastSellOpenTime: null,
-    });
-
+  it("buys when close is within 25-50% band above lowest 24h close", () => {
+    const result = evaluateFlat({ specs: [150, ...LOOKBACK_BASE] });
     expect(result.action).toBe("BUY");
-    expect(result.reason).toBe("entry_band_0.5_0.75");
+    expect(result.reason).toBe("entry_band_0.25_0.5");
   });
 
   it("does not buy when 24h range is more than 100%", () => {
-    const latestOpenTime = 1000 * HOUR_MS;
-    const closed = makeCandles(latestOpenTime, [
-      { close: 190, high: 200, low: 90 },
-      { close: 200, high: 200, low: 90 },
-      ...Array(STRATEGY_LOOKBACK_CLOSES - 2).fill(100),
-    ]);
-
-    const result = evaluateDecision({
-      closed,
-      position: undefined,
-      cash: 10_000,
-      lastProcessedOpenTime: null,
-      lastSellOpenTime: null,
+    const result = evaluateFlat({
+      specs: [
+        { close: 190, high: 200, low: 90 },
+        { close: 200, high: 200, low: 90 },
+        ...LOOKBACK_BASE_MINUS_ONE,
+      ],
     });
-
     expect(result.action).toBe("HOLD");
   });
 
   it("does not buy when last SELL was within 24h", () => {
     const latestOpenTime = 1000 * HOUR_MS;
-    const lastSellOpenTime =
-      latestOpenTime - SYMBOL_REENTRY_COOLDOWN_MS + HOUR_MS;
-    const closed = makeCandles(latestOpenTime, [
-      150,
-      ...Array(STRATEGY_LOOKBACK_CLOSES - 1).fill(100),
-    ]);
-
-    const result = evaluateDecision({
-      closed,
-      position: undefined,
-      cash: 10_000,
-      lastProcessedOpenTime: null,
-      lastSellOpenTime,
+    const result = evaluateFlat({
+      specs: [150, ...LOOKBACK_BASE],
+      lastSellOpenTime: latestOpenTime - SYMBOL_REENTRY_COOLDOWN_MS + HOUR_MS,
     });
-
     expect(result.action).toBe("HOLD");
   });
 
-  it("does not buy when current close is above 60% above lowest close", () => {
-    const latestOpenTime = 1000 * HOUR_MS;
-    const closed = makeCandles(latestOpenTime, [
-      180,
-      ...Array(STRATEGY_LOOKBACK_CLOSES - 1).fill(100),
-    ]);
-
-    const result = evaluateDecision({
-      closed,
-      position: undefined,
-      cash: 10_000,
-      lastProcessedOpenTime: null,
-      lastSellOpenTime: null,
-    });
-
+  it("does not buy when current close is above 50% above lowest close", () => {
+    const result = evaluateFlat({ specs: [180, ...LOOKBACK_BASE] });
     expect(result.action).toBe("HOLD");
   });
 
-  it("does not buy when highest close is above 60% above lowest close", () => {
-    const latestOpenTime = 1000 * HOUR_MS;
-    const closed = makeCandles(latestOpenTime, [
-      160,
-      190,
-      ...Array(STRATEGY_LOOKBACK_CLOSES - 2).fill(100),
-    ]);
-
-    const result = evaluateDecision({
-      closed,
-      position: undefined,
-      cash: 10_000,
-      lastProcessedOpenTime: null,
-      lastSellOpenTime: null,
+  it("does not buy when highest close is above 50% above lowest close", () => {
+    const result = evaluateFlat({
+      specs: [160, 190, ...LOOKBACK_BASE_MINUS_ONE],
     });
-
     expect(result.action).toBe("HOLD");
   });
 
-  it("buys when current and highest close are both within 40-60% band", () => {
-    const latestOpenTime = 1000 * HOUR_MS;
-    const closed = makeCandles(latestOpenTime, [
-      155,
-      160,
-      ...Array(STRATEGY_LOOKBACK_CLOSES - 2).fill(100),
-    ]);
-
-    const result = evaluateDecision({
-      closed,
-      position: undefined,
-      cash: 10_000,
-      lastProcessedOpenTime: null,
-      lastSellOpenTime: null,
+  it("buys when current and highest close are both within 25-50% band", () => {
+    const result = evaluateFlat({
+      specs: [130, 140, ...LOOKBACK_BASE_MINUS_ONE],
     });
-
     expect(result.action).toBe("BUY");
-    expect(result.reason).toBe("entry_band_0.5_0.75");
+    expect(result.reason).toBe("entry_band_0.25_0.5");
   });
 });
 
 describe("evaluateDecision skip", () => {
   it("skips when candle already processed", () => {
     const latestOpenTime = 1000 * HOUR_MS;
-    const closed = makeCandles(latestOpenTime, [
-      150,
-      ...Array(STRATEGY_LOOKBACK_CLOSES - 1).fill(100),
-    ]);
-
-    const result = evaluateDecision({
-      closed,
-      position: undefined,
-      cash: 10_000,
+    const result = evaluateFlat({
+      specs: [150, ...LOOKBACK_BASE],
       lastProcessedOpenTime: latestOpenTime,
-      lastSellOpenTime: null,
     });
-
     expect(result.action).toBe("SKIP");
   });
 });
 
 describe("evaluateDecision modelMinProbability gate", () => {
   function entryReadyCandles(latestOpenTime = 1000 * HOUR_MS): CandleSlice[] {
-    return makeCandles(latestOpenTime, [
-      150,
-      ...Array(STRATEGY_LOOKBACK_CLOSES - 1).fill(100),
-    ]);
+    return makeCandleSlices(latestOpenTime, [150, ...LOOKBACK_BASE]);
   }
 
   it("buys without model gate when modelMinProbability is unset", () => {

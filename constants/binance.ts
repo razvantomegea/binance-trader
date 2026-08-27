@@ -22,11 +22,7 @@ export const KLINE_REVALIDATE_SECONDS = 300;
 export const BINANCE_FETCH_CONCURRENCY = 20;
 
 export const INITIAL_PAPER_CASH = 10_000;
-export const ENTRY_RANGE_PCT = 0.5;
-export const ENTRY_RANGE_MAX_PCT = 0.75;
+export const ENTRY_RANGE_PCT = 0.25;
+export const ENTRY_RANGE_MAX_PCT = 0.5;
 export const BUY_NOTIONAL_PCT = 0.05;
 export const TRAILING_STOP_PCT = 0.25;
-/** Same 25% trailing stop used for per-trade exits and account drawdown. */
-export const MAX_LOSS_PCT = TRAILING_STOP_PCT;
-/** @deprecated use MAX_LOSS_PCT */
-export const EXIT_DRAWDOWN_PCT = MAX_LOSS_PCT;

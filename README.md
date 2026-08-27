@@ -25,7 +25,7 @@ Next.js dashboard for **paper trading** USDT pairs on Binance spot data. A sched
 The strategy evaluates once per closed hourly candle (`H1`) and uses close prices for decisions. Core logic lives in `helpers/strategy/decision-core.ts`.
 
 - **Entry**:
-  - Current close and highest close in the 24h lookback must both be +40% to +60% above the lowest close (`ENTRY_RANGE_PCT = 0.4`, `ENTRY_RANGE_MAX_PCT = 0.6`)
+  - Current close and highest close in the 24h lookback must both be +25% to +50% above the lowest close (`ENTRY_RANGE_PCT = 0.25`, `ENTRY_RANGE_MAX_PCT = 0.5`)
   - Position size is 5% of available cash (`BUY_NOTIONAL_PCT = 0.05`)
   - Optional ML gate: when a trained model is wired in, BUY requires `entryProbability >= modelMinProbability`
 

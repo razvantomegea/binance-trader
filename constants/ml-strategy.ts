@@ -30,8 +30,8 @@ export const STRATEGY_PARAM_BOUNDS: Record<
   keyof Omit<StrategyParams, "symbolReentryCooldownMs">,
   StrategyParamBounds
 > = {
-  entryRangePct: { min: 0.3, max: 0.5, step: 0.05 },
-  entryRangeMaxPct: { min: 0.5, max: 0.8, step: 0.05 },
+  entryRangePct: { min: 0.15, max: 0.35, step: 0.05 },
+  entryRangeMaxPct: { min: 0.4, max: 0.6, step: 0.05 },
   buyNotionalPct: { min: 0.03, max: 0.1, step: 0.01 },
   trailingStopPct: { min: 0.15, max: 0.35, step: 0.05 },
 };

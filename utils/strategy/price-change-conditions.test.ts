@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ENTRY_RANGE_PCT, EXIT_DRAWDOWN_PCT } from "@/constants/binance";
+import { ENTRY_RANGE_PCT, TRAILING_STOP_PCT } from "@/constants/binance";
 
 import {
   hasGainVsAnyRef,
@@ -27,27 +27,27 @@ describe("hasGainVsAnyRef", () => {
     ).toBe(false);
   });
 
-  it("returns true at exactly 50% gain boundary", () => {
+  it("returns true at exactly 25% gain boundary", () => {
     expect(
       hasGainVsAnyRef({
-        reference: 150,
+        reference: 125,
         refs: [100],
         thresholdPct: ENTRY_RANGE_PCT,
       }),
     ).toBe(true);
   });
 
-  it("returns false just below 50% gain", () => {
+  it("returns false just below 25% gain", () => {
     expect(
       hasGainVsAnyRef({
-        reference: 149,
+        reference: 124,
         refs: [100],
         thresholdPct: ENTRY_RANGE_PCT,
       }),
     ).toBe(false);
   });
 
-  it("returns true above 40% gain", () => {
+  it("returns true above 25% gain", () => {
     expect(
       hasGainVsAnyRef({
         reference: 200,
@@ -82,7 +82,7 @@ describe("hasLossVsAnyRef", () => {
       hasLossVsAnyRef({
         reference: 75,
         refs: [100],
-        thresholdPct: EXIT_DRAWDOWN_PCT,
+        thresholdPct: TRAILING_STOP_PCT,
       }),
     ).toBe(true);
   });
@@ -92,7 +92,7 @@ describe("hasLossVsAnyRef", () => {
       hasLossVsAnyRef({
         reference: 91,
         refs: [100],
-        thresholdPct: EXIT_DRAWDOWN_PCT,
+        thresholdPct: TRAILING_STOP_PCT,
       }),
     ).toBe(false);
   });

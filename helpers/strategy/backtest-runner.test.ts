@@ -50,7 +50,7 @@ describe("runBacktest", () => {
   it("runs deterministic simulation for one symbol", async () => {
     const fetchStart = 0;
     const closes = Array.from({ length: 48 }, (_, i) =>
-      i < 24 ? 100 : i < 36 ? 160 : 240,
+      i < 24 ? 100 : i < 36 ? 140 : 100,
     );
     const klines = makeAscendingKlines({ startOpenTime: fetchStart, closes });
 
@@ -217,7 +217,7 @@ describe("runBacktestWithPreloadedKlines", () => {
     const klines = makeAscendingKlines({
       startOpenTime: 0,
       closes: Array.from({ length: 48 }, (_, i) =>
-        i < 24 ? 100 : i < 36 ? 160 : 240,
+        i < 24 ? 100 : i < 36 ? 140 : 100,
       ),
     });
 

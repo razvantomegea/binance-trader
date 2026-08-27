@@ -85,7 +85,7 @@ describe("generateDatasetRowsForSymbol", () => {
   it("skips samples when forward label cannot be built", () => {
     const length = 72;
     const closes = Array.from({ length }, (_, i) =>
-      i < 24 ? 100 : i < 36 ? 160 : 240,
+      i < 24 ? 100 : i < 36 ? 140 : 100,
     );
     const klinesAsc = makeKlines(closes);
     mockedBuildForwardLabel.mockReturnValue(null);
@@ -104,7 +104,7 @@ describe("generateDatasetRowsForSymbol", () => {
   it("generates labeled rows for entry-band candidates", () => {
     const length = 72;
     const closes = Array.from({ length }, (_, i) =>
-      i < 24 ? 100 : i < 36 ? 160 : 240,
+      i < 24 ? 100 : i < 36 ? 140 : 100,
     );
     const klinesAsc = makeKlines(closes);
 
