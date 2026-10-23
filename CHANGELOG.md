@@ -6,6 +6,18 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 Versions are auto-released on every merge to `main`.
 
+## [1.0.11] - 2026-10-23
+
+- chore: bump version after security pin (b2e668a)
+- chore(security): pin Node.js to patched Oct 2026 releases (b7dc0b0)
+- refactor: Adjust entry range parameters for trading strategy (8ed8ea1)
+- refactor: Update strategy to use a 25% trailing stop for portfolio management (75da74e)
+- chore: Update local server port to 4000 in configuration files (176bc8e)
+- fix: Update strategy heartbeat behavior and README clarification (e7aeb00)
+- feat: Enhance Windows startup support and update README (ee5d7a9)
+- refactor: Update strategy heartbeat to 5-minute interval (05a04d2)
+- feat: Enhance web push VAPID key management and local setup (060d6f1)
+
 ## [1.0.10] - 2026-08-25
 
 - refactor: Simplify TRUNCATE command in copy-postgres script (4cea8ea)
