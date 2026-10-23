@@ -6,6 +6,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 Versions are auto-released on every merge to `main`.
 
+## [1.0.12] - 2026-10-23
+
+- chore: bump version (4dbec99)
+- chore: sync AGENTS.md (c1819bc)
+
 ## [1.0.11] - 2026-10-23
 
 - chore: bump version after security pin (b2e668a)
